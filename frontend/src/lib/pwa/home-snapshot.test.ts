@@ -221,6 +221,37 @@ describe('durable eligibility', () => {
   })
 })
 
+describe('captured launch snapshot invalidation', () => {
+  it('does not clear a newer verified identity when a captured old snapshot mismatches', async () => {
+    setHomeSnapshotIdentity('alice')
+    const capturedEpoch = getHomeSnapshotEpoch()
+    expect(capturedEpoch).toBeTruthy()
+    setHomeSnapshotIdentity('bob')
+    const verifiedEpoch = getHomeSnapshotEpoch()
+    expect(verifiedEpoch).not.toBe(capturedEpoch)
+    const open = vi.fn()
+    vi.stubGlobal('indexedDB', { open })
+
+    expect(await clearHomeSnapshot(capturedEpoch!)).toBe(true)
+    expect(getHomeSnapshotEpoch()).toBe(verifiedEpoch)
+    expect(window.localStorage.getItem('splice:home-snapshot-identity')).toBe(
+      'bob',
+    )
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('still invalidates a mismatched snapshot from the current epoch', async () => {
+    setHomeSnapshotIdentity('alice')
+    const capturedEpoch = getHomeSnapshotEpoch()
+    expect(capturedEpoch).toBeTruthy()
+    expect(await clearHomeSnapshot(capturedEpoch!)).toBe(true)
+    expect(getHomeSnapshotEpoch()).not.toBe(capturedEpoch)
+    expect(
+      window.localStorage.getItem('splice:home-snapshot-identity'),
+    ).toBeNull()
+  })
+})
+
 describe('durable cleanup acknowledgment', () => {
   function denyMarkers() {
     vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
@@ -229,6 +260,14 @@ describe('durable cleanup acknowledgment', () => {
     vi.spyOn(document, 'cookie', 'get').mockReturnValue('')
     vi.spyOn(document, 'cookie', 'set').mockImplementation(() => {})
   }
+  it('does not acknowledge a captured epoch when current durable eligibility is unreadable', async () => {
+    denyMarkers()
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('denied')
+    })
+    vi.stubGlobal('indexedDB', undefined)
+    expect(await clearHomeSnapshot('captured-old-epoch')).toBe(false)
+  })
   it('does not acknowledge when epoch, cookie and deletion all fail', async () => {
     denyMarkers()
     vi.stubGlobal('indexedDB', undefined)

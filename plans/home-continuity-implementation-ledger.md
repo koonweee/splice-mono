@@ -52,9 +52,9 @@
 - verified: Checks and browser validation pass; physical-iOS limitations and release status are recorded honestly.
 
 ## Delivery
-- verified: Independent source review/fix loop and all required pre-release verification. Final delivery review follows rollout.
-- pending: Commit and push implementation.
-- pending: Protected deploy workflow, image build, live rollout and health verification.
+- verified: Independent source review/fix loop and all required pre-release verification. Final independent delivery review: “No major issues remain.”
+- verified: Commit and push implementation (`a1e40ec`).
+- verified: Protected deploy workflow, image build, live rollout and health verification (frontend 0.0.129 on VPS/SG/SF).
 
 ## Verification evidence (2026-09-08)
 
@@ -62,9 +62,32 @@
 - Final isolated lifecycle run: `yarn pwa:test --channel=chromium` passed all 18 real-browser checks, including update activation, auth/logout, missing shell dependencies and old lazy chunks.
 - Workbench agent-browser checks: 320px Light, 390px OLED, and desktop Dark; unchanged data stayed at one path across 41 frames, small changes produced 26 intermediate geometries, response bursts 32, and added endpoint 27. All retained SVG identity, settled without gaps, and reduced motion updated immediately. No browser runtime errors; sessions closed.
 - Production fixture inspected at 390×844 with synthetic data, including saved offline Home; no runtime errors. The expanded production harness verifies first frames, one snapshot read, retained SVG identity at handoff, foreground requests, reconnect, held period responses, privacy invalidation and failure recovery.
-- Review/fix rounds covered startup ownership/provider continuity, retained live content during period changes, and a first-install service-worker waiting-state regression. The rollback launch harness now isolates immutable auth scenarios so a previous scenario's late401 redirect cannot cancel another launch.
+- Review/fix rounds covered startup ownership/provider continuity, retained live content during period changes, and a first-install service-worker waiting-state regression. The rollback launch harness now isolates immutable auth scenarios so a previous scenario's late 401 redirect cannot cancel another launch.
 - Physical installed-iOS termination/relaunch/resume remains unverified because no physical device is available. Native startup artwork is retained. Desktop evidence covers app-controlled frames, not the OS launch surface; this is a documented device limitation, not a claim that iOS can omit its native launch phase.
 
 - Final normal production build, `pwa:check` (15 essentials), and `pwa:launch-test` passed. `VITE_CACHED_HOME=false` production build, artifact checks and launch suite also passed; normal build restored.
-- Final `pwa:cached-home-test` passed in20.77s, including no transient first-install Update notice, synthetic Dark first-frame sampling, shared snapshot read, SVG retention/interpolation, foreground deduplication and all existing auth/storage/offline cases. Light/Dark/OLED canvas selection has executable unit coverage; multi-theme layout/motion evidence comes from workbench inspection rather than claiming automated first-frame sampling in every theme.
+- Final `pwa:cached-home-test` passed in 20.77s, including no transient first-install Update notice, synthetic Dark first-frame sampling, shared snapshot read, SVG retention/interpolation, foreground deduplication and all existing auth/storage/offline cases. Light/Dark/OLED canvas selection has executable unit coverage; multi-theme layout/motion evidence comes from workbench inspection rather than claiming automated first-frame sampling in every theme.
 - Independent whole-source review found no major release-blocking issue. Three review/fix rounds addressed startup/provider ownership, live period retention, and worker first-install state; release verification remains below.
+
+## Release
+
+- Implementation commit: `a1e40ece9a9834e4493936578fa5a35e30a4cbd6`, pushed to `main`.
+- Protected deploy workflow: [34294781127](https://github.com/koonweee/splice-mono/actions/runs/34294781127); required comparison CI: [34294793998](https://github.com/koonweee/splice-mono/actions/runs/34294793998). Both passed. [Deploy PR 293](https://github.com/koonweee/splice-mono/pull/293) merged as `3a7be4d3c74e3852ee501969fa9553cd929fa126`; deploy ancestry includes the tested implementation. Image rollout completed successfully.
+
+- Komodo frontend build `6aa0a8b1d28c58b2ef41e9d6` succeeded: image `0.0.129`, built revision `3a7be4d`.
+- Frontend-only deployments succeeded: VPS `6aa0a9ded28c58b2ef41ea14`, Singapore `6aa0aa04d28c58b2ef41ea1e`, San Francisco `6aa0aa04d28c58b2ef41ea1f`. All three containers are running and healthy.
+- VPS/SF image `sha256:3ee8183627a7598a26407c0b1ddca327645a49abdd8c3ae93b6ea159382fe989`; SG image `sha256:74ebe63cec8f4ad47e1c89b6c0a03f5035865d89d404d70af49a5ee538d37f04`. Both platform digests were matched to the successful build output without publishing build logs.
+- Public `https://splice.kw0.dev` returned 200; `/version.json` reports `mttd4el8-e89933fb-0616-4390-89c7-e6f1ec0d890f`. Its versioned shell returned 200 with local-launch marker and inline canvas; `/sw.js` returned 200 and references that exact shell.
+- Existing installed clients adopt this build through the existing explicit Update flow. No native-iOS launch guarantee is implied.
+
+- Final independent delivery review completed after rollout: “No major issues remain.” All scoped ledger entries are verified; three implementation/review/fix rounds plus final delivery review used subagents.
+
+## iOS resume follow-up (2026-09-08)
+
+- verified: Diagnose the event gap: only an observed hidden→visible pair forced fresh Home; standalone focus used hourly checks and page restoration was unhandled. This is a code-supported candidate for the physical-iOS report, not a captured device trace.
+- verified: Add standalone focus and restored-page fallbacks with burst deduplication, explicit-departure rearming, existing editor/offline/date safeguards and listener cleanup. Six hook tests plus 17 coordinator tests pass; production missing-visibility cases and direct agent-browser focus return make exactly one summary/series pair while retaining the chart.
+- verified: Fix the startup identity race exposed by the broader harness: an earlier captured snapshot must not invalidate a newer verified authentication epoch.
+- in_progress: Final checks and independent review, then push and protected production rollout. No physical iOS device is available to certify native resume event delivery.
+
+- Follow-up verification: 904 tests in124 files passed, lint0errors/25existingwarnings, typecheck and production build passed. `pwa:check`, full `pwa:cached-home-test` (21.77s) and `pwa:launch-test` (17.86s) passed. Direct agent-browser focus-only resume produced one summary/series request pair, retained the same chart, and no runtime errors; browser and fixture closed.
+- Two independent review/fix passes covered resume event ownership and the captured-snapshot identity race; neither has outstanding major source findings. Production suite initially exposed the identity race twice; the final guarded build passes the unchanged identity-switch assertions.

@@ -284,3 +284,19 @@ starts from its displayed frame. Equal points stay still, and reduced motion use
 an immediate update. Hover is unavailable during interpolation or while retained
 series is waiting for its matching response. Native iOS startup artwork is retained;
 physical process termination/relaunch still needs an actual device check.
+
+### iOS resume follow-up
+
+Returning installed apps also use window focus and persisted `pageshow` as
+foreground signals when a complete visibility pair is absent. Window blur (in
+standalone mode) and `pagehide` arm a new return. Unpaired fallback signals share
+a one-second burst window, while an observed new departure always permits the
+next return. Initial load/pageshow and ordinary repeated desktop focus remain
+on the hourly path. Offline/editor deferral and date reconciliation still belong
+to the existing refresh coordinator.
+
+Hook tests cover missing visibility events, initial load, restoration bursts,
+focus-before-visible ordering, offline reconnect and cleanup. The production
+harness injects these missing-visibility sequences and asserts exactly one fresh
+summary/series pair with the same chart element. This verifies the event handlers;
+it does not establish which events a particular physical iOS release emits.

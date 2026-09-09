@@ -29,6 +29,10 @@ beforeEach(() => {
     () => visibility,
   )
   vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online)
+  Object.defineProperty(navigator, 'standalone', {
+    configurable: true,
+    value: false,
+  })
   preferences.today = '2026-06-10'
   preferences.reconcileDate.mockReset().mockReturnValue(false)
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -76,6 +80,90 @@ async function flush() {
 }
 
 describe('foreground event ownership', () => {
+  it('refreshes standalone focus returns without visibility events and joins restoration bursts', async () => {
+    Object.defineProperty(navigator, 'standalone', { value: true })
+    const functions = reads()
+    renderHook(() => usePageRefresh('alice', 'UTC', '/home'), { wrapper })
+    act(() => window.dispatchEvent(new Event('focus')))
+    await flush()
+    functions.forEach((fn) => expect(fn).not.toHaveBeenCalled())
+    await act(async () => vi.advanceTimersByTimeAsync(2000))
+    act(() => window.dispatchEvent(new Event('focus')))
+    await flush()
+    act(() => {
+      window.dispatchEvent(
+        new PageTransitionEvent('pageshow', { persisted: true }),
+      )
+      window.dispatchEvent(new Event('focus'))
+      window.dispatchEvent(new Event('online'))
+    })
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(1))
+    // A known second departure is a new return, even inside the burst window.
+    act(() => {
+      window.dispatchEvent(new Event('blur'))
+      window.dispatchEvent(new Event('focus'))
+    })
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(2))
+  })
+  it('restores frozen pages without visibility changes and ignores initial pageshow', async () => {
+    const functions = reads()
+    const hook = renderHook(() => usePageRefresh('alice', 'UTC', '/home'), {
+      wrapper,
+    })
+    act(() => window.dispatchEvent(new PageTransitionEvent('pageshow')))
+    await flush()
+    functions.forEach((fn) => expect(fn).not.toHaveBeenCalled())
+    act(() => {
+      window.dispatchEvent(
+        new PageTransitionEvent('pagehide', { persisted: true }),
+      )
+      window.dispatchEvent(
+        new PageTransitionEvent('pageshow', { persisted: true }),
+      )
+    })
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(1))
+    await act(async () => vi.advanceTimersByTimeAsync(2000))
+    act(() =>
+      window.dispatchEvent(
+        new PageTransitionEvent('pageshow', { persisted: true }),
+      ),
+    )
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(2))
+    hook.unmount()
+    act(() => {
+      window.dispatchEvent(new PageTransitionEvent('pagehide'))
+      window.dispatchEvent(
+        new PageTransitionEvent('pageshow', { persisted: true }),
+      )
+    })
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(2))
+  })
+  it('queues focus before visible and offline standalone returns exactly once', async () => {
+    Object.defineProperty(navigator, 'standalone', { value: true })
+    const functions = reads()
+    renderHook(() => usePageRefresh('alice', 'UTC', '/home'), { wrapper })
+    changeVisibility('hidden')
+    act(() => window.dispatchEvent(new Event('focus')))
+    changeVisibility('visible')
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(1))
+    online = false
+    act(() => {
+      window.dispatchEvent(new Event('blur'))
+      window.dispatchEvent(new Event('focus'))
+    })
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(1))
+    online = true
+    act(() => window.dispatchEvent(new Event('online')))
+    await flush()
+    functions.forEach((fn) => expect(fn).toHaveBeenCalledTimes(2))
+  })
   it('ignores initial visible mount and focus duplicates, but counts each actual return', async () => {
     const functions = reads()
     renderHook(() => usePageRefresh('alice', 'UTC', '/home'), { wrapper })

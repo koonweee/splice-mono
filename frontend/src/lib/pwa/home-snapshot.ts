@@ -353,7 +353,14 @@ export async function saveHomeSnapshot(
 }
 
 /** Eligibility changes synchronously, before asynchronous data deletion. */
-export function clearHomeSnapshot(): Promise<boolean> {
+export function clearHomeSnapshot(expectedEpoch?: string): Promise<boolean> {
+  // A captured launch snapshot may outlive verification of a new identity.
+  // Its epoch was already invalidated; do not clear the newer identity marker.
+  if (expectedEpoch !== undefined) {
+    const currentEpoch = getHomeSnapshotEpoch()
+    if (currentEpoch !== null && expectedEpoch !== currentEpoch)
+      return Promise.resolve(true)
+  }
   revision += 1
   if (typeof window === 'undefined') return Promise.resolve(true)
   let durable = false

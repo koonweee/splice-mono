@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented and verified; production release in progress.
+Completed and deployed (frontend 0.0.129, 2026-09-08).
 
 ## Goal
 
