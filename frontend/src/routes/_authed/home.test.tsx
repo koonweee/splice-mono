@@ -1,5 +1,6 @@
 import { MantineProvider } from '@mantine/core'
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -223,8 +224,10 @@ beforeEach(() => {
   })
 })
 
-afterEach(() => {
+afterEach(async () => {
   cleanup()
+  // Flush deferred feature/Suspense completion before jsdom is torn down.
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
   vi.clearAllMocks()
   window.localStorage.clear()
 })

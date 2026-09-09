@@ -162,6 +162,7 @@ export function NetWorthCard({
                 loading={!hasChartData}
                 minimal
                 animate
+                transitionKey={comparisonPeriod}
                 interactive={!comparisonLoading && !chartLoading && !chartError}
                 height={180}
                 valueFormatter={(value) =>

@@ -90,6 +90,12 @@ export function PresentationProvider({
 }) {
   const [today, setToday] = useState(initial.today)
   const currentDay = useRef(today)
+  const [initialDay, setInitialDay] = useState(initial.today)
+  if (initial.today && initialDay !== initial.today) {
+    setInitialDay(initial.today)
+    setToday(initial.today)
+    currentDay.current = initial.today
+  }
   const reconcileDate = useCallback((timezone: string) => {
     let next: string
     try {
@@ -109,6 +115,11 @@ export function PresentationProvider({
   }, [])
   // Unknown legacy preferences must mask every monetary surface until migration.
   const [maskBalances, setMasked] = useState(initial.maskBalances ?? true)
+  const [initialMask, setInitialMask] = useState(initial.maskBalances)
+  if (initialMask !== initial.maskBalances) {
+    setInitialMask(initial.maskBalances)
+    if (initial.maskBalances !== null) setMasked(initial.maskBalances)
+  }
   useEffect(() => {
     if (initial.maskBalances === null) {
       let hidden = false

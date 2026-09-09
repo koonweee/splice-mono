@@ -276,7 +276,12 @@ export const pageExamples = [
       'offline',
       'refresh-failure',
     ],
-    components: ['SavedHomePreview', 'CachedHomeLaunch', 'HomeContent'],
+    components: [
+      'SavedHomePreview',
+      'CachedHomeLaunch',
+      'HomeContent',
+      'HomeContinuityHost',
+    ],
   },
   {
     id: 'page-home',

@@ -261,3 +261,26 @@ Automated/browser evidence is recorded in the implementation ledger. Physical
 installed-iOS process termination/relaunch and OS-native splash caching require
 an actual device and remain a device-only validation limitation; desktop
 Chromium service-worker cold-start tests do not certify those OS behaviors.
+
+## Home startup and refresh continuity
+
+The local shell paints an inline appearance-matched canvas before loading CSS or
+JavaScript. The client starts one shared bounded snapshot read; unresolved reads
+keep the canvas, usable snapshots render Home, and confirmed cache misses retain
+the normal launch fallback. Root suspense stays inside the document shell so the
+same Home presentation and chart survive session preparation. Its data/action
+publishers mount only after verified authentication, and durable auth invalidation
+removes the host's private inputs and retained geometry.
+
+A true hidden-to-visible return on Home requests its current summary and series
+once, including fresh data. Focus bursts join existing work. Offline/editor
+returns coalesce into one intent, and date reconciliation waits for current-date
+observers; route/identity changes discard pending intent. Other pages retain the
+hourly schedule. This reads Splice data and never starts provider synchronization.
+
+Charts paint existing real points immediately and interpolate displayed geometry
+over 400 ms. Same-period additions/removals align by date; an interrupted animation
+starts from its displayed frame. Equal points stay still, and reduced motion uses
+an immediate update. Hover is unavailable during interpolation or while retained
+series is waiting for its matching response. Native iOS startup artwork is retained;
+physical process termination/relaunch still needs an actual device check.

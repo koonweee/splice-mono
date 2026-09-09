@@ -231,3 +231,161 @@ describe('visible page refresh', () => {
     ).toBeUndefined()
   })
 })
+
+function homeRead(family: 'summary' | 'series', endDate = '2026-06-10') {
+  const queryKey = [
+    `/balance-query/dashboard-${family}`,
+    { period: 'month', endDate },
+  ]
+  const fn = vi.fn().mockResolvedValue({ version: 'new' })
+  const observer = new QueryObserver(client, {
+    ...pageReadPolicy,
+    queryKey,
+    queryFn: fn,
+    initialData: { version: 'saved' },
+    initialDataUpdatedAt: Date.now(),
+    staleTime: Infinity,
+  })
+  const unsubscribe = observer.subscribe(() => {})
+  cleanup.push(unsubscribe)
+  return { fn, observer, unsubscribe, queryKey }
+}
+describe('Home foreground intent', () => {
+  it('refreshes fresh Home reads once, ignores ordinary focus, and permits each subsequent return', async () => {
+    const summary = homeRead('summary')
+    const series = homeRead('series')
+    const detail = observe('/balance-query/balances')
+    const c = start({ home: () => ({ endDate: '2026-06-10' }) })
+    c.wake()
+    c.wake()
+    expect(summary.fn).not.toHaveBeenCalled()
+    c.foreground()
+    c.wake()
+    c.reconnect()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(summary.fn).toHaveBeenCalledTimes(1)
+    expect(series.fn).toHaveBeenCalledTimes(1)
+    expect(detail.fn).not.toHaveBeenCalled()
+    c.foreground()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(summary.fn).toHaveBeenCalledTimes(2)
+    expect(series.fn).toHaveBeenCalledTimes(2)
+  })
+  it('joins in-flight launch reads without cancellation and retries a new return despite failure backoff', async () => {
+    const summary = homeRead('summary')
+    const series = homeRead('series')
+    let finish!: () => void
+    summary.fn.mockImplementationOnce(
+      () =>
+        new Promise<{ version: string }>((resolve) => {
+          finish = () => resolve({ version: 'new' })
+        }),
+    )
+    series.fn.mockRejectedValueOnce(new Error('unavailable'))
+    const c = start({ home: () => ({ endDate: '2026-06-10' }) })
+    const request = client.refetchQueries({ queryKey: summary.queryKey })
+    c.foreground()
+    c.wake()
+    c.foreground()
+    expect(summary.fn).toHaveBeenCalledTimes(1)
+    finish()
+    await request
+    await vi.advanceTimersByTimeAsync(1)
+    c.foreground()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(summary.fn).toHaveBeenCalledTimes(2)
+    expect(series.fn).toHaveBeenCalledTimes(2)
+  })
+  it('coalesces offline returns, including fresh reads without errors, until reconnect', async () => {
+    let online = false
+    const summary = homeRead('summary')
+    const series = homeRead('series')
+    const c = start({
+      online: () => online,
+      home: () => ({ endDate: '2026-06-10' }),
+    })
+    c.foreground()
+    c.foreground()
+    c.wake()
+    expect(summary.fn).not.toHaveBeenCalled()
+    online = true
+    c.reconnect()
+    c.wake()
+    c.reconnect()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(summary.fn).toHaveBeenCalledTimes(1)
+    expect(series.fn).toHaveBeenCalledTimes(1)
+  })
+  it('retains deferred intent until editor release and discards it on leaving Home or stopping', async () => {
+    let editing = true
+    let onHome = true
+    const summary = homeRead('summary')
+    homeRead('series')
+    const c = start({
+      defer: () => editing,
+      home: () => (onHome ? { endDate: '2026-06-10' } : null),
+    })
+    c.foreground()
+    c.foreground()
+    editing = false
+    c.resumeDeferred()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(summary.fn).toHaveBeenCalledTimes(1)
+    editing = true
+    c.foreground()
+    onHome = false
+    c.wake()
+    onHome = true
+    editing = false
+    c.resumeDeferred()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(summary.fn).toHaveBeenCalledTimes(1)
+    editing = true
+    c.foreground()
+    c.stop()
+    editing = false
+    c.resumeDeferred()
+    c.reconnect()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(summary.fn).toHaveBeenCalledTimes(1)
+  })
+  it('waits through date reconciliation and joins newly started current-date reads', async () => {
+    let endDate = '2026-06-10'
+    const oldSummary = homeRead('summary')
+    const oldSeries = homeRead('series')
+    const reconcileDate = vi.fn().mockReturnValue(false)
+    const c = start({ home: () => ({ endDate }), reconcileDate })
+    reconcileDate.mockReturnValueOnce(true)
+    c.foreground()
+    c.wake()
+    c.reconnect()
+    expect(oldSummary.fn).not.toHaveBeenCalled()
+    expect(oldSeries.fn).not.toHaveBeenCalled()
+    endDate = '2026-06-11'
+    oldSummary.unsubscribe()
+    oldSeries.unsubscribe()
+    const currentSummary = homeRead('summary', endDate)
+    const currentSeries = homeRead('series', endDate)
+    await client.refetchQueries({ queryKey: currentSummary.queryKey })
+    await client.refetchQueries({ queryKey: currentSeries.queryKey })
+    c.wake()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(currentSummary.fn).toHaveBeenCalledTimes(1)
+    expect(currentSeries.fn).toHaveBeenCalledTimes(1)
+    expect(oldSummary.fn).not.toHaveBeenCalled()
+  })
+  it('does not prefetch Home on other pages or refresh disabled dashboard observers', async () => {
+    const summary = homeRead('summary')
+    const series = homeRead('series')
+    series.observer.setOptions({ ...series.observer.options, enabled: false })
+    let onHome = false
+    const c = start({ home: () => (onHome ? { endDate: '2026-06-10' } : null) })
+    c.foreground()
+    expect(summary.fn).not.toHaveBeenCalled()
+    onHome = true
+    c.foreground()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(summary.fn).toHaveBeenCalledTimes(1)
+    expect(series.fn).not.toHaveBeenCalled()
+  })
+})

@@ -101,6 +101,44 @@ describe('native PWA service worker lifecycle', () => {
     expect(reload).not.toHaveBeenCalled()
   })
 
+  it('does not latch an update while the first worker passes through waiting', async () => {
+    const worker = new Worker('installing')
+    registration.active = null
+    registration.installing = worker
+    container.controller = null
+    const ready = getServiceWorkerRegistration()
+    await flush()
+    registration.installing = null
+    registration.waiting = worker
+    worker.change('installed')
+    expect(getPwaUpdateState()).toMatchObject({
+      needRefresh: false,
+      status: 'registering',
+    })
+    registration.waiting = null
+    registration.active = worker
+    container.controller = worker
+    worker.change('activated')
+    container.dispatchEvent(new Event('controllerchange'))
+    await ready
+    expect(getPwaUpdateState()).toMatchObject({
+      needRefresh: false,
+      status: 'ready',
+    })
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('still reports a genuine waiting replacement on an uncontrolled page', async () => {
+    container.controller = null
+    registration.waiting = new Worker('installed')
+    await getServiceWorkerRegistration()
+    expect(getPwaUpdateState()).toMatchObject({
+      needRefresh: true,
+      status: 'update-waiting',
+    })
+    expect(reload).not.toHaveBeenCalled()
+  })
+
   it('bounds a stalled register call and allows a fresh retry without accepting the late attempt', async () => {
     const late = deferred<Registration>()
     container.register.mockReturnValueOnce(late.promise)

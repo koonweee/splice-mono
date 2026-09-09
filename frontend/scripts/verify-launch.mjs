@@ -124,34 +124,38 @@ try {
   }
   const browser = await chromium.launch()
   try {
-    const page = await browser.newPage({
-      viewport: { width: 430, height: 932 },
-      serviceWorkers: 'block',
-    })
     const errors = []
-    page.on('pageerror', (error) => errors.push(error.message))
+    // Each launch scenario owns a fixed identity. Changing a shared token while
+    // Alice's background reads are still running can trigger an auth redirect
+    // that races the next page.goto(), rather than testing the intended launch.
+    const createLaunchPage = async (token, sessionGate = Promise.resolve()) => {
+      const launchPage = await browser.newPage({
+        viewport: { width: 430, height: 932 },
+        serviceWorkers: 'block',
+      })
+      launchPage.on('pageerror', (error) => errors.push(error.message))
+      await launchPage.route('**/*', async (route) => {
+        const url = new URL(route.request().url())
+        if (url.hostname !== 'localhost' || url.port !== '3000')
+          return route.continue()
+        if (url.pathname === '/user/me') await sessionGate
+        const response = await fetch(
+          `http://127.0.0.1:${apiPort}${url.pathname}${url.search}`,
+          { headers: { Cookie: `splice_access_token=${token}` } },
+        )
+        await route.fulfill({
+          status: response.status,
+          contentType: 'application/json',
+          body: await response.text(),
+        })
+      })
+      return launchPage
+    }
     let releaseSession
-    let sessionToken = 'alice'
     const sessionGate = new Promise((resolve) => {
       releaseSession = resolve
     })
-    await page.route('**/*', async (route) => {
-      const url = new URL(route.request().url())
-      if (url.hostname !== 'localhost' || url.port !== '3000')
-        return route.continue()
-      if (url.pathname === '/user/me') await sessionGate
-      const response = await fetch(
-        `http://127.0.0.1:${apiPort}${url.pathname}${url.search}`,
-        {
-          headers: { Cookie: `splice_access_token=${sessionToken}` },
-        },
-      )
-      await route.fulfill({
-        status: response.status,
-        contentType: 'application/json',
-        body: await response.text(),
-      })
-    })
+    const page = await createLaunchPage('alice', sessionGate)
     // Browser API resolution uses localhost:3000 for a localhost preview.
     await page.goto(`http://localhost:${port}`)
     await page
@@ -162,17 +166,17 @@ try {
     releaseSession()
     await page.waitForURL('**/home')
     await page.getByText('ACCOUNT_ALICE', { exact: true }).first().waitFor()
-    sessionToken = 'invalid'
-    await page.goto(`http://localhost:${port}`)
-    await page.getByRole('button', { name: /Google/ }).waitFor()
-    assert.equal(await page.getByText('ACCOUNT_ALICE').count(), 0)
-    sessionToken = 'unavailable'
-    await page.goto(`http://localhost:${port}`)
-    await page
+    const anonymous = await createLaunchPage('invalid')
+    await anonymous.goto(`http://localhost:${port}`)
+    await anonymous.getByRole('button', { name: /Google/ }).waitFor()
+    assert.equal(await anonymous.getByText('ACCOUNT_ALICE').count(), 0)
+    const unavailable = await createLaunchPage('unavailable')
+    await unavailable.goto(`http://localhost:${port}`)
+    await unavailable
       .locator('button[data-size="lg"]')
       .filter({ hasText: /^Retry$/ })
       .waitFor()
-    assert.equal(await page.getByText('ACCOUNT_ALICE').count(), 0)
+    assert.equal(await unavailable.getByText('ACCOUNT_ALICE').count(), 0)
     assert.deepEqual(errors, [], 'Launch must hydrate without errors')
 
     // Direct entry must reserve the same known page controls before hydration.

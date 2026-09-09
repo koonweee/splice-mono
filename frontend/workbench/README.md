@@ -578,6 +578,9 @@ and service-worker/cache behavior; fixture module holds do not prove those.
 
 `page-home` adds `fresh`, `hourly-refreshing`, `offline`, `refresh-failure`, and
 `retrying` states using the real `HeaderRefreshStatus` inside `AppShellLayout`.
+The refreshing states use the original visualization's centered gradient pulse:
+a full-width 1px edge fading between 15% and 60% opacity over two seconds.
+Reduced motion keeps a static gradient at 30% opacity.
 Retry simulates 2.5 seconds of work and returns to the failure fixture. These
 fixtures verify presentation; persisted launch and hourly timing require the
 production lifecycle tests.
@@ -609,3 +612,22 @@ accessibility tree. Missing series retains the chart region with its existing
 empty-history message; no-snapshot shows the launch screen. Browser runtime
 errors were empty and the isolated browser was closed. Workbench tests cover
 initial saved masking plus cookie/storage isolation.
+
+## Chart refresh continuity
+
+`history` adds `unchanged-refresh`, `small-change`, `new-date`, `period-change`,
+and `response-burst`. Click Refresh series to update the same production Chart;
+the burst issues another response after 100ms. The chart uses normalized plotted
+coordinates with date alignment and a 400ms transition, rather than Recharts
+index animation. Real data paints immediately and tooltips remain disabled while
+intermediate geometry is displayed. Final point money and dates stay exact.
+
+Browser inspected real SVG paths on 2026-09-08: unchanged refresh at 390px OLED
+held the same path across 41 sampled frames; small-value change at desktop Dark
+produced 26 geometries; a response burst at 320px Light produced 32 geometries;
+a new endpoint at desktop produced 27. No sampled path disappeared, SVG identity
+was retained, and changed paths settled. Reduced-motion period change at 390px
+OLED had one geometry after first paint. Inspected phone/desktop screenshots and
+intermediate path coordinates; no browser runtime errors. This validates Chart
+internals; production cached-to-verified host continuity is covered separately by
+the synthetic PWA harness.

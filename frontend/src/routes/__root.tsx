@@ -12,12 +12,17 @@ import mantineCss from '@mantine/core/styles.css?url'
 import mantineDatesCss from '@mantine/dates/styles.css?url'
 import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import mantineReactTableCss from 'mantine-react-table/styles.css?url'
+import { useSyncExternalStore } from 'react'
 import appCss from '../styles.css?url'
-import { resolveAppearance } from '../lib/design-system/appearance'
+import {
+  DEFAULT_APPEARANCE,
+  resolveAppearance,
+} from '../lib/design-system/appearance'
 import { BASES } from '../lib/design-system/bases'
 import {
   PresentationProvider,
   getPresentationPreferences,
+  readPresentationCookies,
 } from '../lib/presentation-preferences'
 import { SessionOutcomeContext, sessionQueryOptions } from '../lib/session'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
@@ -28,11 +33,19 @@ import {
   isHomeLaunchUrl,
   isLocalLaunch,
 } from '../lib/pwa/launch-mode'
-import { clearHomeSnapshot, readHomeSnapshot } from '../lib/pwa/home-snapshot'
+import { clearHomeSnapshot } from '../lib/pwa/home-snapshot'
 import {
   dashboardSeriesOptions,
   dashboardSummaryOptions,
 } from '../lib/queries/dashboard'
+import {
+  getHomeLaunch,
+  getServerHomeLaunch,
+  prepareHomeLaunch,
+  subscribeHomeLaunch,
+} from '../lib/pwa/home-launch'
+import { HomeContinuityHost } from '../components/pages/HomeContinuityHost'
+import { readLaunchAppearance } from '../lib/pwa/launch-canvas'
 import { TimePeriod } from '../lib/types'
 import { isValidTimePeriod } from '../lib/route-search'
 import { appleStartupImages } from '../lib/pwa/startup-images'
@@ -71,6 +84,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   ssr: ({ location }) => location.pathname !== '/',
   shellComponent: DocumentShell,
   pendingComponent: CachedHomeLaunch,
+  pendingMs: isLocalLaunch ? 0 : undefined,
+  wrapInSuspense: isLocalLaunch || undefined,
   beforeLoad: async ({
     context,
   }): Promise<{
@@ -84,7 +99,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       !localHomePrepared &&
       cachedHomeEnabled &&
       isHomeLaunchUrl(new URL(window.location.href))
-        ? readHomeSnapshot()
+        ? prepareHomeLaunch()
         : Promise.resolve(null)
     if (typeof window !== 'undefined' && !cachedHomeEnabled) clearHomeSnapshot()
     let sessionOutcome: SessionOutcome = 'authenticated'
@@ -284,28 +299,67 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function DocumentShell({ children }: { children: ReactNode }) {
   const data = Route.useLoaderData()
+  const launch = useSyncExternalStore(
+    subscribeHomeLaunch,
+    getHomeLaunch,
+    getServerHomeLaunch,
+  )
+  const initialPresentation = data?.presentation ?? {
+    appearance:
+      readLaunchAppearance() ??
+      launch.snapshot?.presentation.appearance ??
+      (isLocalLaunch
+        ? DEFAULT_APPEARANCE
+        : { mode: 'oled' as const, accent: null }),
+    today:
+      launch.snapshot?.endDate ??
+      (typeof document !== 'undefined'
+        ? readPresentationCookies(document.cookie).today
+        : ''),
+    maskBalances:
+      typeof document !== 'undefined'
+        ? (readPresentationCookies(document.cookie).maskBalances ??
+          launch.snapshot?.presentation.maskBalances ??
+          true)
+        : true,
+  }
   const preset = resolveAppearance(
     // The shell also renders before loaders run on the client-only launch path.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    data?.presentation.appearance ?? {
-      mode: 'oled',
-      accent: null,
-      monospaceAmounts: false,
-    },
+
+    initialPresentation.appearance,
   )
   return (
     <html
       lang="en"
       {...mantineHtmlProps}
       data-mantine-color-scheme={preset.colorScheme}
+      style={
+        {
+          background: 'var(--mantine-color-body, var(--splice-launch-canvas))',
+          '--splice-launch-canvas': preset.colors.canvas,
+        } as React.CSSProperties
+      }
     >
       <head>
         <ColorSchemeScript forceColorScheme={preset.colorScheme} />
         <HeadContent />
         {developmentStyles && <style>{developmentStyles}</style>}
       </head>
-      <body>
-        {children}
+      <body
+        style={{
+          background: 'var(--mantine-color-body, var(--splice-launch-canvas))',
+        }}
+      >
+        <AppThemeProvider
+          initialAppearance={initialPresentation.appearance}
+          restoreStoredAppearance={!isLocalLaunch}
+          authenticated={Boolean(data?.authenticated)}
+        >
+          <PresentationProvider initial={initialPresentation}>
+            {isLocalLaunch && <HomeContinuityHost />}
+            {children}
+          </PresentationProvider>
+        </AppThemeProvider>
         <Scripts />
       </body>
     </html>
@@ -313,23 +367,16 @@ function DocumentShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  const { presentation, sessionOutcome, authenticated, savedHomeAvailable } =
+  const { sessionOutcome, authenticated, savedHomeAvailable } =
     Route.useLoaderData()
   if (savedHomeAvailable) return <CachedHomeLaunch failed />
   return (
-    <AppThemeProvider
-      initialAppearance={presentation.appearance}
-      authenticated={authenticated}
-    >
-      <SessionOutcomeContext.Provider value={sessionOutcome}>
-        <PresentationProvider initial={presentation}>
-          <PrivateSessionBoundary fallback={null}>
-            <Notifications />
-          </PrivateSessionBoundary>
-          <PwaLifecycle offlineStatusOwnedByHeader={authenticated} />
-          <Outlet />
-        </PresentationProvider>
-      </SessionOutcomeContext.Provider>
-    </AppThemeProvider>
+    <SessionOutcomeContext.Provider value={sessionOutcome}>
+      <PrivateSessionBoundary fallback={null}>
+        <Notifications />
+      </PrivateSessionBoundary>
+      <PwaLifecycle offlineStatusOwnedByHeader={authenticated} />
+      <Outlet />
+    </SessionOutcomeContext.Provider>
   )
 }

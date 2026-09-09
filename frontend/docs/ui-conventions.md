@@ -457,7 +457,8 @@ errors, missing series, failed new filters and mutation failures remain local
 and actionable. The default stays `local`.
 
 `AppShellLayout` accepts presentational `refreshStatus` and `onRetryRefresh`
-inputs. The header divider hosts a delayed, subtle edge animation; reduced
+inputs. The header divider hosts a delayed, subtle full-width gradient, brightest
+at the center, pulsing in opacity every two seconds without lateral motion; reduced
 motion uses a static edge. A reserved title-adjacent slot holds offline/failure
 feedback, with a focus/hover tooltip and tap/keyboard detail offering Retry.
 Status changes preserve header and content geometry; networking stays with the

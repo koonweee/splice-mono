@@ -9,6 +9,7 @@ import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
+import { launchCanvasBootstrap } from './src/lib/pwa/launch-canvas'
 import { OFFLINE_COLORS } from './src/lib/design-system/offline'
 import { spliceCss } from './vite-css'
 import {
@@ -69,7 +70,7 @@ const config = defineConfig({
           this.emitFile({
             type: 'asset',
             fileName: shell,
-            source: `<!doctype html><html lang="en" data-splice-launch="local"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#000000"><title>Splice</title>${styles.map((output) => `<link rel="stylesheet" href="/${output.fileName}">`).join('')}</head><body><script type="module" src="/${entry.fileName}"></script></body></html>`,
+            source: `<!doctype html><html lang="en" data-splice-launch="local"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#000000"><title>Splice</title>${launchCanvasBootstrap}${styles.map((output) => `<link rel="stylesheet" href="/${output.fileName}">`).join('')}</head><body><script type="module" src="/${entry.fileName}"></script></body></html>`,
           })
           essentialAssets.add(shell)
         }

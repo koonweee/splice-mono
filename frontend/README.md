@@ -383,3 +383,12 @@ writes/restoration. Updated clients clear their snapshot store and use network
 launch. An already-offline older client needs to receive the updated release
 before rollback can affect it. See [PWA validation](docs/pwa-validation.md) for
 reproducible checks and device limitations.
+
+Home foreground returns refresh the current dashboard summary and series once,
+even while fresh. Background data remains visible, with the centered header pulse;
+o bank/provider sync is scheduled. Cached launch now shares its snapshot read and
+keeps Home's presentation mounted into verified mode. The public HTML paints the
+saved appearance before JavaScript, while graph updates interpolate actual prior
+geometry rather than replaying placeholder curves. See
+[continuity validation](docs/pwa-validation.md#home-startup-and-refresh-continuity)
+for browser and native-device boundaries.

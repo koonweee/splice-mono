@@ -11,6 +11,8 @@ const money = (amount) => ({
   money: { amount: String(amount), currency: 'USD' },
   sign: 'positive',
 })
+let seriesRevision = 0
+const invalidDateRequests = []
 const api = createServer((req, res) => {
   const url = new URL(req.url, 'http://api.test')
   const token = /splice_access_token=([^;]+)/.exec(
@@ -35,9 +37,17 @@ const api = createServer((req, res) => {
   const range = {
     period: url.searchParams.get('period') ?? 'month',
     startDate: '2026-01-01',
-    endDate: url.searchParams.get('endDate'),
+    endDate:
+      url.searchParams.get('endDate') ?? new Date().toISOString().slice(0, 10),
     reportingCurrency: 'USD',
     generatedAt: new Date().toISOString(),
+  }
+  if (!Number.isFinite(Date.parse(`${range.endDate}T00:00:00Z`))) {
+    invalidDateRequests.push(req.url)
+    console.error('Invalid synthetic dashboard range:', req.url, range)
+    res.statusCode = 400
+    res.end('{}')
+    return
   }
   if (url.pathname === '/user/me') {
     res.end(
@@ -84,7 +94,17 @@ const api = createServer((req, res) => {
     res.end(
       JSON.stringify({
         ...range,
-        points: [{ date: range.endDate, netWorth: money(123456) }],
+        points: [0, 1, 2, 3].map((index) => ({
+          date: new Date(
+            Date.parse(`${range.endDate}T00:00:00Z`) - (3 - index) * 86400000,
+          )
+            .toISOString()
+            .slice(0, 10),
+          netWorth: money(
+            [120000, 122000, 121000, 123456][index] +
+              (index === 2 ? seriesRevision * 100 : 0),
+          ),
+        })),
       }),
     )
   } else res.end('[]')
@@ -201,8 +221,10 @@ try {
     let sessionGate = Promise.resolve()
     let heldRequests = 0
     let dashboardGate = Promise.resolve()
+    let seriesGate = Promise.resolve()
     let failDashboard = false
     let summaryRequests = 0
+    let seriesRequests = 0
     const apiPaths = []
     context.on('page', (page) =>
       page.on('pageerror', (error) => errors.push(error.message)),
@@ -214,12 +236,14 @@ try {
       const url = new URL(route.request().url())
       apiPaths.push(url.pathname)
       if (url.pathname === '/balance-query/dashboard-summary') summaryRequests++
+      if (url.pathname === '/balance-query/dashboard-series') seriesRequests++
       if (offline) return route.abort('internetdisconnected')
       if (url.pathname === '/user/me') {
         heldRequests++
         await sessionGate
       }
       if (url.pathname.startsWith('/balance-query/')) await dashboardGate
+      if (url.pathname === '/balance-query/dashboard-series') await seriesGate
       if (failDashboard && url.pathname === '/balance-query/dashboard-summary')
         return route.fulfill({
           status: 503,
@@ -240,6 +264,17 @@ try {
         .catch(() => {})
     })
     let page = await context.newPage()
+    await page.addInitScript(() => {
+      window.__initialInstallUpdateNotice = false
+      new MutationObserver(() => {
+        if (document.body?.textContent?.includes('Update available'))
+          window.__initialInstallUpdateNotice = true
+      }).observe(document, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      })
+    })
     await page.goto(origin)
     await page.getByText('ACCOUNT_ALICE', { exact: true }).first().waitFor()
     await page.waitForFunction(() =>
@@ -257,6 +292,17 @@ try {
       'Verified Home must create a persistent snapshot',
     )
     assert.ok(saved.series, 'Successful series must persist independently')
+    await page.waitForTimeout(300)
+    assert.equal(
+      await page.getByText('Update available', { exact: true }).count(),
+      0,
+      'Initial same-build service worker activation must not show an update notice',
+    )
+    assert.equal(
+      await page.evaluate(() => window.__initialInstallUpdateNotice),
+      false,
+      'Initial installation must not briefly flash an update notice',
+    )
     console.log(
       'PASS: online Home seeds bounded snapshot with summary and series',
     )
@@ -268,7 +314,50 @@ try {
     heldRequests = 0
     await page.close()
     page = await context.newPage()
-    await page.goto(`${origin}/home`, { waitUntil: 'domcontentloaded' })
+    await page.addInitScript(() => {
+      const evidence = (window.__launchEvidence = {
+        frames: [],
+        branded: false,
+        snapshotReads: 0,
+      })
+      const transaction = IDBDatabase.prototype.transaction
+      IDBDatabase.prototype.transaction = function (stores, mode, options) {
+        if (
+          this.name === 'splice-home-snapshot' &&
+          (mode === undefined || mode === 'readonly')
+        )
+          evidence.snapshotReads++
+        return transaction.call(this, stores, mode, options)
+      }
+      new MutationObserver(() => {
+        if (
+          document.body?.textContent?.includes(
+            'Your personal finance dashboard',
+          ) ||
+          document.body?.textContent?.includes('Checking session')
+        )
+          evidence.branded = true
+      }).observe(document, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      })
+      const frame = () => {
+        if (document.documentElement && document.body)
+          evidence.frames.push({
+            root: getComputedStyle(document.documentElement).backgroundColor,
+            body: getComputedStyle(document.body).backgroundColor,
+            saved: Boolean(
+              document.querySelector('[inert][aria-label^="Saved Home"]'),
+            ),
+          })
+        if (evidence.frames.length < 300) requestAnimationFrame(frame)
+      }
+      requestAnimationFrame(frame)
+    })
+    const coldResponse = await page.goto(`${origin}/home`, {
+      waitUntil: 'domcontentloaded',
+    })
     await page
       .locator('[inert][aria-label^="Saved Home"]')
       .waitFor()
@@ -287,9 +376,13 @@ try {
         })
         throw error
       })
-    assert.equal(
-      await page.locator('html').getAttribute('data-splice-launch'),
-      'local',
+    assert.ok(
+      coldResponse?.fromServiceWorker(),
+      'Cold navigation uses installed service worker',
+    )
+    assert.ok(
+      (await coldResponse.text()).includes('data-splice-launch="local"'),
+      'Cold navigation response is the generic local shell',
     )
     assert.ok(
       heldRequests > 0,
@@ -300,6 +393,54 @@ try {
       await page.getByText('Checking session…', { exact: true }).count(),
       0,
     )
+    const savedChart = page.locator('svg.recharts-surface').first()
+    await savedChart.waitFor()
+    await page.waitForTimeout(180)
+    const savedChartHandle = await savedChart.elementHandle()
+    const savedPath = await savedChart
+      .locator('path.recharts-area-curve')
+      .first()
+      .getAttribute('d')
+    const initialEvidence = await page.evaluate(() => window.__launchEvidence)
+    assert.equal(
+      initialEvidence.branded,
+      false,
+      'Usable snapshot must never mount branded/checking-session splash',
+    )
+    assert.equal(
+      initialEvidence.snapshotReads,
+      1,
+      'Launch bootstrap and presenter share one snapshot read',
+    )
+    assert.ok(initialEvidence.frames.length > 0)
+    assert.ok(
+      initialEvidence.frames.every((frame) => {
+        const white = 'rgb(255, 255, 255)'
+        const transparent = 'rgba(0, 0, 0, 0)'
+        return (
+          frame.body !== white &&
+          !(
+            frame.body === transparent &&
+            (frame.root === transparent || frame.root === white)
+          )
+        )
+      }),
+      'Dark cached launch must never paint a white/default transparent canvas',
+    )
+    await page.evaluate(() => {
+      window.__handoffPaths = []
+      window.__recordHandoff = true
+      const sample = () => {
+        if (!window.__recordHandoff) return
+        window.__handoffPaths.push(
+          document
+            .querySelector('path.recharts-area-curve')
+            ?.getAttribute('d') ?? null,
+        )
+        requestAnimationFrame(sample)
+      }
+      sample()
+    })
     let releaseFirstDashboard
     dashboardGate = new Promise((resolve) => {
       releaseFirstDashboard = resolve
@@ -328,10 +469,190 @@ try {
       'PASS: cold document paints local saved Home before held session, then live handoff preserves masking',
     )
 
+    await page.waitForTimeout(350)
+    assert.equal(
+      await savedChartHandle.evaluate((element) => element.isConnected),
+      true,
+      'Saved-to-live handoff retains actual chart SVG identity',
+    )
+    const handoffPaths = await page.evaluate(() => {
+      window.__recordHandoff = false
+      return window.__handoffPaths
+    })
+    assert.ok(savedPath && handoffPaths.length > 1)
+    assert.ok(
+      handoffPaths.every((path) => path === savedPath),
+      'Identical saved/live data must not move, replay entrance motion, or disappear',
+    )
+    console.log(
+      'PASS: first cached content avoids branded/white frames, shares one read, and retains identical chart DOM/geometry through handoff',
+    )
+
+    const foreground = async () =>
+      page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          get: () => 'hidden',
+        })
+        document.dispatchEvent(new Event('visibilitychange'))
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          get: () => 'visible',
+        })
+        document.dispatchEvent(new Event('visibilitychange'))
+        window.dispatchEvent(new Event('focus'))
+        window.dispatchEvent(new Event('focus'))
+      })
+    const beforeForeground = {
+      summary: summaryRequests,
+      series: seriesRequests,
+    }
+    let releaseForeground
+    dashboardGate = new Promise((resolve) => {
+      releaseForeground = resolve
+    })
+    await foreground()
+    for (
+      let n = 0;
+      n < 30 &&
+      (summaryRequests === beforeForeground.summary ||
+        seriesRequests === beforeForeground.series);
+      n++
+    )
+      await pause(50)
+    assert.equal(
+      summaryRequests,
+      beforeForeground.summary + 1,
+      'Fresh Home foreground reads summary exactly once',
+    )
+    assert.equal(
+      seriesRequests,
+      beforeForeground.series + 1,
+      'Fresh Home foreground reads series exactly once',
+    )
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'))
+      window.dispatchEvent(new Event('online'))
+    })
+    await pause(100)
+    assert.equal(
+      summaryRequests,
+      beforeForeground.summary + 1,
+      'Focus/reconnect burst joins foreground work',
+    )
+    assert.equal(seriesRequests, beforeForeground.series + 1)
+    releaseForeground()
+    await pause(350)
+    assert.equal(
+      await savedChartHandle.evaluate((element) => element.isConnected),
+      true,
+    )
+    assert.equal(
+      await savedChart
+        .locator('path.recharts-area-curve')
+        .first()
+        .getAttribute('d'),
+      savedPath,
+      'Identical foreground data keeps path stable',
+    )
+
+    await page.evaluate(() => {
+      window.__motionPaths = []
+      window.__recordMotion = true
+      const sample = () => {
+        if (!window.__recordMotion) return
+        window.__motionPaths.push(
+          document
+            .querySelector('path.recharts-area-curve')
+            ?.getAttribute('d') ?? null,
+        )
+        requestAnimationFrame(sample)
+      }
+      sample()
+    })
+    seriesRevision++
+    const beforeChanged = { summary: summaryRequests, series: seriesRequests }
+    await foreground()
+    for (let n = 0; n < 30 && seriesRequests === beforeChanged.series; n++)
+      await pause(50)
+    await pause(600)
+    const motionPaths = await page.evaluate(() => {
+      window.__recordMotion = false
+      return window.__motionPaths
+    })
+    assert.equal(
+      summaryRequests,
+      beforeChanged.summary + 1,
+      'Distinct new foreground remains eligible while fresh',
+    )
+    assert.equal(seriesRequests, beforeChanged.series + 1)
+    const uniquePaths = [...new Set(motionPaths)]
+    assert.ok(
+      !uniquePaths.includes(null),
+      'Refresh must retain plotted geometry continuously',
+    )
+    assert.ok(
+      uniquePaths.length > 2,
+      'Changed series must expose intermediate SVG geometry, not jump directly to final path',
+    )
+    assert.notEqual(
+      motionPaths.at(-1),
+      savedPath,
+      'Changed data must settle to changed geometry',
+    )
+    assert.equal(
+      await savedChartHandle.evaluate((element) => element.isConnected),
+      true,
+    )
+    console.log(
+      'PASS: foreground requests fresh Home once, deduplicates event bursts, and changed chart values interpolate through real intermediate paths',
+    )
+
+    const beforeOfflineForeground = {
+      summary: summaryRequests,
+      series: seriesRequests,
+    }
+    offline = true
+    await context.setOffline(true)
+    await foreground()
+    await pause(100)
+    assert.equal(
+      summaryRequests,
+      beforeOfflineForeground.summary,
+      'Offline foreground queues intent without making reads',
+    )
+    assert.equal(seriesRequests, beforeOfflineForeground.series)
+    offline = false
+    await context.setOffline(false)
+    for (
+      let n = 0;
+      n < 30 && seriesRequests === beforeOfflineForeground.series;
+      n++
+    )
+      await pause(50)
+    await pause(200)
+    assert.equal(
+      summaryRequests,
+      beforeOfflineForeground.summary + 1,
+      'Reconnect consumes fresh pending Home foreground once',
+    )
+    assert.equal(seriesRequests, beforeOfflineForeground.series + 1)
+    console.log(
+      'PASS: offline foreground coalesces pending Home intent and reconnect consumes it once',
+    )
+
     let releasePeriod
     dashboardGate = new Promise((resolve) => {
       releasePeriod = resolve
     })
+    let releasePeriodSeries
+    seriesGate = new Promise((resolve) => {
+      releasePeriodSeries = resolve
+    })
+    const beforePeriodPath = await savedChart
+      .locator('path.recharts-area-curve')
+      .first()
+      .getAttribute('d')
     const beforePeriodRequests = summaryRequests
     const liveHeader = await page.locator('header').elementHandle()
     await page.getByRole('button', { name: 'Week', exact: true }).click()
@@ -357,11 +678,52 @@ try {
       await page.getByRole('button', { name: 'Week', exact: true }).isEnabled(),
       true,
     )
+    assert.equal(
+      await savedChartHandle.evaluate((element) => element.isConnected),
+      true,
+      'Held new-period summary retains the current live SVG',
+    )
+    assert.equal(
+      await savedChart
+        .locator('path.recharts-area-curve')
+        .first()
+        .getAttribute('d'),
+      beforePeriodPath,
+      'Held new-period summary retains actual current geometry',
+    )
     releasePeriod()
     await page.waitForURL('**period=week')
+    await page.waitForTimeout(200)
+    assert.equal(
+      await page
+        .getByRole('button', { name: 'Week', exact: true })
+        .getAttribute('aria-pressed'),
+      'true',
+      'Retained live content uses the currently selected period controls',
+    )
+    assert.equal(
+      await page.locator('[inert][aria-label^="Saved Home"]').count(),
+      0,
+      'Held new-period series does not restore read-only saved launch',
+    )
+    assert.equal(
+      await savedChartHandle.evaluate((element) => element.isConnected),
+      true,
+      'Summary-only arrival retains the current live SVG while series is held',
+    )
+    assert.equal(
+      await savedChart
+        .locator('path.recharts-area-curve')
+        .first()
+        .getAttribute('d'),
+      beforePeriodPath,
+      'Summary-only arrival does not replace actual geometry with a placeholder',
+    )
+    releasePeriodSeries()
+    await page.waitForTimeout(500)
     await page.getByText('ACCOUNT_ALICE', { exact: true }).first().waitFor()
     console.log(
-      'PASS: held period-change read retains verified live page and never re-enters cached launch',
+      'PASS: independently held new-period summary/series retain live SVG/geometry and current controls without cached-launch regression',
     )
 
     await page.close()
@@ -593,6 +955,39 @@ try {
       'PASS: confirmed anonymous response purges persisted private Home',
     )
 
+    token = 'alice'
+    let releaseStalledSession
+    sessionGate = new Promise((resolve) => {
+      releaseStalledSession = resolve
+    })
+    const stalled = await context.newPage()
+    await stalled.addInitScript(() => {
+      const open = indexedDB.open.bind(indexedDB)
+      indexedDB.open = (name, version) =>
+        name === 'splice-home-snapshot'
+          ? new EventTarget()
+          : open(name, version)
+    })
+    const stalledSessionBefore = heldRequests
+    await stalled.goto(`${origin}/home`, { waitUntil: 'domcontentloaded' })
+    await stalled
+      .getByText('Checking session…', { exact: true })
+      .waitFor({ timeout: 2000 })
+    assert.ok(
+      heldRequests > stalledSessionBefore,
+      'Session validation starts independently while snapshot storage stalls',
+    )
+    assert.equal(
+      await stalled.getByText('ACCOUNT_ALICE', { exact: true }).count(),
+      0,
+    )
+    releaseStalledSession()
+    await stalled.getByText('ACCOUNT_ALICE', { exact: true }).first().waitFor()
+    await stalled.close()
+    console.log(
+      'PASS: stalled snapshot storage reaches bounded fallback while session validation proceeds independently',
+    )
+
     const denied = await browser.newContext({ serviceWorkers: 'allow' })
     denied.on('page', (p) =>
       p.on('pageerror', (error) => errors.push(error.message)),
@@ -624,6 +1019,11 @@ try {
       .waitFor()
     await denied.close()
     console.log('PASS: denied snapshot storage falls back to online launch')
+    assert.deepEqual(
+      invalidDateRequests,
+      [],
+      'Dashboard reads must never use empty or invalid dates',
+    )
     assert.deepEqual(
       errors,
       [],

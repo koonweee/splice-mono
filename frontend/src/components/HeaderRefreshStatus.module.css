@@ -26,26 +26,31 @@
 .edge::after {
   content: '';
   display: block;
-  width: 35%;
+  width: 100%;
   height: 100%;
-  background: var(--splice-chart-color);
-  opacity: 0.45;
-  animation: header-refresh 2.4s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--splice-chart-color) 48%,
+    transparent 100%
+  );
+  opacity: 0.6;
+  animation: header-refresh 2s ease-in-out infinite;
 }
 
 @keyframes header-refresh {
-  from {
-    transform: translateX(-100%);
+  0%,
+  100% {
+    opacity: 0.15;
   }
-  to {
-    transform: translateX(386%);
+  50% {
+    opacity: 0.6;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .edge::after {
     animation: none;
-    width: 100%;
     opacity: 0.3;
   }
 }
