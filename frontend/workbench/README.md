@@ -490,6 +490,12 @@ Home headline net worth uses whole-currency formatting, including hovered histor
 values; percentage popovers retain exact cents. The comparison percentage and
 its period label use a 6px gap. Review in page-home or all-pages.
 
+The Home net worth graph reaches both content-area edges at every viewport width,
+including tablets and desktops. The ready chart and initial data/module-loading
+silhouettes share the same page-inset bleed. Compare `page-home` ready with
+`hold=reads` and `holdModules=true` at phone, tablet and desktop widths; the
+headline and period controls retain their inset.
+
 Home period loading: use `/?frame=true&example=page-home&latency=1500&width=390`
 and select an uncached period. The comparison row reserves its touch-target
 height while loading, showing zero/no change, or inspecting a chart point, so
