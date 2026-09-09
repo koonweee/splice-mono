@@ -118,7 +118,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     const snapshot = await snapshotPromise
     if (sessionOutcome === 'anonymous') clearHomeSnapshot()
     if (snapshot && sessionUser && snapshot.identity !== sessionUser.id)
-      clearHomeSnapshot()
+      clearHomeSnapshot(snapshot.authEpoch)
     if (
       snapshot &&
       sessionUser?.id === snapshot.identity &&

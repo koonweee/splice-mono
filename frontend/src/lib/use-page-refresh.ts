@@ -55,11 +55,41 @@ export function usePageRefresh(
     })
     coordinator.current = instance
     let wasHidden = document.visibilityState === 'hidden'
+    let awaitingReturn = wasHidden
+    let lastReturnAt = Date.now()
+    const standalone = () =>
+      Boolean(
+        (typeof window.matchMedia === 'function' &&
+          window.matchMedia('(display-mode: standalone)').matches) ||
+        (navigator as Navigator & { standalone?: boolean }).standalone,
+      )
+    const returned = (fallback = false) => {
+      // iOS can restore a live standalone page without a complete visibility
+      // pair. Multiple resume signals belong to one return; an observed new
+      // departure always permits another return, even within this burst window.
+      if (awaitingReturn || (fallback && Date.now() - lastReturnAt > 1000)) {
+        awaitingReturn = false
+        lastReturnAt = Date.now()
+        instance.foreground()
+      } else instance.wake()
+    }
     const visibility = () => {
       const hidden = document.visibilityState === 'hidden'
-      const returned = wasHidden && !hidden
+      if (hidden) awaitingReturn = true
+      const becameVisible = wasHidden && !hidden
       wasHidden = hidden
-      if (returned) instance.foreground()
+      if (becameVisible) returned()
+      else instance.wake()
+    }
+    const blur = () => {
+      if (standalone()) awaitingReturn = true
+    }
+    const focus = () => returned(standalone())
+    const pageHide = () => {
+      awaitingReturn = true
+    }
+    const pageShow = (event: PageTransitionEvent) => {
+      if (event.persisted || awaitingReturn) returned(event.persisted)
       else instance.wake()
     }
     const resume = () => instance.resumeDeferred()
@@ -68,7 +98,10 @@ export function usePageRefresh(
     edits.observe(document.body, { childList: true, subtree: true })
     document.addEventListener('focusout', focusOut)
     document.addEventListener('visibilitychange', visibility)
-    window.addEventListener('focus', instance.wake)
+    window.addEventListener('blur', blur)
+    window.addEventListener('focus', focus)
+    window.addEventListener('pagehide', pageHide)
+    window.addEventListener('pageshow', pageShow)
     window.addEventListener('online', instance.reconnect)
     window.addEventListener('offline', instance.wake)
     return () => {
@@ -77,7 +110,10 @@ export function usePageRefresh(
       edits.disconnect()
       document.removeEventListener('focusout', focusOut)
       document.removeEventListener('visibilitychange', visibility)
-      window.removeEventListener('focus', instance.wake)
+      window.removeEventListener('blur', blur)
+      window.removeEventListener('focus', focus)
+      window.removeEventListener('pagehide', pageHide)
+      window.removeEventListener('pageshow', pageShow)
       window.removeEventListener('online', instance.reconnect)
       window.removeEventListener('offline', instance.wake)
     }

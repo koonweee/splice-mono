@@ -608,6 +608,53 @@ try {
       'PASS: foreground requests fresh Home once, deduplicates event bursts, and changed chart values interpolate through real intermediate paths',
     )
 
+    // Reproduce missing visibility notifications with standalone focus and
+    // restored-page signals. This is event-path coverage, not physical iOS QA.
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'standalone', {
+        configurable: true,
+        value: true,
+      })
+    })
+    for (const signal of ['focus', 'pageshow']) {
+      await pause(1100)
+      const before = { summary: summaryRequests, series: seriesRequests }
+      await page.evaluate((kind) => {
+        if (kind === 'focus') window.dispatchEvent(new Event('focus'))
+        else
+          window.dispatchEvent(
+            new PageTransitionEvent('pageshow', { persisted: true }),
+          )
+        window.dispatchEvent(new Event('focus'))
+      }, signal)
+      for (
+        let n = 0;
+        n < 30 &&
+        (summaryRequests === before.summary ||
+          seriesRequests === before.series);
+        n++
+      )
+        await pause(50)
+      await pause(200)
+      assert.equal(
+        summaryRequests,
+        before.summary + 1,
+        `${signal} refreshes summary once`,
+      )
+      assert.equal(
+        seriesRequests,
+        before.series + 1,
+        `${signal} refreshes series once`,
+      )
+      assert.equal(
+        await savedChartHandle.evaluate((element) => element.isConnected),
+        true,
+      )
+    }
+    console.log(
+      'PASS: standalone focus and restored pages refresh fresh Home without visibility events or chart replacement',
+    )
+
     const beforeOfflineForeground = {
       summary: summaryRequests,
       series: seriesRequests,

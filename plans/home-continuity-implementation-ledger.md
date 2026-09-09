@@ -81,3 +81,13 @@
 - Existing installed clients adopt this build through the existing explicit Update flow. No native-iOS launch guarantee is implied.
 
 - Final independent delivery review completed after rollout: “No major issues remain.” All scoped ledger entries are verified; three implementation/review/fix rounds plus final delivery review used subagents.
+
+## iOS resume follow-up (2026-09-08)
+
+- verified: Diagnose the event gap: only an observed hidden→visible pair forced fresh Home; standalone focus used hourly checks and page restoration was unhandled. This is a code-supported candidate for the physical-iOS report, not a captured device trace.
+- verified: Add standalone focus and restored-page fallbacks with burst deduplication, explicit-departure rearming, existing editor/offline/date safeguards and listener cleanup. Six hook tests plus 17 coordinator tests pass; production missing-visibility cases and direct agent-browser focus return make exactly one summary/series pair while retaining the chart.
+- verified: Fix the startup identity race exposed by the broader harness: an earlier captured snapshot must not invalidate a newer verified authentication epoch.
+- in_progress: Final checks and independent review, then push and protected production rollout. No physical iOS device is available to certify native resume event delivery.
+
+- Follow-up verification: 904 tests in124 files passed, lint0errors/25existingwarnings, typecheck and production build passed. `pwa:check`, full `pwa:cached-home-test` (21.77s) and `pwa:launch-test` (17.86s) passed. Direct agent-browser focus-only resume produced one summary/series request pair, retained the same chart, and no runtime errors; browser and fixture closed.
+- Two independent review/fix passes covered resume event ownership and the captured-snapshot identity race; neither has outstanding major source findings. Production suite initially exposed the identity race twice; the final guarded build passes the unchanged identity-switch assertions.
