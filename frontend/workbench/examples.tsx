@@ -677,6 +677,7 @@ function Editors({ state }: ExampleProps) {
 }
 
 function History({ state, masked }: ExampleProps) {
+  const [revision, setRevision] = useState(0)
   const [period, setPeriod] = useState(TimePeriod.month)
   const [hover, setHover] = useState<ChartDataPoint>()
   const [loaded, setLoaded] = useState(false)
@@ -694,10 +695,48 @@ function History({ state, masked }: ExampleProps) {
     value: moneyToChartNumber(point.netWorth),
     money: point.netWorth,
   }))
+  if (
+    revision > 0 &&
+    ['small-change', 'new-date', 'response-burst'].includes(state)
+  ) {
+    const index = Math.floor(data.length / 2)
+    const prior = data[index]
+    const amount = String(
+      BigInt(prior.money.money.amount) + BigInt(revision * 100),
+    )
+    const money = { ...prior.money, money: { ...prior.money.money, amount } }
+    data[index] = { ...prior, money, value: moneyToChartNumber(money) }
+    if (state === 'new-date') {
+      const last = data[data.length - 1]
+      const date = dayjs(last.date).add(1, 'day').format('YYYY-MM-DD')
+      data.push({ ...last, date, label: dayjs(date).format('MMM D') })
+    }
+  }
   const current = hover ?? data.at(-1)
   return (
     <Stack gap="md">
       <PageHeader title="Net worth history" />
+      {[
+        'unchanged-refresh',
+        'small-change',
+        'new-date',
+        'period-change',
+        'response-burst',
+      ].includes(state) && (
+        <Button
+          onClick={() => {
+            setRevision((value) => value + 1)
+            if (state === 'period-change')
+              setPeriod((value) =>
+                value === TimePeriod.month ? TimePeriod.week : TimePeriod.month,
+              )
+            if (state === 'response-burst')
+              window.setTimeout(() => setRevision((value) => value + 1), 100)
+          }}
+        >
+          Refresh series
+        </Button>
+      )}
       <Text size="xl" fw={600}>
         {loading
           ? 'Loading…'
@@ -719,6 +758,7 @@ function History({ state, masked }: ExampleProps) {
           data={data}
           minimal
           animate
+          transitionKey={period}
           placeholder
           loading={loading}
           valueFormatter={(value) =>
@@ -854,7 +894,18 @@ export const examples = [
     id: 'history',
     title: 'Chart and period control',
     component: History,
-    states: ['ready', 'loading', 'empty', 'single', 'refresh-error'],
+    states: [
+      'ready',
+      'loading',
+      'empty',
+      'single',
+      'refresh-error',
+      'unchanged-refresh',
+      'small-change',
+      'new-date',
+      'period-change',
+      'response-burst',
+    ],
     components: ['Chart', 'HomePeriodControl'],
   },
 ]

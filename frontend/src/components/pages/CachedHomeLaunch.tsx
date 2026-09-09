@@ -12,10 +12,20 @@ import {
 } from '../../lib/presentation-preferences'
 import {
   getHomeSnapshotEpoch,
-  readHomeSnapshot,
   subscribeHomeSnapshot,
 } from '../../lib/pwa/home-snapshot'
-import { cachedHomeEnabled, isHomeLaunchUrl } from '../../lib/pwa/launch-mode'
+import {
+  cachedHomeEnabled,
+  isHomeLaunchUrl,
+  isLocalLaunch,
+} from '../../lib/pwa/launch-mode'
+import {
+  getHomeLaunch,
+  getServerHomeLaunch,
+  prepareHomeLaunch,
+  subscribeHomeLaunch,
+} from '../../lib/pwa/home-launch'
+import { setHomeLaunchFailed } from '../../lib/pwa/home-continuity'
 import {
   clearPrivateCaches,
   isPrivateUiBlocked,
@@ -32,7 +42,12 @@ import type { RefreshStatus } from '../HeaderRefreshStatus'
 
 export function CachedHomeLaunch({ failed = false }: { failed?: boolean }) {
   const router = useRouter()
-  const [snapshot, setSnapshot] = useState<HomeSnapshot | null>(null)
+  const launch = useSyncExternalStore(
+    subscribeHomeLaunch,
+    getHomeLaunch,
+    getServerHomeLaunch,
+  )
+  const snapshot = launch.snapshot
   const [online, setOnline] = useState(true)
   const blocked = useSyncExternalStore(
     subscribeAuthBoundary,
@@ -51,16 +66,12 @@ export function CachedHomeLaunch({ failed = false }: { failed?: boolean }) {
       getPendingLogout()
     )
       return
-    let active = true
-    void readHomeSnapshot().then((value) => {
-      if (active) setSnapshot(value)
-    })
+    void prepareHomeLaunch()
     const update = () => setOnline(navigator.onLine)
     update()
     window.addEventListener('online', update)
     window.addEventListener('offline', update)
     return () => {
-      active = false
       window.removeEventListener('online', update)
       window.removeEventListener('offline', update)
     }
@@ -76,6 +87,15 @@ export function CachedHomeLaunch({ failed = false }: { failed?: boolean }) {
     window.addEventListener('online', reconnect)
     return () => window.removeEventListener('online', reconnect)
   }, [failed, router])
+  useEffect(() => {
+    if (isLocalLaunch) setHomeLaunchFailed(failed)
+  }, [failed])
+  if (
+    isLocalLaunch &&
+    (launch.phase === 'reading' ||
+      (snapshot && !blocked && epoch === snapshot.authEpoch))
+  )
+    return null
   if (!snapshot || blocked || epoch !== snapshot.authEpoch)
     return <LaunchScreen />
   return (
@@ -131,6 +151,48 @@ function SavedHomeContent({
   onLogout,
 }: Parameters<typeof SavedHomePreview>[0]) {
   const { maskBalances } = usePresentationPreferences()
+  const content = snapshotHomeContent(snapshot)
+  const logout = () => {
+    setPendingLogout('device')
+    clearPrivateCaches()
+    void completePendingLogout()
+      .catch(() => false)
+      .finally(() => window.location.replace('/?login=true'))
+  }
+  return (
+    <AppShellLayout
+      pathname="/home"
+      readOnly
+      onLogout={onLogout ?? logout}
+      refreshStatus={{
+        phase,
+        lastSuccessfulAt: Math.min(
+          snapshot.summary.updatedAt,
+          snapshot.series?.updatedAt ?? Infinity,
+        ),
+      }}
+      onRetryRefresh={onRetry}
+    >
+      <VisuallyHidden role="status">
+        Saved Home as of {snapshot.endDate}. Updating; financial actions are
+        unavailable.
+      </VisuallyHidden>
+      <HomePageFrame>
+        <div inert aria-label={`Saved Home for ${snapshot.endDate}`}>
+          <HomeContent
+            {...content}
+            balancesHidden={maskBalances}
+            onAccountClick={() => undefined}
+            onPeriodChange={() => undefined}
+            seriesLoading={false}
+          />
+        </div>
+      </HomePageFrame>
+    </AppShellLayout>
+  )
+}
+
+export function snapshotHomeContent(snapshot: HomeSnapshot) {
   const summary = snapshot.summary.data
   const account = (item: (typeof summary.assets)[number]) => ({
     ...item,
@@ -162,45 +224,13 @@ function SavedHomeContent({
         money: point.netWorth,
       })) ?? [],
   }
-  const logout = () => {
-    setPendingLogout('device')
-    clearPrivateCaches()
-    void completePendingLogout()
-      .catch(() => false)
-      .finally(() => window.location.replace('/?login=true'))
+  return {
+    dashboard,
+    period: snapshot.period,
+    visibleAssets: visible(assets),
+    visibleLiabilities: visible(liabilities),
+    onAccountClick: () => undefined,
+    onPeriodChange: () => undefined,
+    seriesLoading: false,
   }
-  return (
-    <AppShellLayout
-      pathname="/home"
-      readOnly
-      onLogout={onLogout ?? logout}
-      refreshStatus={{
-        phase,
-        lastSuccessfulAt: Math.min(
-          snapshot.summary.updatedAt,
-          snapshot.series?.updatedAt ?? Infinity,
-        ),
-      }}
-      onRetryRefresh={onRetry}
-    >
-      <VisuallyHidden role="status">
-        Saved Home as of {snapshot.endDate}. Updating; financial actions are
-        unavailable.
-      </VisuallyHidden>
-      <HomePageFrame>
-        <div inert aria-label={`Saved Home for ${snapshot.endDate}`}>
-          <HomeContent
-            dashboard={dashboard}
-            period={snapshot.period}
-            balancesHidden={maskBalances}
-            visibleAssets={visible(assets)}
-            visibleLiabilities={visible(liabilities)}
-            onAccountClick={() => undefined}
-            onPeriodChange={() => undefined}
-            seriesLoading={false}
-          />
-        </div>
-      </HomePageFrame>
-    </AppShellLayout>
-  )
 }

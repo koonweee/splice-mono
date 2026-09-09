@@ -180,7 +180,18 @@
     "component": "Chart",
     "source": "components/Chart.tsx",
     "example": "history",
-    "states": ["ready", "loading", "empty", "single", "refresh-error"]
+    "states": [
+      "ready",
+      "loading",
+      "empty",
+      "single",
+      "refresh-error",
+      "unchanged-refresh",
+      "small-change",
+      "new-date",
+      "period-change",
+      "response-burst"
+    ]
   },
   {
     "source": "components/CompactAccountRow.skeleton.tsx",
@@ -2017,5 +2028,20 @@
       "refresh-failure"
     ],
     "composition": "Real saved Home presentation using a synthetic snapshot. CachedHomeLaunch is mounted in no-snapshot with storage boundaries that always miss; lifecycle/authentication are verified in production tests."
+  },
+  {
+    "component": "HomeContinuityHost",
+    "source": "components/pages/HomeContinuityHost.tsx",
+    "example": "cached-home",
+    "states": [
+      "cached-validating",
+      "masked",
+      "missing-series",
+      "no-snapshot",
+      "empty",
+      "offline",
+      "refresh-failure"
+    ],
+    "composition": "Runtime owner for the same HomeContent presentation demonstrated by cached-home. Stable pending-to-verified host ownership is exercised by the production cached-home harness; the workbench uses isolated presentation inputs, not live auth/storage."
   }
 ]

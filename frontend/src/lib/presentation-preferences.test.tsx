@@ -116,3 +116,43 @@ it('reconciles midnight and timezone changes without relabeling before reconcili
   expect(screen.getByText('2026-09-06')).toBeTruthy()
   vi.useRealTimers()
 })
+
+it('adopts resolved launch preferences and date before rendering children without undoing local masking', () => {
+  const observations: Array<string> = []
+  function Probe() {
+    const { today, maskBalances, setMaskBalances } =
+      usePresentationPreferences()
+    observations.push(today)
+    return (
+      <button onClick={() => setMaskBalances(true)}>
+        {today}:{String(maskBalances)}
+      </button>
+    )
+  }
+  const initial = {
+    appearance: { mode: 'dark' as const, accent: null },
+    today: '2026-09-08',
+    maskBalances: true,
+  }
+  const view = render(
+    <PresentationProvider initial={initial}>
+      <Probe />
+    </PresentationProvider>,
+  )
+  const resolved = { ...initial, today: '2026-09-07', maskBalances: false }
+  observations.length = 0
+  view.rerender(
+    <PresentationProvider initial={resolved}>
+      <Probe />
+    </PresentationProvider>,
+  )
+  expect(observations.every((date) => date === '2026-09-07')).toBe(true)
+  expect(screen.getByText('2026-09-07:false')).toBeTruthy()
+  act(() => screen.getByRole('button').click())
+  view.rerender(
+    <PresentationProvider initial={{ ...resolved }}>
+      <Probe />
+    </PresentationProvider>,
+  )
+  expect(screen.getByText('2026-09-07:true')).toBeTruthy()
+})

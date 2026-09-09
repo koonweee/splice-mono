@@ -18,6 +18,11 @@ import { sessionQueryOptions, useSession } from '../lib/session'
 import { APPEARANCE_STORAGE_KEY } from '../lib/appearance-preferences'
 import { NotificationMenu } from '../components/notifications/NotificationMenu'
 import { AppShellLayout } from '../components/AppShellLayout'
+import {
+  ownsHomePresentation,
+  useHomePublication,
+} from '../lib/pwa/home-continuity'
+import type { HomeShell } from '../lib/pwa/home-continuity'
 import type { PrimaryDestination } from '../lib/navigation-preload'
 
 export const Route = createFileRoute('/_authed')({
@@ -78,7 +83,11 @@ function AuthenticatedLayoutContent() {
   const logoutMutation = useLogout()
   const { data: session } = useSession()
   const user = session?.user
-  const refresh = usePageRefresh(user?.id, user?.settings.timezone)
+  const refresh = usePageRefresh(
+    user?.id,
+    user?.settings.timezone,
+    location.pathname,
+  )
   const router = useRouter()
   const queryClient = useQueryClient()
   const { today } = usePresentationPreferences()
@@ -134,22 +143,27 @@ function AuthenticatedLayoutContent() {
     return () => window.removeEventListener('storage', syncSavedAppearance)
   }, [queryClient])
 
-  return (
-    <AppShellLayout
-      pathname={location.pathname}
-      refreshStatus={refresh.status}
-      onRetryRefresh={refresh.retry}
-      headerActions={
-        <NotificationMenu
-          onNavigate={(url) => {
-            void router.navigate({ href: url })
-          }}
-        />
-      }
-      onLogout={() => logoutMutation.mutate({ data: {} })}
-      logoutPending={logoutMutation.isPending}
-      onPrepareDestination={prepareDestination}
-    >
+  const hosted = ownsHomePresentation()
+  const shell: HomeShell = {
+    pathname: location.pathname,
+    refreshStatus: refresh.status,
+    onRetryRefresh: refresh.retry,
+    headerActions: (
+      <NotificationMenu
+        onNavigate={(url) => {
+          void router.navigate({ href: url })
+        }}
+      />
+    ),
+    onLogout: () => logoutMutation.mutate({ data: {} }),
+    logoutPending: logoutMutation.isPending,
+    onPrepareDestination: prepareDestination,
+  }
+  useHomePublication('shell', shell, hosted)
+  return hosted ? (
+    <Outlet />
+  ) : (
+    <AppShellLayout {...shell}>
       <Outlet />
     </AppShellLayout>
   )

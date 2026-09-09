@@ -6,7 +6,7 @@ All scope from the plan is tracked below. Statuses: pending, in_progress, implem
 ### 1. Establish A Locally Bootable Launch Path
 - verified: Add a generic, versioned PWA launch shell and a client bootstrap seam under `frontend/src/lib/pwa/`, wired through `vite.config.ts`, `sw.ts`, and `static-cache.ts`. The shell contains no private data or serialized authentication state.
 - verified: Prove the installed TanStack Start version's client mounting path against a production build before expanding the feature. Use a client-rendered launch path with a separate preview boundary; do not call hydration against arbitrary cached server HTML. Document the actual bootstrap entry and mount ownership selected in this milestone.
-- verified: Serve the locally bootable shell on controlled eligible root/Home navigations, without awaiting a network response. Preserve search parameters. Exclude OAuth/auth endpoints, recovery endpoints, other private deep links, and pending logout. Noncontrolled launches and direct private SSR continue to work.
+- verified: Serve the locally bootable shell on controlled eligible root/Home navigations, without awaiting a network response. Preserve search parameters. Exclude OAuth/auth endpoints, recovery endpoints, and other private deep links. A pending logout may boot the public shell, but suppresses all saved content and runs the existing logout recovery. Noncontrolled launches and direct private SSR continue to work.
 - verified: Cache the shell and its complete required JS/CSS dependency set coherently by build. Missing assets or incompatible builds take the existing recovery/network path; never mix an old shell with incompatible new chunks.
 - verified: Integrate preview-to-live transition in the same document. Keep the preview mounted while authenticated routing prepares; remove it only when the live destination is ready, without a second full-document reload or flash of the validating screen. Ensure only the verified tree can run private observers or mutations.
 
@@ -59,8 +59,8 @@ All scope from the plan is tracked below. Statuses: pending, in_progress, implem
 
 ## Delivery
 - verified: Independent review and fix loop.
-- in_progress: Commit and push verified implementation.
-- pending: Run Deploy workflow, verify required CI and production rollout.
+- verified: Commit and push verified implementation (`e87b55d`).
+- verified: Run Deploy workflow, verify required CI and production rollout.
 
 ## Milestone 4 Evidence
 
@@ -78,3 +78,11 @@ All scope from the plan is tracked below. Statuses: pending, in_progress, implem
 - Agent-browser checked real production synthetic Home and workbench at 320px, 390px, and 1440px, across Light/Dark/OLED and reduced motion. Tooltip/tap/Retry/Escape, masking, inert preview controls, layout anchors, and console health passed. Sessions started for verification were closed.
 - Independent implementation and review/fix work used three subagents. Three substantive review/fix passes plus final regression review addressed launch retention, masking handoff, identity invalidation, durable cleanup, read deadlines, and offline chart dependencies. Final source review found no major issues.
 - Physical installed-iOS termination/relaunch and native splash remain unverified because no physical device is connected. The plan's requirement to document this limitation is satisfied; browser emulation is not claimed as device evidence.
+
+## Production Release Evidence
+
+- Feature commit: `e87b55d8678ff468dcfa07c9013fa703f20e4539`, pushed to `main`.
+- [Deployment workflow](https://github.com/koonweee/splice-mono/actions/runs/34276471493) succeeded; [release CI](https://github.com/koonweee/splice-mono/actions/runs/34276490538) passed all required checks. [PR #292](https://github.com/koonweee/splice-mono/pull/292) merged to `deploy` as `784b450940b98e69be6d5c64b8791e88b3ba21fd`.
+- Komodo frontend `0.0.128` built successfully from `784b450`. Service-scoped frontend deployments completed successfully on `splice-app-vps`, `splice-app-sg`, and `splice-app-sf`; all report running/healthy with no frontend image update outstanding. Both observed image digests occur in the successful build output: `sha256:b1fa737fa7b5dc1e973aa9a3ed82720f0f7d0e7b2400f314ddf87cd3b75b4fc0` (VPS/SF) and `sha256:f48d30c85a1c0c8ecd06761f4d76ab7abe342260a17b315efe2d4c80ec2a2ffe` (SG).
+- Public `/`, `/version.json`, `/sw.js`, and the matching public launch shell return HTTP 200. Public build `mtt5adw9-d06b4952-4e89-4134-83b5-9dff4d344e8f` has matching worker/shell references and the client-mount marker.
+- This release record is a documentation-only follow-up to the deployed feature; it does not require rebuilding the application image. Physical installed-iOS validation remains the documented device-only limitation.

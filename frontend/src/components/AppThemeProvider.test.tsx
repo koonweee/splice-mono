@@ -124,3 +124,26 @@ describe('server-first appearance provider', () => {
     expect(document.documentElement.dataset.mantineColorScheme).toBe('dark')
   })
 })
+
+it('adopts snapshot appearance without migrating unrelated storage during local launch', () => {
+  document.cookie = 'splice_appearance=; Max-Age=0; Path=/'
+  const view = render(
+    <AppThemeProvider
+      restoreStoredAppearance={false}
+      initialAppearance={{ mode: 'dark', accent: null }}
+    >
+      <div />
+    </AppThemeProvider>,
+  )
+  expect(document.cookie).not.toContain('splice_appearance=')
+  view.rerender(
+    <AppThemeProvider
+      restoreStoredAppearance={false}
+      initialAppearance={{ mode: 'light', accent: null }}
+    >
+      <div />
+    </AppThemeProvider>,
+  )
+  expect(document.documentElement.dataset.mantineColorScheme).toBe('light')
+  expect(document.cookie).not.toContain('splice_appearance=')
+})

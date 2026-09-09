@@ -10,9 +10,14 @@ import { useBalanceData } from '../../hooks/useBalanceData'
 import { isZeroBalanceAccount } from '../../lib/balance-utils'
 
 import { isValidTimePeriod } from '../../lib/route-search'
+import {
+  ownsHomePresentation,
+  useHomePublication,
+} from '../../lib/pwa/home-continuity'
 import { HomeContent } from './HomeContent'
 import { HomeSkeleton } from './HomePage.skeleton'
 import { HomePageFrame } from './HomePageFrame'
+import type { HomeView } from '../../lib/pwa/home-continuity'
 import type { AccountSummaryData } from '../../lib/balance-utils'
 import type { HomeSearch } from '../../lib/route-search'
 import { TimePeriod } from '@/lib/types'
@@ -94,35 +99,51 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
     }
   }
 
+  const hosted = ownsHomePresentation()
+  const view: HomeView = {
+    controls: {
+      period,
+      onPeriodChange: handlePeriodChange,
+      onAccountClick: handleAccountClick,
+      onRetrySeries: () => void refetchSeries(),
+    },
+    content: dashboard
+      ? {
+          dashboard,
+          period,
+          balancesHidden,
+          visibleAssets,
+          visibleLiabilities,
+          isChangingPeriod,
+          chartDisplayData,
+          seriesLoading,
+          seriesError: Boolean(seriesError),
+          onPeriodChange: handlePeriodChange,
+          onAccountClick: handleAccountClick,
+          onRetrySeries: () => void refetchSeries(),
+        }
+      : null,
+    state: {
+      backgroundErrorMode: isChangingPeriod ? 'local' : 'header',
+      hasData: Boolean(dashboard),
+      isLoading,
+      isError: Boolean(error),
+      isFetching,
+      errorMessage: 'Unable to load the selected dashboard period.',
+      onRetry: () => void refetch(),
+      loadingFallback: <HomeSkeleton period={period} />,
+    },
+  }
+  useHomePublication('home', view, hosted)
   return (
-    <HomePageFrame>
-      <DataState
-        backgroundErrorMode={isChangingPeriod ? 'local' : 'header'}
-        hasData={Boolean(dashboard)}
-        isLoading={isLoading}
-        isError={Boolean(error)}
-        isFetching={isFetching}
-        errorMessage="Unable to load the selected dashboard period."
-        onRetry={() => void refetch()}
-        loadingFallback={<HomeSkeleton period={period} />}
-      >
-        {dashboard && (
-          <HomeContent
-            dashboard={dashboard}
-            period={period}
-            balancesHidden={balancesHidden}
-            visibleAssets={visibleAssets}
-            visibleLiabilities={visibleLiabilities}
-            isChangingPeriod={isChangingPeriod}
-            chartDisplayData={chartDisplayData}
-            seriesLoading={seriesLoading}
-            seriesError={Boolean(seriesError)}
-            onPeriodChange={handlePeriodChange}
-            onAccountClick={handleAccountClick}
-            onRetrySeries={() => void refetchSeries()}
-          />
-        )}
-      </DataState>
+    <>
+      {!hosted && (
+        <HomePageFrame>
+          <DataState {...view.state}>
+            {view.content && <HomeContent {...view.content} />}
+          </DataState>
+        </HomePageFrame>
+      )}
 
       {selectedAccount && (
         <DeferredOverlay
@@ -146,6 +167,6 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
           />
         </DeferredOverlay>
       )}
-    </HomePageFrame>
+    </>
   )
 }

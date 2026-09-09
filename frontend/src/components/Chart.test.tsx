@@ -284,7 +284,7 @@ it('keeps hover available when chart animation is enabled', () => {
   expect(chartProps.tooltipProps?.active).toBeUndefined()
 })
 
-it('never exposes decorative points to hover while loading', () => {
+it('retains available real points but disables hover while loading', () => {
   vi.useFakeTimers()
   const onDataPointHover = vi.fn()
   const view = (loading: boolean) => (
@@ -300,12 +300,13 @@ it('never exposes decorative points to hover while loading', () => {
   )
   const { rerender } = render(view(true))
   act(() => vi.advanceTimersByTime(120))
-  expect(chartProps.data).not.toEqual([point])
+  expect(chartProps.data).toMatchObject([point])
+  expect(screen.queryByLabelText('Loading chart')).toBeNull()
   fireEvent.mouseEnter(screen.getByTestId('chart'))
   move()
   expect(onDataPointHover).not.toHaveBeenCalled()
   rerender(view(false))
-  expect(chartProps.data).toEqual([point])
+  expect(chartProps.data).toMatchObject([point])
   move()
   expect(onDataPointHover).toHaveBeenLastCalledWith(point)
 })
@@ -379,4 +380,28 @@ it('does not repeat inspection when the parent recreates its hover callback', ()
   fireEvent.focus(chart)
   expect(screen.getByLabelText('Inspected date').textContent).toBe('Sep 1')
   expect(notifications).toBe(3)
+})
+
+it('retains the last real geometry through loading with empty data, then accepts an empty result', () => {
+  const view = (data: Array<typeof point>, loading: boolean) => (
+    <MantineProvider env="test">
+      <Chart
+        data={data}
+        loading={loading}
+        placeholder
+        animate
+        valueFormatter={String}
+      />
+    </MantineProvider>
+  )
+  const { rerender } = render(view([point], false))
+  const chart = screen.getByTestId('chart')
+  const plotted = chartProps.data
+  rerender(view([], true))
+  expect(screen.getByTestId('chart')).toBe(chart)
+  expect(chartProps.data).toBe(plotted)
+  expect(screen.queryByLabelText('Loading chart')).toBeNull()
+  expect(chartProps.tooltipProps?.active).toBe(false)
+  rerender(view([], false))
+  expect(screen.queryByTestId('chart')).toBeNull()
 })

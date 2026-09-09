@@ -2,6 +2,7 @@ import { AreaChart } from '@mantine/charts'
 import { useReducedMotion } from '@mantine/hooks'
 import { Box, Paper, Text } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
+import { useChartMotion } from '../lib/chart-motion'
 import { foundation } from '../lib/design-system/foundation'
 import placeholderStyles from './Chart.skeleton.module.css'
 import styles from './Chart.module.css'
@@ -73,7 +74,7 @@ function ChartTooltipContent({
           ? undefined
           : pointFormatter
             ? pointFormatter(point.payload)
-            : valueFormatter(point.value ?? point.payload.value)
+            : valueFormatter(point.payload.value)
       }
     />
   )
@@ -103,6 +104,7 @@ interface ChartProps {
   placeholder?: boolean
   loading?: boolean
   animate?: boolean
+  transitionKey?: string
   interactive?: boolean
   minimal?: boolean
   height?: number
@@ -118,6 +120,7 @@ export function Chart({
   height = 280,
   minimal = false,
   animate = false,
+  transitionKey,
   placeholder = false,
   loading = false,
   interactive = true,
@@ -125,17 +128,25 @@ export function Chart({
   mb,
   onDataPointHover,
 }: ChartProps) {
-  const [initialized, setInitialized] = useState(!placeholder)
-  useEffect(() => {
-    if (!placeholder) return
-    // Give the responsive chart time to measure and paint its initial points.
-    const timer = window.setTimeout(() => setInitialized(true), 120)
-    return () => window.clearTimeout(timer)
-  }, [placeholder])
-  const showingPlaceholder = placeholder && (!initialized || loading)
-  const plottedData = showingPlaceholder ? PLACEHOLDER_POINTS : data
+  const lastReal = useRef<{ data: Array<ChartDataPoint>; key?: string } | null>(
+    null,
+  )
+  if (data.length) lastReal.current = { data, key: transitionKey }
+  else if (!loading) lastReal.current = null
+  const retainedData = loading && !data.length ? lastReal.current : null
+  const showingPlaceholder =
+    placeholder && data.length === 0 && loading && !retainedData
+  const sourceData =
+    retainedData?.data ?? (showingPlaceholder ? PLACEHOLDER_POINTS : data)
   const reducedMotion = useReducedMotion()
-  const canInteract = interactive && !showingPlaceholder
+  const motion = useChartMotion(
+    sourceData,
+    animate && !reducedMotion && !showingPlaceholder,
+    retainedData?.key ?? transitionKey,
+  )
+  const plottedData = sourceData.length ? motion.frame : []
+  const canInteract =
+    interactive && !loading && !showingPlaceholder && !motion.moving
   const containerRef = useRef<HTMLDivElement>(null)
   const interacting = useRef(false)
   const pointerWithin = useRef(false)
@@ -233,15 +244,6 @@ export function Chart({
   if (plottedData.length === 0) {
     return null
   }
-
-  // Calculate min and max for y-axis ticks with padding for label visibility
-  const values = plottedData.map((d) => d.value)
-  const minValue = Math.min(...values)
-  const maxValue = Math.max(...values)
-  const range = maxValue - minValue || 1 // Avoid division by zero
-  const padding = range * 0.1 // 10% padding
-  const domainMin = minValue - padding
-  const domainMax = maxValue + padding
 
   const handleStart = () => {
     if (Date.now() - lastTouch.current < 800) return
@@ -361,8 +363,8 @@ export function Chart({
         className={minimal ? styles.softArea : undefined}
         h={height}
         data={plottedData}
-        dataKey="date"
-        series={[{ name: 'value', color }]}
+        dataKey="plotX"
+        series={[{ name: 'plotValue', color }]}
         curveType="monotone"
         withDots={!minimal || plottedData.length === 1}
         strokeWidth={minimal ? 1.5 : 2}
@@ -374,11 +376,13 @@ export function Chart({
           minimal ? foundation.chart.minimalFill : foundation.chart.fill
         }
         yAxisProps={{
-          domain: [domainMin, domainMax],
+          domain: [0, 1],
+          allowDataOverflow: true,
         }}
+        xAxisProps={{ type: 'number', domain: [0, 1], allowDataOverflow: true }}
         valueFormatter={valueFormatter}
         areaProps={{
-          isAnimationActive: animate && !reducedMotion && !showingPlaceholder,
+          isAnimationActive: false,
           animationDuration: foundation.motion.chart,
           animationEasing: 'ease-in-out',
         }}

@@ -62,11 +62,19 @@ function listen(target: EventTarget, event: string, listener: () => void) {
   target.addEventListener(event, listener)
   cleanupListeners.push(() => target.removeEventListener(event, listener))
 }
+function hasWaitingUpdate(current: ServiceWorkerRegistration) {
+  // First install can briefly occupy `waiting` before becoming active. Only a
+  // distinct existing worker makes this a replacement that needs an app reload.
+  // An uncontrolled page can still have an active worker and a genuine update.
+  return Boolean(
+    current.active && current.waiting && current.active !== current.waiting,
+  )
+}
 function watchRegistration(current: ServiceWorkerRegistration, token: number) {
   const hadController = Boolean(navigator.serviceWorker.controller)
   const changed = () => {
     if (token !== attempt) return
-    if (current.waiting) {
+    if (hasWaitingUpdate(current)) {
       needRefresh = true
       status = 'update-waiting'
       emit()
@@ -169,8 +177,8 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
     await activeRegistration(current)
     if (token !== attempt) throw new Error('App registration was superseded.')
     registration = current
-    status = current.waiting ? 'update-waiting' : 'ready'
-    needRefresh ||= Boolean(current.waiting)
+    status = hasWaitingUpdate(current) ? 'update-waiting' : 'ready'
+    needRefresh ||= hasWaitingUpdate(current)
     emit()
     return current
   })().catch((cause: unknown) => {

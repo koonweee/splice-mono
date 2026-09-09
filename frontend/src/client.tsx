@@ -3,7 +3,10 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 import { StartClient } from '@tanstack/react-start/client'
 import { RouterProvider } from '@tanstack/react-router'
 import { getRouter } from './router'
+import { prepareHomeLaunch } from './lib/pwa/home-launch'
 import { isLocalLaunch } from './lib/pwa/launch-mode'
+
+if (isLocalLaunch) void prepareHomeLaunch()
 
 startTransition(() => {
   if (isLocalLaunch) {

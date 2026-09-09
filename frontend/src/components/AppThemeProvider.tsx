@@ -26,14 +26,21 @@ export function AppThemeProvider({
   children,
   initialAppearance = DEFAULT_APPEARANCE,
   authenticated = false,
+  restoreStoredAppearance = true,
 }: {
   children: ReactNode
   initialAppearance?: AppearancePreference
   authenticated?: boolean
+  restoreStoredAppearance?: boolean
 }) {
   const [appearance, setAppearance] = useState(initialAppearance)
-  const resolved = resolveAppearance(appearance)
   const initialKey = encodeAppearance(initialAppearance)
+  const [sourceKey, setSourceKey] = useState(initialKey)
+  if (sourceKey !== initialKey) {
+    setSourceKey(initialKey)
+    setAppearance(initialAppearance)
+  }
+  const resolved = resolveAppearance(appearance)
   useIsomorphicLayoutEffect(() => {
     const handlePreview = (event: Event) => {
       if (!(event instanceof CustomEvent)) return
@@ -51,6 +58,7 @@ export function AppThemeProvider({
     if (authenticated)
       applyAppearance(decodeAppearance(initialKey) ?? DEFAULT_APPEARANCE)
     else if (
+      restoreStoredAppearance &&
       !document.cookie
         .split(';')
         .some((entry) => entry.trim().startsWith(`${APPEARANCE_COOKIE}=`))
@@ -60,7 +68,7 @@ export function AppThemeProvider({
       window.removeEventListener(APPEARANCE_CHANGE_EVENT, handlePreview)
       window.removeEventListener('storage', handleStorage)
     }
-  }, [authenticated, initialKey])
+  }, [authenticated, initialKey, restoreStoredAppearance])
   useIsomorphicLayoutEffect(() => {
     document
       .querySelector('meta[name="theme-color"]')
