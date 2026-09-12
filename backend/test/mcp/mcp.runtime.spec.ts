@@ -131,6 +131,7 @@ async function startRuntime(
     mcpPortfolioVisualizationService as never,
     mcpCategorizationService as never,
     transactionAnalysisService as never,
+    {} as never,
     logger as never,
   );
   const config: EnabledMcpRuntimeConfig = {
@@ -183,6 +184,7 @@ describe('SpliceMcpRuntimeService', () => {
   it('keeps the standalone listener opt-in and close idempotent', async () => {
     const logger = { log: jest.fn(), error: jest.fn() };
     const runtime = new SpliceMcpRuntimeService(
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -874,6 +876,7 @@ describe('SpliceMcpRuntimeService', () => {
     });
     const logger = { log: jest.fn(), error: jest.fn() };
     const runtime = new SpliceMcpRuntimeService(
+      {} as never,
       {} as never,
       {} as never,
       {} as never,

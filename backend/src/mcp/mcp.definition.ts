@@ -1,4 +1,9 @@
 import {
+  McpTransactionCategoriesService,
+  TransactionCategoryUpdatesSchema,
+  SetTransactionCategoriesOutputSchema,
+} from './mcp-transaction-categories.service';
+import {
   DecimalAmountSchema,
   MinorUnitAmountSchema,
 } from '../types/MoneyWithSign';
@@ -77,6 +82,7 @@ import {
 } from './mcp.extensions';
 
 export interface SpliceMcpDependencies {
+  readonly mcpTransactionCategoriesService: McpTransactionCategoriesService;
   readonly userId: string;
   readonly userService: UserService;
   readonly accountsSurfaceService: AccountsSurfaceService;
@@ -352,6 +358,7 @@ export const SPLICE_MCP_TOOL_NAMES = [
   'search_transactions',
   'list_transactions',
   'list_balance_snapshots',
+  'set_transaction_categories',
   'list_categories',
   'list_investment_holdings',
   'list_investment_activity',
@@ -634,6 +641,26 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
           await dependencies.mcpReadService.listBalanceSnapshots(
             dependencies.userId,
             input,
+          ),
+        ),
+    ),
+
+    createSpliceTool(
+      'set_transaction_categories',
+      {
+        title: 'Set Transaction Categories',
+        description:
+          'Directly set categories on one or many existing banking transactions, including manually entered transactions. Use for user-requested corrections, not future automation rules. Pass updates grouped by categoryId; one group with one transaction ID handles a single edit, and multiple groups handle different categories in one call. Discover transaction IDs with list_transactions and active category IDs with list_categories. Null sets Uncategorized and remains a manual assignment; it does not restore automatic categorization. Overwrites existing manual or rule assignments and prevents future rules from replacing them. Does not create or edit rules. Up to 500 IDs across 50 groups per call; split larger requests into batches, each independently atomic. Duplicate identical assignments are deduplicated; conflicting assignments are rejected. Any unavailable transaction or inactive/unowned category rejects the entire batch. Returns exact updated and unchanged IDs by category. Repeating the same request is a no-op if assignments have not changed. Requires user authorization but no preview token.',
+        inputSchema: { updates: TransactionCategoryUpdatesSchema },
+        outputSchema: SetTransactionCategoriesOutputSchema,
+        requiredScopes: ['splice:write'],
+        risk: { kind: 'mutating', idempotent: true },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpTransactionCategoriesService.setCategories(
+            dependencies.userId,
+            input.updates,
           ),
         ),
     ),

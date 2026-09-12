@@ -55,6 +55,7 @@ const INTENTIONALLY_UPDATED_EXACT_QUERY_TOOLS = new Set([
   'collect_projection_assumptions',
 ]);
 const ADDED_CATEGORIZATION_LIFECYCLE_TOOLS = new Set([
+  'set_transaction_categories',
   'get_categorization_rule',
   'preview_categorization_rule_edit',
   'edit_categorization_rule',
@@ -102,6 +103,7 @@ function normalizeVersionedAppUris(value: unknown): unknown {
 }
 
 describe('Splice MCP definition', () => {
+  const mcpTransactionCategoriesService = { setCategories: jest.fn() };
   const userService = {
     findOne: jest.fn(),
   };
@@ -212,6 +214,8 @@ describe('Splice MCP definition', () => {
         },
         logger: silentLogger,
         dependencies: createSpliceMcpDependencies(userId, {
+          mcpTransactionCategoriesService:
+            mcpTransactionCategoriesService as never,
           userService: userService as never,
           accountsSurfaceService: accountsSurfaceService as never,
           balanceHistorySurfaceService: balanceHistorySurfaceService as never,
@@ -225,6 +229,78 @@ describe('Splice MCP definition', () => {
       }),
     );
   }
+
+  it('sets grouped transaction categories through the authenticated write tool', async () => {
+    const updates = [{ transactionIds: [mockAccountId], categoryId: null }];
+    const output = {
+      requested: 1,
+      updated: 1,
+      unchanged: 0,
+      results: [
+        {
+          categoryId: null,
+          updatedTransactionIds: [mockAccountId],
+          unchangedTransactionIds: [],
+        },
+      ],
+    };
+    mcpTransactionCategoriesService.setCategories.mockResolvedValue(output);
+    const { client, close } = await connect(createServer(mockUserId));
+    try {
+      const result = await client.callTool({
+        name: 'set_transaction_categories',
+        arguments: { updates },
+      });
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toEqual(output);
+      expect(
+        mcpTransactionCategoriesService.setCategories,
+      ).toHaveBeenCalledWith(mockUserId, updates);
+    } finally {
+      await close();
+    }
+  });
+
+  it('rejects conflicting category assignments before invoking the service', async () => {
+    const { client, close } = await connect(createServer(mockUserId));
+    try {
+      const result = await client.callTool({
+        name: 'set_transaction_categories',
+        arguments: {
+          updates: [
+            { transactionIds: [mockAccountId], categoryId: null },
+            { transactionIds: [mockAccountId], categoryId: mockCategoryId },
+          ],
+        },
+      });
+      expect(result.isError).toBe(true);
+      expect(
+        mcpTransactionCategoriesService.setCategories,
+      ).not.toHaveBeenCalled();
+    } finally {
+      await close();
+    }
+  });
+
+  it('denies category updates without write scope', async () => {
+    const { client, close } = await connect(
+      createServer(mockUserId, ['splice:read']),
+    );
+    try {
+      const result = await client.callTool({
+        name: 'set_transaction_categories',
+        arguments: {
+          updates: [{ transactionIds: [mockAccountId], categoryId: null }],
+        },
+      });
+      expect(result.isError).toBe(true);
+      expect(
+        mcpTransactionCategoriesService.setCategories,
+      ).not.toHaveBeenCalled();
+    } finally {
+      await close();
+    }
+  });
 
   it('registers MCP tools with read and write annotations', async () => {
     const { client, close } = await connect(createServer(mockUserId));
@@ -295,13 +371,14 @@ describe('Splice MCP definition', () => {
         'preview_categorization_rule_restore',
         'restore_categorization_rule',
         'search_transactions',
+        'set_transaction_categories',
         'visualize_cash_flow',
         'visualize_portfolio',
       ]);
       expect(result.tools.map((tool) => tool.name)).toEqual([
         ...SPLICE_MCP_TOOL_NAMES,
       ]);
-      expect(result.tools).toHaveLength(32);
+      expect(result.tools).toHaveLength(33);
       expect(toolsByName.has('show_cashflow_explorer')).toBe(false);
       expect(toolsByName.has('show_portfolio_viewer')).toBe(false);
       expect(toolsByName.get('visualize_cash_flow')).toMatchObject({
