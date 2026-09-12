@@ -130,9 +130,7 @@ describe('notification queries', () => {
       await act(async () => {
         await result.current.mutateAsync({ id: item.id, action: 'read' })
       })
-      expect(
-        queryClient.getQueryData(inboxKey)?.pages[0].items[0].readAt,
-      ).toBeTruthy()
+      expect(queryClient.getQueryData(inboxKey)?.pages[0].items).toEqual([])
       expect(
         queryClient.getQueryData(notificationSummaryQueryOptions().queryKey)
           ?.uncategorizedTransactionCount,

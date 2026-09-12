@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   clearPendingAppTransition,
   registerAppTransitionGuard,
+  requestAppTransition,
   setAppMutationBlocked,
 } from '../lib/pwa/app-transition'
 import { PwaLifecycle } from './PwaLifecycle'
@@ -432,6 +433,7 @@ describe('PwaLifecycle integration', () => {
   })
   it('reflects pending mutations in the shared update guard', async () => {
     const saving = deferred()
+    const navigate = vi.fn()
     mount()
     act(() =>
       emit({
@@ -456,12 +458,40 @@ describe('PwaLifecycle integration', () => {
     await act(async () => {
       saving.resolve()
       await promise
+      // Inbox navigation runs here, before React flushes another render/effect.
+      expect(requestAppTransition(navigate)).toBe(true)
+      expect(navigate).toHaveBeenCalledOnce()
     })
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: 'Update' }).hasAttribute('disabled'),
       ).toBe(false),
     )
+  })
+  it('still defers navigation when another save remains pending', async () => {
+    mount()
+    const saving = deferred()
+    const otherSaving = deferred()
+    const mutation = new MutationObserver(client, {
+      mutationFn: () => saving.promise,
+    })
+    const otherMutation = new MutationObserver(client, {
+      mutationFn: () => otherSaving.promise,
+    })
+    const navigate = vi.fn()
+    await act(async () => {
+      const promise = mutation.mutate()
+      const otherPromise = otherMutation.mutate()
+      saving.resolve()
+      await promise
+      expect(requestAppTransition(navigate)).toBe(false)
+      expect(navigate).not.toHaveBeenCalled()
+      otherSaving.resolve()
+      await otherPromise
+    })
+    expect(navigate).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+    expect(navigate).toHaveBeenCalledOnce()
   })
   it('keeps a hidden observer tab honest until another tab acknowledges pending logout', () => {
     online(false)

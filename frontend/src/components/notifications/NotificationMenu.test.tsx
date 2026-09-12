@@ -93,6 +93,8 @@ describe('authenticated notification menu', () => {
     fireEvent.click(bell)
     await screen.findByText(item.body)
     expect(api.inbox).toHaveBeenCalledOnce()
+    expect(api.read).not.toHaveBeenCalled()
+    expect(api.archive).not.toHaveBeenCalled()
     const dialog = screen.getByRole('dialog')
     await waitFor(() =>
       expect(dialog.contains(document.activeElement)).toBe(true),
@@ -137,14 +139,21 @@ describe('authenticated notification menu', () => {
       uncategorizedTransactionCount: 12,
     })
   })
-  it('marks only the selected item read and defers its destination through the editor guard', async () => {
+  it('clears the selected notification on opening and keeps its guarded destination', async () => {
     const navigate = mount()
     fireEvent.click(
       await screen.findByRole('button', { name: 'Notifications, 1 unread' }),
     )
-    fireEvent.click(
-      await screen.findByRole('button', { name: `Open ${item.title}` }),
-    )
+    const open = await screen.findByRole('button', {
+      name: `Open ${item.title}`,
+    })
+    api.inbox.mockResolvedValue({ items: [], hasMore: false, nextCursor: null })
+    api.summary.mockResolvedValue({
+      unreadNotificationCount: 0,
+      uncategorizedTransactionCount: 12,
+      computedAt: '2026-09-06T12:01:00Z',
+    })
+    fireEvent.click(open)
     await waitFor(() => expect(api.transition).toHaveBeenCalledOnce())
     expect(api.read).toHaveBeenCalledWith(item.id)
     expect(navigate).not.toHaveBeenCalled()
@@ -152,6 +161,27 @@ describe('authenticated notification menu', () => {
     expect(navigate).toHaveBeenCalledWith(
       '/transactions?categoryId=UNCATEGORIZED',
     )
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Notifications, 0 unread' }),
+    )
+    await screen.findByText("You're all caught up.")
+    expect(screen.queryByText(item.body)).toBeNull()
+  })
+  it('retains a notification and does not navigate when marking it read fails', async () => {
+    const navigate = mount()
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Notifications, 1 unread' }),
+    )
+    api.read.mockRejectedValueOnce(new Error('Unavailable'))
+    fireEvent.click(
+      await screen.findByRole('button', { name: `Open ${item.title}` }),
+    )
+    await screen.findByText(
+      'Unable to update this notification. Please try again.',
+    )
+    expect(screen.getByText(item.body)).toBeTruthy()
+    expect(api.transition).not.toHaveBeenCalled()
+    expect(navigate).not.toHaveBeenCalled()
   })
   it('clears every notification while preserving the independent transaction count', async () => {
     mount()

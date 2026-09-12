@@ -202,6 +202,7 @@ export class NotificationService {
     query: NotificationInboxQuery,
   ): Promise<NotificationInboxPage> {
     const builder = this.inboxQuery(this.notificationRepository.manager, userId)
+      .andWhere('notification.readAt IS NULL')
       .addSelect('notification."createdAt"::text', 'cursorCreatedAt')
       .orderBy('notification.createdAt', 'DESC')
       .addOrderBy('notification.id', 'DESC')

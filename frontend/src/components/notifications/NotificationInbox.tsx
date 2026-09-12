@@ -10,15 +10,7 @@ import {
   ThemeIcon,
   Tooltip,
 } from '@mantine/core'
-import {
-  Bell,
-  Check,
-  CheckCheck,
-  Landmark,
-  ListX,
-  RefreshCw,
-  X,
-} from 'lucide-react'
+import { Bell, Landmark, ListX, RefreshCw, X } from 'lucide-react'
 import { DataState } from '../DataState'
 import { InteractiveRow } from '../InteractiveRow'
 import { formatDateTime } from '../../lib/format'
@@ -72,7 +64,6 @@ export interface NotificationInboxProps {
   onRetry: () => void
   pendingId?: string
   mutationError?: string
-  onRead: (item: NotificationInboxItem) => void
   onDismiss: (item: NotificationInboxItem) => void
   onOpen: (item: NotificationInboxItem) => void
   hasMore?: boolean
@@ -94,7 +85,6 @@ export function NotificationInbox({
   onRetry,
   pendingId,
   mutationError,
-  onRead,
   onDismiss,
   onOpen,
   hasMore,
@@ -218,31 +208,12 @@ export function NotificationInbox({
                             gap={2}
                             wrap="nowrap"
                           >
-                            <Tooltip
-                              label={item.readAt ? 'Read' : 'Mark as read'}
-                            >
-                              <ActionIcon
-                                variant="subtle"
-                                color="gray"
-                                aria-label={`${item.readAt ? 'Read' : 'Mark as read'}: ${item.title}`}
-                                disabled={
-                                  Boolean(item.readAt) || actionsDisabled
-                                }
-                                loading={pendingId === item.id}
-                                onClick={() => onRead(item)}
-                              >
-                                {item.readAt ? (
-                                  <CheckCheck size={16} />
-                                ) : (
-                                  <Check size={16} />
-                                )}
-                              </ActionIcon>
-                            </Tooltip>
                             <Tooltip label="Dismiss">
                               <ActionIcon
                                 variant="subtle"
                                 color="gray"
                                 aria-label={`Dismiss: ${item.title}`}
+                                loading={pendingId === item.id}
                                 disabled={actionsDisabled}
                                 onClick={() => onDismiss(item)}
                               >

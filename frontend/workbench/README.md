@@ -58,8 +58,9 @@ All states use generated TanStack mutations and a per-document in-memory store.
 opens the production bottom sheet directly. Its states include `loading`,
 `empty`, `error`, `refresh-error`, `refreshing`, `pending`, `mutation-error`,
 `clearing`, and `clear-error`.
-Read and dismiss use separate icon buttons; opening a row follows its local
-fixture destination. The example keeps its transaction count independent from
+Opening the sheet leaves notifications unread. Opening a row removes it and
+follows its local fixture destination; the only row icon dismisses it without
+navigation. Read notifications are excluded from the inbox. The example keeps its transaction count independent from
 the unread indicator and has no retention footer.
 
 The header bell in `page-home` exercises the production query/mutation wiring

@@ -42,16 +42,19 @@ export function NotificationMenu({
     setError(undefined)
     const generation = getAuthGeneration()
     try {
+      const destination = navigate
+        ? new URL(item.url, window.location.origin)
+        : undefined
+      if (
+        destination &&
+        (destination.origin !== window.location.origin ||
+          !['/transactions', '/accounts'].includes(destination.pathname))
+      )
+        throw new Error('This notification destination is unavailable.')
       if (action === 'archive' || !item.readAt)
         await mutation.mutateAsync({ id: item.id, action })
       assertAuthGeneration(generation)
-      if (navigate) {
-        const destination = new URL(item.url, window.location.origin)
-        if (
-          destination.origin !== window.location.origin ||
-          !['/transactions', '/accounts'].includes(destination.pathname)
-        )
-          throw new Error('This notification destination is unavailable.')
+      if (destination) {
         requestAppTransition(() => {
           if (getAuthGeneration() !== generation) return
           onNavigate(
@@ -121,7 +124,6 @@ export function NotificationMenu({
         }}
         pendingId={mutation.isPending ? mutation.variables.id : undefined}
         mutationError={error}
-        onRead={(item) => void act(item, 'read')}
         onDismiss={(item) => void act(item, 'archive')}
         onOpen={(item) => void act(item, 'read', true)}
         hasMore={inbox.hasNextPage}
