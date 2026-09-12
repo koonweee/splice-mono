@@ -48,7 +48,9 @@ export function createNotificationStore(
       computedAt: FIXTURE_NOW,
     }),
     '/notification/inbox': ({ params }) => {
-      const visible = items.filter((item) => !archived.has(item.id))
+      const visible = items.filter(
+        (item) => !item.readAt && !archived.has(item.id),
+      )
       const start = params?.cursor
         ? visible.findIndex((item) => item.id === params.cursor) + 1
         : 0

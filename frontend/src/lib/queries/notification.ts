@@ -71,17 +71,7 @@ export function useNotificationAction() {
             ...previous,
             pages: previous.pages.map((page) => ({
               ...page,
-              items:
-                action === 'archive'
-                  ? page.items.filter((item) => item.id !== id)
-                  : page.items.map((item) =>
-                      item.id === id
-                        ? {
-                            ...item,
-                            readAt: item.readAt ?? new Date().toISOString(),
-                          }
-                        : item,
-                    ),
+              items: page.items.filter((item) => item.id !== id),
             })),
           },
       )

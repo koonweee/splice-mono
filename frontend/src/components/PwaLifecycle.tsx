@@ -1,7 +1,7 @@
 import { Alert, Button, Group, Text } from '@mantine/core'
 import { CloudOff } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useIsMutating, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { useSession } from '../lib/session'
 import { applyNotificationSummaryBadge } from '../lib/pwa/app-badge'
@@ -73,7 +73,6 @@ export function PwaLifecycle({
   const router = useRouter({ warn: false }) as
     | ReturnType<typeof useRouter>
     | undefined
-  const mutations = useIsMutating()
   const transition = useAppTransitionState()
   const summary = useQuery({
     ...notificationSummaryQueryOptions(),
@@ -319,9 +318,16 @@ export function PwaLifecycle({
 
   useEffect(() => {
     if (!active) return
-    setAppMutationBlocked(mutations > 0)
-    return () => setAppMutationBlocked(false)
-  }, [active, mutations])
+    // Keep imperative navigation in sync with saves before React's next render.
+    // In particular, opening an unread notification first awaits its read save.
+    const syncMutations = () => setAppMutationBlocked(client.isMutating() > 0)
+    const unsubscribe = client.getMutationCache().subscribe(syncMutations)
+    syncMutations()
+    return () => {
+      unsubscribe()
+      setAppMutationBlocked(false)
+    }
+  }, [active, client])
   useEffect(() => {
     if (active && online && userId && !pendingLogout) wake.current()
   }, [active, online, userId, pendingLogout])

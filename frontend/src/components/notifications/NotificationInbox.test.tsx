@@ -31,7 +31,6 @@ function mount(props: Partial<NotificationInboxProps> = {}) {
   const actions = {
     onClose: vi.fn(),
     onRetry: vi.fn(),
-    onRead: vi.fn(),
     onDismiss: vi.fn(),
     onOpen: vi.fn(),
     onClearAll: vi.fn(),
@@ -53,13 +52,6 @@ function mount(props: Partial<NotificationInboxProps> = {}) {
 describe('notification inbox', () => {
   it('keeps icon actions independent from opening the alert', () => {
     const actions = mount()
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Mark as read: New transactions synced',
-      }),
-    )
-    expect(actions.onRead).toHaveBeenCalledWith(item)
-    expect(actions.onOpen).not.toHaveBeenCalled()
     fireEvent.click(
       screen.getByRole('button', { name: 'Dismiss: New transactions synced' }),
     )

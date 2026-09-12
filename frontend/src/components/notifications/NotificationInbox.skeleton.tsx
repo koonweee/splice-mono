@@ -1,4 +1,4 @@
-import { Check, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { ActionIcon, Group, Skeleton, Stack } from '@mantine/core'
 import styles from './NotificationInbox.module.css'
 
@@ -23,9 +23,6 @@ export function NotificationInboxSkeleton() {
               <Skeleton height={14} width={115} />
             </div>
             <Group className={styles.rowActions} gap={2} wrap="nowrap">
-              <ActionIcon variant="subtle" color="gray" disabled>
-                <Check size={16} />
-              </ActionIcon>
               <ActionIcon variant="subtle" color="gray" disabled>
                 <X size={16} />
               </ActionIcon>

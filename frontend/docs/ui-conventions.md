@@ -125,6 +125,13 @@ screens. Keep row actions and the sheet-level Clear all action subtle and icon-o
 with accessible names and tooltips. Place row actions in a trailing column so their
 touch targets do not add a separate 44px information line.
 
+The inbox contains only unread notifications. Opening the sheet does not mark
+anything read. Opening a row marks that notification read, removes it after server
+confirmation, and follows its destination through the navigation guard. Read
+notifications stay out of subsequent inbox fetches. Keep only the Dismiss row
+action; there is no separate mark-read button or read-status tick. Failed writes
+leave the notification available for retry.
+
 Clearing is a single authenticated server mutation. It must archive the current
 user's complete inbox, including pages the client has not loaded; do not iterate
 over rendered rows. During any inbox mutation, block competing row and bulk

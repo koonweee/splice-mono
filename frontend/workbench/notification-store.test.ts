@@ -29,8 +29,7 @@ describe('notification fixtures', () => {
     })
     expect(await other<Summary>(getSummary)).toEqual(original)
     const page = await first<Page>({ url: '/notification/inbox' })
-    expect(page.items.map((item) => item.id)).not.toContain('connection')
-    expect(page.items[0].readAt).toBeTruthy()
+    expect(page.items).toEqual([])
   })
   it('keeps alerts unchanged on failed writes and fails closed for unknown IDs', async () => {
     const api = createFixtureApi({ failure: 'writes' })

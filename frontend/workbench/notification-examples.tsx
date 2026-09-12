@@ -5,14 +5,15 @@ import {
   NotificationInbox,
 } from '../src/components/notifications/NotificationInbox'
 import { fixtureNotifications } from './notification-store'
-import { FIXTURE_NOW } from './fixtures'
 import type { ExampleProps } from './examples'
 
 function InboxExample({ state }: ExampleProps) {
   const [opened, setOpened] = useState(true)
   const [items, setItems] = useState(() =>
     structuredClone(
-      ['empty', 'error', 'loading'].includes(state) ? [] : fixtureNotifications,
+      ['empty', 'error', 'loading'].includes(state)
+        ? []
+        : fixtureNotifications.filter((item) => !item.readAt),
     ),
   )
   const [retried, setRetried] = useState(false)
@@ -21,18 +22,12 @@ function InboxExample({ state }: ExampleProps) {
   )
   const [destination, setDestination] = useState('')
   const unreadCount = items.filter((item) => !item.readAt).length
-  const update = (id: string, dismiss = false) => {
+  const update = (id: string) => {
     if (state === 'mutation-error') {
       setError(true)
       return
     }
-    setItems((previous) =>
-      dismiss
-        ? previous.filter((item) => item.id !== id)
-        : previous.map((item) =>
-            item.id === id ? { ...item, readAt: FIXTURE_NOW } : item,
-          ),
-    )
+    setItems((previous) => previous.filter((item) => item.id !== id))
   }
   const clearAll = () => {
     if (state === 'clear-error') {
@@ -72,10 +67,13 @@ function InboxExample({ state }: ExampleProps) {
         }
         onRetry={() => {
           setRetried(true)
-          setItems(structuredClone(fixtureNotifications))
+          setItems(
+            structuredClone(
+              fixtureNotifications.filter((item) => !item.readAt),
+            ),
+          )
         }}
-        onRead={(item) => update(item.id)}
-        onDismiss={(item) => update(item.id, true)}
+        onDismiss={(item) => update(item.id)}
         onOpen={(item) => {
           if (state === 'mutation-error') {
             setError(true)

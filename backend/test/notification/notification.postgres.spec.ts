@@ -171,6 +171,14 @@ postgresSuite(
     it('keeps reads/dismissals idempotent and scoped while summary counts remain independent', async () => {
       const item = await notification();
       const before = await service.getSummary(userId);
+      expect(
+        (await service.getInbox(userId, { pageSize: 100 })).items.map(
+          (entry) => entry.id,
+        ),
+      ).toContain(item.id);
+      expect((await service.getSummary(userId)).unreadNotificationCount).toBe(
+        before.unreadNotificationCount,
+      );
       await expect(service.markRead(foreignUser, item.id)).rejects.toThrow(
         'Notification not found',
       );
@@ -186,6 +194,11 @@ postgresSuite(
       expect(read.uncategorizedTransactionCount).toBe(
         before.uncategorizedTransactionCount,
       );
+      expect(
+        (await service.getInbox(userId, { pageSize: 100 })).items.map(
+          (entry) => entry.id,
+        ),
+      ).not.toContain(item.id);
       await service.archive(userId, item.id);
       await service.archive(userId, item.id);
       expect(
