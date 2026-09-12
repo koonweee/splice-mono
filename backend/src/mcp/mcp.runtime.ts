@@ -1,3 +1,4 @@
+import { McpTransactionCategoriesService } from './mcp-transaction-categories.service';
 import { Injectable } from '@nestjs/common';
 import {
   createAuth0BearerGate,
@@ -43,6 +44,7 @@ export class SpliceMcpRuntimeService {
     private readonly mcpPortfolioVisualizationService: McpPortfolioVisualizationService,
     private readonly mcpCategorizationService: McpCategorizationService,
     private readonly transactionAnalysisService: TransactionAnalysisService,
+    private readonly mcpTransactionCategoriesService: McpTransactionCategoriesService,
     private readonly logger: Logger,
   ) {}
 
@@ -101,6 +103,7 @@ export class SpliceMcpRuntimeService {
           this.userService,
         );
         return createSpliceMcpDependencies(userId, {
+          mcpTransactionCategoriesService: this.mcpTransactionCategoriesService,
           userService: this.userService,
           accountsSurfaceService: this.accountsSurfaceService,
           balanceHistorySurfaceService: this.balanceHistorySurfaceService,

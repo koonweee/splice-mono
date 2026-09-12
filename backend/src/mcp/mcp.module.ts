@@ -1,3 +1,4 @@
+import { McpTransactionCategoriesService } from './mcp-transaction-categories.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountModule } from '../account/account.module';
@@ -41,6 +42,7 @@ import { SpliceMcpRuntimeService } from './mcp.runtime';
     UserModule,
   ],
   providers: [
+    McpTransactionCategoriesService,
     SpliceMcpRuntimeService,
     McpReadService,
     McpPortfolioVisualizationService,

@@ -765,6 +765,7 @@ async function main(): Promise<void> {
     mcpPortfolioVisualizationService,
     mcpCategorizationService as never,
     transactionAnalysisService as never,
+    {} as never,
     logger as never,
   );
   const config: EnabledMcpRuntimeConfig = {

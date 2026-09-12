@@ -1174,3 +1174,38 @@ After a full cutover rollback, confirm the public MCP hostname no longer reaches
 the failed listener and record whether DNS should remain for a retry or be
 removed. An App-metadata-only rollback keeps that hostname live. Never point
 `splice-mcp.kw0.dev` at the API-origin PAT service as a compatibility path.
+
+### Direct transaction category updates
+
+Use `set_transaction_categories` for user-authorized corrections to existing
+banking transactions (provider or manually entered). Requires `splice:write`;
+no rule preview token is needed. Resolve IDs with `list_transactions` and
+`list_categories`, then group transactions by target category:
+
+```json
+{
+  "updates": [
+    { "transactionIds": ["<transaction-id>"], "categoryId": "<active-category-id>" },
+    { "transactionIds": ["<another-id>", "<third-id>"], "categoryId": null }
+  ]
+}
+```
+
+One group with one ID is a single edit. Multiple groups assign different
+categories in one call. Null explicitly assigns Uncategorized; it does not
+resume automatic categorization. Existing rule/manual assignments are replaced
+with manual assignments. Future automation rules are unaffected.
+
+Each call accepts up to 500 IDs across 50 groups and is all-or-nothing.
+Identical duplicates are deduplicated; conflicting targets reject the request.
+Unavailable/unowned transactions or archived/unowned categories reject the
+whole batch without writes. Larger requests must be split into independently
+atomic batches. Investment activity is not supported.
+
+Results contain unique `requested`, `updated`, and `unchanged` counts and exact
+updated/unchanged IDs grouped by category. Assigning the same category to a
+rule-assigned transaction counts as an update because it becomes manual.
+Repeating an already manual assignment performs no write. Reads lock only the
+necessary rows inside a database transaction; writes are grouped by category
+rather than issuing a save for each transaction. No migration or REST contract
+change is required.
