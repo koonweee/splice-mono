@@ -84,13 +84,29 @@ export function buildBalanceWithConversion(
       ? { money: { ...balance.money }, sign: balance.sign }
       : balance,
   };
-  if (!targetCurrency || balance.money.currency === targetCurrency)
+  if (!targetCurrency) return result;
+  if (balance.money.currency === targetCurrency) {
+    result.reportingBalance = {
+      money: { ...balance.money },
+      sign: balance.sign,
+    };
+    result.exchangeRate = {
+      baseCurrency: targetCurrency,
+      targetCurrency,
+      requestedDate: targetDate,
+      rateDate: targetDate,
+      rate: '1',
+      source: 'IDENTITY',
+      ratio: { numerator: '1', denominator: '1' },
+    };
     return result;
+  }
   if (balance.money.amount === '0') {
     result.convertedBalance = {
       money: { amount: '0', currency: targetCurrency },
       sign: balance.sign,
     };
+    result.reportingBalance = result.convertedBalance;
     return result;
   }
   const rateInfo = dateRates?.get(
@@ -123,6 +139,7 @@ export function buildBalanceWithConversion(
     money: { amount, currency: targetCurrency },
     sign: balance.sign,
   };
+  result.reportingBalance = result.convertedBalance;
   result.exchangeRate = rateInfo;
   return result;
 }
@@ -131,6 +148,16 @@ export function isLiabilityType(type: string): boolean {
   return (
     type === String(AccountType.Credit) || type === String(AccountType.Loan)
   );
+}
+
+/** The contribution sign used by every net-worth projection. */
+export function netWorthContribution(result: AccountBalanceResult): bigint {
+  const effective =
+    result.effectiveBalance.reportingBalance ??
+    result.effectiveBalance.convertedBalance ??
+    result.effectiveBalance.balance;
+  const amount = getSignedAmount(effective);
+  return isLiabilityType(result.account.type) && amount > 0n ? -amount : amount;
 }
 
 /** Signed minor units; all balance projection arithmetic shares the reporting currency. */
@@ -168,12 +195,7 @@ export function calculateNetWorthForDate(
       }
       currency = effective.money.currency;
     }
-    const amount = getSignedAmount(effective);
-    total += isLiabilityType(result.account.type)
-      ? amount < 0n
-        ? amount
-        : -amount
-      : amount;
+    total += netWorthContribution(result);
   }
   return total;
 }

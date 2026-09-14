@@ -336,6 +336,11 @@ describe('BalanceQueryService', () => {
       expect(
         result[0].balances['acc-1'].currentBalance.balance.money.amount,
       ).toBe('0');
+      expect(result[0].balances['acc-1'].provenance).toMatchObject({
+        snapshotId: null,
+        snapshotDate: null,
+        coverage: 'missing',
+      });
     });
 
     it('should handle multiple accounts', async () => {
@@ -398,6 +403,19 @@ describe('BalanceQueryService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].balances['acc-1']).toBeDefined();
       expect(result[0].balances['acc-2']).toBeUndefined();
+    });
+
+    it('rejects partial ownership for attribution while retaining legacy filtered reads', async () => {
+      mockAccountRepository.find.mockResolvedValue([
+        createMockAccountEntity('acc-1'),
+      ]);
+      await expect(
+        service.loadBalanceProjection(mockUserId, '2024-01-15', '2024-01-16', {
+          accountIds: ['acc-1', 'not-owned'],
+          boundaryOnly: true,
+          requireAllAccounts: true,
+        }),
+      ).rejects.toThrow('accounts were not found');
     });
 
     it('should return empty array when no accounts found', async () => {
@@ -597,7 +615,14 @@ describe('BalanceQueryService', () => {
         ).toBeUndefined();
         expect(
           result[0].balances['acc-1'].availableBalance.exchangeRate,
-        ).toBeUndefined();
+        ).toMatchObject({
+          source: 'IDENTITY',
+          rate: '1',
+          rateDate: '2024-01-15',
+        });
+        expect(
+          result[0].balances['acc-1'].availableBalance.reportingBalance,
+        ).toEqual(result[0].balances['acc-1'].availableBalance.balance);
         // Exchange rate service should not be called for same-currency
         expect(
           mockCurrencyExchangeService.getRatesForDateRange,

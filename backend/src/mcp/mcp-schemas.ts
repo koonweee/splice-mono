@@ -1,3 +1,5 @@
+import { BalanceProvenanceSchema } from '../types/BalanceQuery';
+import { RateWithSourceSchema } from '../types/ExchangeRate';
 import { z } from 'zod';
 import {
   ExactDecimal as Decimal,
@@ -52,9 +54,59 @@ export const AccountsSnapshotOutputSchema = z
   .object({
     matchedCount: z.number().optional(),
     truncated: z.boolean().optional(),
-    accounts: z.array(McpLooseObjectSchema),
+    reportingCurrency: z.string().optional(),
+    fxReferenceDate: DateStringSchema.optional(),
+    dateBasis: z.literal('current_account_record_with_UTC_date_FX').optional(),
+    accounts: z.array(
+      z
+        .object({
+          reportingBalance: McpMoneySchema.nullable().optional(),
+          reportingCoverage: z.enum(['available', 'missing_fx']).optional(),
+          exchangeRate: RateWithSourceSchema.nullable().optional(),
+        })
+        .passthrough(),
+    ),
   })
   .passthrough();
+
+export const BalanceEndpointOutputSchema = z.object({
+  date: DateStringSchema,
+  nativeBalance: McpMoneySchema,
+  reportingBalance: McpMoneySchema,
+  netWorthContribution: McpMoneySchema,
+  provenance: BalanceProvenanceSchema.nullable(),
+  exchangeRate: RateWithSourceSchema.nullable(),
+  latestAccountSyncAt: z.string().nullable(),
+});
+export const BalanceAttributionOutputSchema = z.object({
+  basis: z.literal('recorded_balance_change'),
+  reportingCurrency: z.string(),
+  startDate: DateStringSchema,
+  endDate: DateStringSchema,
+  coverage: z.enum(['no_accounts', 'missing_snapshots', 'complete']),
+  openingNetWorth: McpMoneySchema,
+  closingNetWorth: McpMoneySchema,
+  change: McpMoneySchema,
+  accounts: z.array(
+    z.object({
+      rank: z.number().int().positive(),
+      accountId: z.string().uuid(),
+      accountName: z.string().nullable(),
+      type: z.string(),
+      isLiability: z.boolean(),
+      opening: BalanceEndpointOutputSchema,
+      closing: BalanceEndpointOutputSchema,
+      nativeBalanceChange: McpMoneySchema.nullable(),
+      contribution: McpMoneySchema,
+    }),
+  ),
+  reconciliation: z.object({
+    contributionTotal: McpMoneySchema,
+    residual: McpMoneySchema,
+    exact: z.boolean(),
+  }),
+  limitations: z.array(z.string()),
+});
 
 export const BalanceHistoryOutputSchema = z
   .object({
@@ -62,6 +114,7 @@ export const BalanceHistoryOutputSchema = z
     chartData: z.array(z.unknown()).optional(),
     assets: z.array(z.unknown()).optional(),
     liabilities: z.array(z.unknown()).optional(),
+    endpoints: BalanceAttributionOutputSchema.optional(),
   })
   .passthrough();
 
@@ -81,6 +134,30 @@ export const PaginatedListOutputSchema = z
   })
   .passthrough();
 
+export const BalanceSnapshotsOutputSchema = z
+  .object({
+    data: z.array(
+      z
+        .object({
+          id: z.string().uuid(),
+          accountId: z.string().uuid(),
+          snapshotDate: DateStringSchema,
+          snapshotType: z.string(),
+          currentBalance: McpMoneySchema,
+          availableBalance: McpMoneySchema,
+          reportingCurrentBalance: McpMoneySchema.nullable(),
+          reportingAvailableBalance: McpMoneySchema.nullable(),
+          currentBalanceFx: RateWithSourceSchema.nullable(),
+          availableBalanceFx: RateWithSourceSchema.nullable(),
+          snapshotUpdatedAt: z.string().nullable(),
+        })
+        .passthrough(),
+    ),
+    pageInfo: McpPageInfoSchema,
+    query: McpQuerySchema,
+  })
+  .passthrough();
+
 export const CategoriesOutputSchema = z
   .object({
     data: z.array(z.unknown()),
@@ -88,16 +165,143 @@ export const CategoriesOutputSchema = z
   })
   .passthrough();
 
+const HoldingOutputSchema = z
+  .object({
+    id: z.string().uuid(),
+    accountId: z.string().uuid(),
+    accountName: z.string().nullable(),
+    snapshotDate: DateStringSchema,
+    provider: z.string(),
+    securityId: z.string().uuid(),
+    securityName: z.string().nullable(),
+    tickerSymbol: z.string().nullable(),
+    type: z.string().nullable(),
+    subtype: z.string().nullable(),
+    quantity: z.string().nullable(),
+    costBasis: z.string().nullable(),
+    institutionPrice: z.string().nullable(),
+    institutionValue: McpMoneySchema.nullable(),
+    currency: z.string().nullable(),
+    vestedQuantity: z.string().nullable(),
+    vestedValue: McpMoneySchema.nullable(),
+    institutionPriceAsOf: DateStringSchema.nullable(),
+    institutionPriceDatetime: z.string().nullable(),
+    securityIdentifiers: z.object({
+      isin: z.string().nullable(),
+      cusip: z.string().nullable(),
+      sedol: z.string().nullable(),
+      externalSecurityId: z.string().nullable(),
+      provider: z.string().nullable(),
+    }),
+    marketIdentifierCode: z.string().nullable(),
+    securityCurrency: z.string().nullable(),
+    securityClosePrice: z.string().nullable(),
+    securityClosePriceAsOf: DateStringSchema.nullable(),
+    securityUpdatedAt: z.string().nullable(),
+  })
+  .passthrough();
+
 export const InvestmentHoldingsOutputSchema = z
   .object({
-    data: z.array(z.unknown()),
+    data: z.array(HoldingOutputSchema),
+    snapshots: z
+      .array(
+        z.object({
+          accountId: z.string().uuid(),
+          snapshotDate: DateStringSchema.nullable(),
+          holdingCount: z.number().int().nonnegative(),
+          snapshotId: z.string().uuid().nullable(),
+          completedAt: z.string().nullable(),
+          carriedForward: z.boolean(),
+          coverage: z.enum(['missing', 'empty', 'recorded']),
+        }),
+      )
+      .optional(),
     query: z
       .object({
         latestOnly: z.boolean(),
+        dateMode: z.enum(['latest', 'exact', 'on_or_before']).optional(),
       })
       .passthrough(),
   })
   .passthrough();
+
+export const HoldingsDatesOutputSchema = z.object({
+  data: z.array(
+    z.object({
+      accountId: z.string().uuid(),
+      snapshotId: z.string().uuid(),
+      snapshotDate: DateStringSchema,
+      provider: z.string(),
+      revision: z.number().int(),
+      completedAt: z.string(),
+    }),
+  ),
+  truncated: z.boolean(),
+  limit: z.number().int(),
+  query: McpQuerySchema,
+});
+
+const HistoricalPriceEvidenceSchema = z.object({
+  price: McpAmountSchema,
+  adjustedClose: McpAmountSchema.nullable(),
+  currency: z.string(),
+  priceDate: DateStringSchema,
+  priceDatetime: z.string().nullable(),
+  source: z.enum(['yahoo_chart', 'stored_institution_price']),
+  observationSnapshotId: z.string().uuid().nullable(),
+  observationSnapshotDate: DateStringSchema.nullable(),
+});
+const HistoricalPriceEndpointSchema = z.object({
+  requestedDate: DateStringSchema,
+  status: z.enum(['available', 'missing', 'ambiguous']),
+  price: HistoricalPriceEvidenceSchema.nullable(),
+  carriedForward: z.boolean(),
+});
+export const HistoricalSecurityEvidenceSchema = z.object({
+  securityId: z.string().uuid(),
+  identifiers: z.object({
+    provider: z.enum(['yahoo', 'plaid']),
+    externalSecurityId: z.string(),
+    isin: z.string().nullable(),
+    cusip: z.string().nullable(),
+    sedol: z.string().nullable(),
+    tickerSymbol: z.string().nullable(),
+  }),
+  mapping: z.enum(['stored_yahoo_identity', 'unmapped']),
+  proxy: z.null(),
+  providerStatus: z.enum(['ok', 'empty', 'error', 'unavailable', 'unmapped']),
+  exchange: z.string().nullable(),
+  exchangeTimezone: z.string().nullable(),
+  corporateActionsPresent: z.boolean().nullable(),
+  priceBasis: z.enum([
+    'provider_close_adjustment_unverified',
+    'institution_price_adjustment_unknown',
+  ]),
+  prices: z.array(HistoricalPriceEvidenceSchema),
+  storedPrices: z.array(HistoricalPriceEvidenceSchema),
+  endpoints: z.object({
+    opening: HistoricalPriceEndpointSchema,
+    closing: HistoricalPriceEndpointSchema,
+  }),
+});
+export const HistoricalValuationEvidenceOutputSchema = z.object({
+  basis: z.literal('historical_valuation_evidence'),
+  query: McpQuerySchema,
+  data: z.array(HistoricalSecurityEvidenceSchema),
+  storedPricesTruncated: z.boolean(),
+  fx: z.array(
+    z.object({
+      baseCurrency: z.string(),
+      targetCurrency: z.string(),
+      requestedDate: DateStringSchema,
+      currencyUnitSupported: z.boolean(),
+      status: z.enum(['available', 'missing']),
+      evidence: RateWithSourceSchema.nullable(),
+    }),
+  ),
+  limitations: z.array(z.string()),
+});
 
 const PortfolioUsdMoneySchema = z
   .object({

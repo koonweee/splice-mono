@@ -1,3 +1,7 @@
+import {
+  balanceEndpoint,
+  buildBalanceAttribution,
+} from './balance-attribution';
 import { ExactDecimal } from '../common/exact-money';
 import { getDecimalPlaces } from '../common/currency-scales';
 import {
@@ -52,6 +56,8 @@ export interface BalanceHistorySurfaceAccountSummary {
   groupingLabel: string;
   effectiveBalance: SerializedMoneyWithSign;
   convertedEffectiveBalance?: SerializedMoneyWithSign;
+  reportingEffectiveBalance?: SerializedMoneyWithSign;
+  historicalBalance?: ReturnType<typeof balanceEndpoint>;
   changePercent?: number;
   institutionName?: string | null;
   syncedAt?: string;
@@ -65,6 +71,7 @@ export interface BalanceHistorySurfaceSummary {
   sampling: HistorySampling;
   assets: BalanceHistorySurfaceAccountSummary[];
   liabilities: BalanceHistorySurfaceAccountSummary[];
+  endpoints?: ReturnType<typeof buildBalanceAttribution>;
 }
 
 export interface BalanceHistorySurfaceOptions {
@@ -161,6 +168,29 @@ export class BalanceHistorySurfaceService {
     );
   }
 
+  async getBalanceChangeAttribution(
+    userId: string,
+    options: BalanceHistorySurfaceOptions,
+  ) {
+    const projection = await this.balanceQueryService.loadBalanceProjection(
+      userId,
+      options.startDate,
+      options.endDate,
+      {
+        accountIds: options.accountIds,
+        boundaryOnly: true,
+        includeLatestSync: true,
+        requireAllAccounts: true,
+      },
+    );
+    const results = [...projection.balances];
+    return buildBalanceAttribution(
+      results[0] ?? { date: options.startDate, balances: {} },
+      results[results.length - 1] ?? { date: options.endDate, balances: {} },
+      projection.reportingCurrency,
+    );
+  }
+
   private buildSummary(
     results: Iterable<BalanceQueryPerDateResult>,
     reportingCurrency = 'USD',
@@ -254,6 +284,8 @@ export class BalanceHistorySurfaceService {
             effectiveBalance: accountResult.effectiveBalance.balance,
             convertedEffectiveBalance:
               accountResult.effectiveBalance.convertedBalance,
+            reportingEffectiveBalance: currentEffective,
+            historicalBalance: balanceEndpoint(accountResult, lastResult.date),
             changePercent: accountChangePercent,
             institutionName:
               accountResult.account.bankLink?.institutionName ?? null,
@@ -290,6 +322,11 @@ export class BalanceHistorySurfaceService {
       changePercent,
       chartData,
       sampling,
+      endpoints: buildBalanceAttribution(
+        firstResult,
+        lastResult,
+        reportingCurrency,
+      ),
       assets: assets.sort(sortByBalance),
       liabilities: liabilities.sort(sortByBalance),
     };

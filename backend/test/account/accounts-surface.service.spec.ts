@@ -1,3 +1,4 @@
+import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountService } from '../../src/account/account.service';
 import { AccountsSurfaceService } from '../../src/account/accounts-surface.service';
@@ -44,6 +45,13 @@ describe('AccountsSurfaceService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountsSurfaceService,
+        {
+          provide: CurrencyConversionService,
+          useValue: {
+            getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
+            getResolvedRates: jest.fn().mockResolvedValue(new Map()),
+          },
+        },
         {
           provide: AccountService,
           useValue: mockAccountService,
@@ -116,6 +124,10 @@ describe('AccountsSurfaceService', () => {
     expect(mockAccountService.findAll).toHaveBeenCalledWith(mockUserId);
     expect(result.matchedCount).toBe(5);
     expect(result.truncated).toBe(false);
+    expect(result.accounts[0].reportingBalance).toEqual(
+      result.accounts[0].balance,
+    );
+    expect(result.accounts[0].exchangeRate?.source).toBe('IDENTITY');
     expect(result.accounts[0]).toMatchObject({
       id: 'account-1',
       name: 'Primary Checking',

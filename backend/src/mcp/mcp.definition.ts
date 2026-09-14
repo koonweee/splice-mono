@@ -49,6 +49,10 @@ import {
   ApplyCategorizationRuleOutputSchema,
   AccountsSnapshotOutputSchema,
   BalanceHistoryOutputSchema,
+  BalanceSnapshotsOutputSchema,
+  BalanceAttributionOutputSchema,
+  HoldingsDatesOutputSchema,
+  HistoricalValuationEvidenceOutputSchema,
   CashflowAnalysisOutputSchema,
   CashflowAuditOutputSchema,
   CashflowCategoryTransactionsOutputSchema,
@@ -355,6 +359,9 @@ export const SPLICE_MCP_TOOL_NAMES = [
   'get_user_context',
   'get_accounts_snapshot',
   'get_balance_history',
+  'get_balance_change_attribution',
+  'list_holdings_snapshot_dates',
+  'get_historical_valuation_evidence',
   'search_transactions',
   'list_transactions',
   'list_balance_snapshots',
@@ -429,7 +436,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Get Accounts Snapshot',
         description:
-          'Get current Splice accounts, institutions, account groupings, and balances for the authenticated user.',
+          'Get current Splice account records, institutions, groupings, native balances and explicit reporting balances with FX coverage. fxReferenceDate uses the current UTC date; these account records are not historical snapshots. Missing FX leaves reportingBalance null while preserving native evidence. Use balance history or attribution for historical values.',
         inputSchema: {},
         outputSchema: AccountsSnapshotOutputSchema,
         requiredScopes: ['splice:read'],
@@ -448,7 +455,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Get Balance History',
         description:
-          'Get net worth, balance trend, chart points, and account balances over a date range.',
+          'Get observed net-worth chart points using current balances from the latest recorded snapshot on or before each requested date, including assets and liabilities. Missing snapshots contribute zero, with explicit coverage. Endpoints expose opening/closing native and reporting balances, selected snapshot ID/date/type, recording timestamp and FX date/source. Legacy account syncedAt is latest account sync, not historical valuation. Values are recorded changes, not market P&L or spending causes.',
         inputSchema: {
           startDate: DateStringSchema,
           endDate: DateStringSchema,
@@ -476,6 +483,80 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       async (input, dependencies) =>
         toolResult(
           await dependencies.balanceHistorySurfaceService.getBalanceHistorySummary(
+            dependencies.userId,
+            input,
+          ),
+        ),
+    ),
+
+    createSpliceTool(
+      'get_balance_change_attribution',
+      {
+        title: 'Get Recorded Balance Change Attribution',
+        description:
+          'Reconcile opening and closing observed net worth through exact signed per-account contributions, including liabilities, ranked by absolute change. Uses the same on-or-before snapshot, effective current balance, zero-before-first-snapshot and reporting FX semantics as the chart. Native changes, selected snapshot provenance and actual FX fallback dates are included. Reconciliation proves arithmetic, not market P&L, spending causation, or constant holdings. Current account metadata/classification are used. Invalid or unowned requested accounts fail; no finance data is written.',
+        inputSchema: {
+          startDate: DateStringSchema,
+          endDate: DateStringSchema,
+          accountIds: z.array(UuidSchema).min(1).max(100).optional(),
+        },
+        outputSchema: BalanceAttributionOutputSchema,
+        requiredScopes: ['splice:read'],
+        risk: { kind: 'read' },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.balanceHistorySurfaceService.getBalanceChangeAttribution(
+            dependencies.userId,
+            input,
+          ),
+        ),
+    ),
+    createSpliceTool(
+      'list_holdings_snapshot_dates',
+      {
+        title: 'List Holdings Snapshot Dates',
+        description:
+          'Discover recorded provider-appropriate holdings dates for owned active accounts in an inclusive bounded range (max 3660 days). Includes headers for empty portfolios; this is coverage, not evidence of unchanged holdings between dates. Results sort by date/account and report truncation; narrow or partition a truncated range. Does not invent dates or imply account balance snapshot coverage.',
+        inputSchema: {
+          startDate: DateStringSchema,
+          endDate: DateStringSchema,
+          accountIds: z.array(UuidSchema).min(1).max(100).optional(),
+          limit: z.number().int().min(1).max(1000).optional(),
+        },
+        outputSchema: HoldingsDatesOutputSchema,
+        requiredScopes: ['splice:read'],
+        risk: { kind: 'read' },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpReadService.listHoldingsDates(
+            dependencies.userId,
+            input,
+          ),
+        ),
+    ),
+    createSpliceTool(
+      'get_historical_valuation_evidence',
+      {
+        title: 'Get Historical Valuation Evidence',
+        description:
+          'Read bounded historical security price and reporting FX evidence for 1–20 owned security IDs and up to 366 inclusive days. Automatically maps only stored Yahoo provider identities; other securities expose stored institution price-as-of evidence and explicit unmapped status, without ticker proxies. Separates missing/empty, provider error/unavailable, ambiguous endpoints and truncated stored prices. Endpoints use on-or-before prices inside the requested range; FX reports actual DB/fallback dates including later-rate backward fill. Provider close adjustment basis is unverified; adjustedClose is separate. A client may calculate an explicitly assumed constant-holdings estimate, accounting for date/currency alignment and corporate actions. Evidence and estimates are separate from observed chart values and do not establish causation.',
+        inputSchema: {
+          securityIds: z.array(UuidSchema).min(1).max(20),
+          startDate: DateStringSchema,
+          endDate: DateStringSchema,
+          reportingCurrency: CurrencySchema.describe(
+            'Explicit reporting currency, normally get_user_context.currency.',
+          ),
+        },
+        outputSchema: HistoricalValuationEvidenceOutputSchema,
+        requiredScopes: ['splice:read'],
+        risk: { kind: 'read' },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpReadService.getHistoricalValuationEvidence(
             dependencies.userId,
             input,
           ),
@@ -611,7 +692,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'List Balance Snapshots',
         description:
-          'List raw per-account balance snapshots for historical baselines and projection setup. Keep paging until pageInfo.hasMore is false when the full range matters.',
+          'List raw per-account balance snapshots with their recorded ID/date/type/update time, native balances, reporting balances and actual snapshot-date FX source/date. A null reporting balance indicates missing FX, not a zero native valuation. Raw rows do not include carried-forward dates used by balance history. Keep paging until pageInfo.hasMore is false when the full range matters.',
         inputSchema: {
           startDate: DateStringSchema.optional().describe(
             'Inclusive start date in YYYY-MM-DD.',
@@ -632,7 +713,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
             .optional()
             .describe('Defaults to 100, maximum 250.'),
         },
-        outputSchema: PaginatedListOutputSchema,
+        outputSchema: BalanceSnapshotsOutputSchema,
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
       },
@@ -701,7 +782,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'List Investment Holdings',
         description:
-          'List latest or date-specific investment position snapshots. Holdings are portfolio positions and are separate from account balance snapshots.',
+          'List investment position snapshots, separate from account balance history. Omitted date selects latest; snapshotDate defaults to exact-date selection. dateMode=on_or_before requires minSnapshotDate and selects past snapshots within that bound. Missing and recorded empty portfolios differ. Institution price-as-of belongs to the position snapshot; security identifiers and close-price metadata are current security metadata and may have been updated after the snapshot.',
         inputSchema: {
           accountIds: z
             .array(UuidSchema)
@@ -710,7 +791,16 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
               'Optional account IDs. Defaults to all owned investment accounts.',
             ),
           snapshotDate: DateStringSchema.optional().describe(
-            'Optional holdings snapshot date in YYYY-MM-DD.',
+            'Requested holdings date; exact selection unless dateMode=on_or_before.',
+          ),
+          dateMode: z
+            .enum(['exact', 'on_or_before'])
+            .optional()
+            .describe(
+              'Date selection mode. on_or_before requires snapshotDate and minSnapshotDate; never selects future holdings.',
+            ),
+          minSnapshotDate: DateStringSchema.optional().describe(
+            'Inclusive lower bound for on_or_before; at most 3660 days before snapshotDate.',
           ),
           latestOnly: z
             .boolean()
@@ -723,13 +813,18 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
       },
-      async (input, dependencies) =>
-        toolResult(
+      async (input, dependencies) => {
+        if ((input.dateMode || input.minSnapshotDate) && !input.snapshotDate)
+          throw new Error('dateMode and minSnapshotDate require snapshotDate');
+        if (input.dateMode === 'on_or_before' && !input.minSnapshotDate)
+          throw new Error('on_or_before requires minSnapshotDate');
+        return toolResult(
           await dependencies.mcpReadService.listInvestmentHoldings(
             dependencies.userId,
             input,
           ),
-        ),
+        );
+      },
     ),
 
     createSpliceTool(

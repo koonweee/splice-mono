@@ -46,6 +46,7 @@ describe('McpReadService', () => {
   };
 
   const currencyConversionService = {
+    getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
     convertAmount: jest.fn(),
     getResolvedRates: jest.fn().mockResolvedValue(new Map()),
     getRateMap: jest.fn(),
@@ -441,6 +442,10 @@ describe('McpReadService', () => {
         accountId: 'investment-account',
         snapshotDate: '2026-05-20',
         holdingCount: 1,
+        snapshotId: null,
+        completedAt: null,
+        carriedForward: false,
+        coverage: 'recorded',
       },
     ]);
     expect(result.data[0]).toMatchObject({

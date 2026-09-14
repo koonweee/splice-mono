@@ -7,6 +7,7 @@
  */
 import type { Account } from './account'
 import type { BalanceWithConvertedBalance } from './balanceWithConvertedBalance'
+import type { AccountBalanceResultProvenance } from './accountBalanceResultProvenance'
 
 export interface AccountBalanceResult {
   account: Account
@@ -15,4 +16,5 @@ export interface AccountBalanceResult {
   effectiveBalance: BalanceWithConvertedBalance
   syncedAt?: string
   latestSyncedAt?: string
+  provenance?: AccountBalanceResultProvenance
 }

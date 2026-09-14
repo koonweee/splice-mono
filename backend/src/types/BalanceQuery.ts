@@ -16,6 +16,7 @@ export const BalanceWithConvertedBalanceSchema = registerSchema(
   z.object({
     balance: MoneyWithSignSchema,
     convertedBalance: MoneyWithSignSchema.optional(),
+    reportingBalance: MoneyWithSignSchema.optional(),
     exchangeRate: RateWithSourceSchema.optional(),
   }),
 );
@@ -23,9 +24,18 @@ export type BalanceWithConvertedBalance = z.infer<
   typeof BalanceWithConvertedBalanceSchema
 >;
 
-/**
- * Balance result for a single account on a single date
- */
+export const BalanceProvenanceSchema = z.object({
+  requestedDate: CalendarDateSchema,
+  snapshotId: z.string().uuid().nullable(),
+  snapshotDate: CalendarDateSchema.nullable(),
+  snapshotType: z.string().nullable(),
+  snapshotUpdatedAt: z.string().nullable(),
+  carriedForward: z.boolean(),
+  coverage: z.enum(['recorded', 'carried_forward', 'missing']),
+});
+export type BalanceProvenance = z.infer<typeof BalanceProvenanceSchema>;
+
+/** Balance result for a single account on a single date. */
 export const AccountBalanceResultSchema = registerSchema(
   'AccountBalanceResult',
   z.object({
@@ -35,6 +45,7 @@ export const AccountBalanceResultSchema = registerSchema(
     effectiveBalance: BalanceWithConvertedBalanceSchema,
     syncedAt: z.date().optional(),
     latestSyncedAt: z.date().optional(),
+    provenance: BalanceProvenanceSchema.optional(),
   }),
 );
 export type AccountBalanceResult = z.infer<typeof AccountBalanceResultSchema>;
