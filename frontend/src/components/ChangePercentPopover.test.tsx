@@ -26,6 +26,15 @@ afterEach(() => {
 })
 
 describe('absolute change popup', () => {
+  it('omits zero changes when the card opts out', () => {
+    render(
+      <MantineProvider>
+        <ChangePercentPopover changePercent={0} color="dimmed" hideZero />
+      </MantineProvider>,
+    )
+    expect(screen.queryByText('0.00%')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
   it('shows a zero percent and its zero amount', async () => {
     render(
       <MantineProvider>

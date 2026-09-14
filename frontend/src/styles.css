@@ -9,6 +9,33 @@ html {
   scroll-padding-bottom: var(--splice-lifecycle-space, 0px);
 }
 
+/* Hide indicators on touch devices without disabling native swipe scrolling.
+   Portaled menus and dialogs are covered by the same global rules. */
+@media (--coarse-pointer) {
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: none !important;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
+  html {
+    scrollbar-gutter: auto;
+  }
+
+  .mantine-ScrollArea-root {
+    --scrollarea-scrollbar-size: 0px !important;
+  }
+
+  .mantine-ScrollArea-scrollbar,
+  .mantine-ScrollArea-corner {
+    display: none !important;
+  }
+}
+
 /* Doubled attribute selector beats react-remove-scroll-bar's injected
    body[data-scroll-locked] style. scrollbar-gutter: stable on html already
    reserves scrollbar space, so the library's margin-right compensation is

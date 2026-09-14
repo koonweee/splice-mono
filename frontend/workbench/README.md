@@ -16,7 +16,8 @@ geometry is unchanged. The component regression test covers retained search text
 ## Home account change percentages
 
 Home account rows again show the selected period's percentage directly below the
-balance, including neutral `0.00%`; missing comparisons stay absent. Use
+balance. Zero and missing comparisons stay absent in individual account cards;
+account modals still show neutral `0.00%`. Use
 `account-overview` for positive, negative, zero and missing values and the exact
 amount popups. On touch layouts the popup target extends upward over the balance
 to retain a 44px hit area without adding visible space. The account navigation
@@ -27,6 +28,14 @@ phone. Checked Dark desktop, Light phone popup/hit area and the OLED phone
 `page-home&hold=reads` loading/ready pair. The paired row skeleton now reserves
 the percentage line, and period loading uses the same line height. The change
 popup opened without selecting the account. No browser runtime errors.
+
+## Touch scrollbars
+
+On devices with a coarse primary pointer, native scrollbars and Mantine ScrollArea
+indicators are hidden globally, including portaled menus and dialogs. Overflow
+and swipe scrolling remain enabled; fine-pointer desktop scrollbars are unchanged.
+Use `account-overview` and `account-dialogs&state=account` with touch emulation
+and `page-home&hold=reads` for the loading/ready pair.
 
 ## PWA launch screen
 

@@ -19,6 +19,7 @@ export function ChangePercentPopover({
   changePercent,
   color,
   hidden = false,
+  hideZero = false,
   textRole = 'caption',
   testId,
 }: {
@@ -26,12 +27,13 @@ export function ChangePercentPopover({
   changePercent?: number
   color: string
   hidden?: boolean
+  hideZero?: boolean
   textRole?: 'caption' | 'metadata'
   testId?: string
 }) {
   const percent = formatPercent(changePercent)
 
-  if (!percent) return null
+  if (!percent || (hideZero && changePercent === 0)) return null
 
   const amount = hidden
     ? HIDDEN_BALANCE_PLACEHOLDER
