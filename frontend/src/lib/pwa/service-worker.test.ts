@@ -10,6 +10,7 @@ import {
   resetPwaServiceWorkerStateForTests,
   subscribeToPwaUpdates,
 } from './service-worker'
+import * as diagnostics from './diagnostics'
 import { registerAppTransitionGuard } from './app-transition'
 
 class Worker extends EventTarget {
@@ -252,6 +253,33 @@ describe('native PWA service worker lifecycle', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
+  it('captures a fresh registration state without changing the timeout outcome', async () => {
+    const save = vi.spyOn(diagnostics, 'preservePwaFailure')
+    registration.active = new Worker('activating')
+    const fresh = new Registration()
+    container.getRegistration
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(fresh)
+    const failure = expect(getServiceWorkerRegistration()).rejects.toThrow(
+      'timed out',
+    )
+    await vi.advanceTimersByTimeAsync(45_000)
+    await failure
+    await vi.advanceTimersByTimeAsync(4500)
+    expect(save).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          freshRegistration: expect.objectContaining({
+            found: true,
+            sameRegistrationObject: false,
+            states: expect.objectContaining({ active: 'activated' }),
+          }),
+        }),
+      ]),
+      expect.anything(),
+    )
+    expect(getPwaUpdateState().status).toBe('failed')
+  })
   it('preserves unrelated and release caches while removing the legacy private shell', async () => {
     await getServiceWorkerRegistration()
     expect(caches.delete).toHaveBeenCalledOnce()

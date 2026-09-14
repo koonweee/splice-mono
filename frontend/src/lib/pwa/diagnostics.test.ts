@@ -46,6 +46,25 @@ describe('PWA diagnostic capture', () => {
       JSON.parse(reloaded.exportPwaDiagnostics()).failure.page.pending,
     ).toHaveLength(1)
   })
+  it('retains activation milestones after cache traffic replaces the rolling log', async () => {
+    const d = await import('./diagnostics')
+    d.recordPwaDiagnostic('worker:runtime')
+    await d.tracePwa('worker:activate', async () => {
+      await d.tracePwa('worker:claim', () => Promise.resolve())
+    })
+    for (let i = 0; i < 400; i++) d.recordPwaDiagnostic('cache:keys:start')
+    const snapshot = d.diagnosticSnapshot()
+    expect(
+      snapshot.events.every((entry) => entry.event === 'cache:keys:start'),
+    ).toBe(true)
+    expect(snapshot.milestones.map((entry) => entry.event)).toEqual([
+      'worker:runtime',
+      'worker:activate:start',
+      'worker:claim:start',
+      'worker:claim:end',
+      'worker:activate:end',
+    ])
+  })
   it('bounds history and excludes raw exception messages', async () => {
     const d = await import('./diagnostics')
     for (let i = 0; i < 200; i++) d.recordPwaDiagnostic('worker:state')

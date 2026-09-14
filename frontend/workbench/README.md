@@ -709,3 +709,9 @@ The routing probe records the instance serving that probe, not proof of which
 instance served an earlier download. Nonvisual diagnostic helpers are covered by
 `src/lib/pwa/diagnostics.test.ts` (bounded history, storage failure, frozen
 timeout snapshot, and persistence across reload).
+
+PWA diagnostics also retain a separate fixed set of installation/activation
+milestones, the worker's own observed state, and a bounded fresh-registration
+lookup on timeout. These are observational only and do not bypass readiness.
+In `pwa-lifecycle&state=error`, a failed Retry stops before update/notification
+setup, clears its spinner, and leaves the copy action available.

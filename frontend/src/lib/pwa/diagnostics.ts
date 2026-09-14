@@ -2,12 +2,32 @@
 type Detail = Record<string, string | number | boolean | null>
 type Entry = { at: number; event: string; detail: Detail }
 const events: Array<Entry> = []
+// Fixed lifecycle keys survive high-volume cache traffic; repeated stages replace
+// only their own timestamp, keeping this bounded for long-running workers.
+const milestones = new Map<string, Entry>()
+const milestoneNames = new Set([
+  'worker:runtime',
+  'worker:install:start',
+  'worker:install:end',
+  'worker:install:error',
+  'worker:activate:start',
+  'worker:activate:end',
+  'worker:activate:error',
+  'worker:activate-cache:start',
+  'worker:activate-cache:end',
+  'worker:activate-cache:error',
+  'worker:claim:start',
+  'worker:claim:end',
+  'worker:claim:error',
+])
 const pending = new Map<number, Entry>()
 let sequence = 0
 const key = 'splice-pwa-diagnostics-v1'
 let failure: unknown
 export function recordPwaDiagnostic(event: string, detail: Detail = {}) {
-  events.push({ at: Date.now(), event, detail })
+  const entry = { at: Date.now(), event, detail }
+  events.push(entry)
+  if (milestoneNames.has(event)) milestones.set(event, entry)
   if (events.length > 160) events.shift()
 }
 export function diagnosticSnapshot() {
@@ -17,6 +37,7 @@ export function diagnosticSnapshot() {
         ? __SPLICE_BUILD_ID__
         : 'development',
     events: [...events],
+    milestones: [...milestones.values()],
     pending: [...pending.values()],
   }
 }
