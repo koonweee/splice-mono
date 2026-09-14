@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { assertDateRange } from '../common/query-bounds';
 import { AccountEntity } from '../account/account.entity';
@@ -9,11 +13,14 @@ import { InvestmentHoldingSnapshotEntity } from './investment-holding-snapshot.e
 export type HoldingsReadOptions = {
   accountIds?: string[];
   snapshotDate?: string;
+  dateMode?: 'exact' | 'on_or_before';
+  minSnapshotDate?: string;
   includeArchived?: boolean;
 };
 export type HoldingsReadResult = {
   account: AccountEntity;
   snapshot: InvestmentHoldingsResponse;
+  header?: HoldingsSnapshotHeaderEntity;
 };
 
 @Injectable()
@@ -26,8 +33,24 @@ export class HoldingsQueryService {
     options: HoldingsReadOptions = {},
     manager?: EntityManager,
   ): Promise<HoldingsReadResult[]> {
+    if (options.dateMode && !options.snapshotDate)
+      throw new BadRequestException('dateMode requires snapshotDate');
     if (options.snapshotDate)
       assertDateRange(options.snapshotDate, options.snapshotDate);
+    if (
+      options.dateMode === 'on_or_before' &&
+      (!options.snapshotDate || !options.minSnapshotDate)
+    )
+      throw new BadRequestException(
+        'on_or_before requires snapshotDate and minSnapshotDate',
+      );
+    if (options.minSnapshotDate) {
+      if (!options.snapshotDate)
+        throw new BadRequestException('minSnapshotDate requires snapshotDate');
+      assertDateRange(options.minSnapshotDate, options.snapshotDate, {
+        maxDays: 3660,
+      });
+    }
     if (options.accountIds?.length === 0) return [];
     if (manager) return this.readSnapshot(manager, userId, options);
     return this.dataSource.transaction('REPEATABLE READ', (scoped) =>
@@ -35,11 +58,69 @@ export class HoldingsQueryService {
     );
   }
 
-  private async readSnapshot(
+  async listAvailableDates(
+    userId: string,
+    options: {
+      accountIds?: string[];
+      startDate: string;
+      endDate: string;
+      limit?: number;
+    },
+  ) {
+    assertDateRange(options.startDate, options.endDate, { maxDays: 3660 });
+    const limit = options.limit ?? 500;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000)
+      throw new BadRequestException('limit must be between 1 and 1000');
+    return this.dataSource.transaction('REPEATABLE READ', async (manager) => {
+      const accounts = await this.loadAccounts(manager, userId, {
+        accountIds: options.accountIds,
+        snapshotDate: options.endDate,
+      });
+      const ids = accounts.map((account) => account.id);
+      if (ids.length === 0)
+        return { data: [], truncated: false, limit, query: options };
+      const headers = await manager
+        .getRepository(HoldingsSnapshotHeaderEntity)
+        .createQueryBuilder('header')
+        .innerJoin(
+          AccountEntity,
+          'owner',
+          'owner.id = header."accountId" AND owner."userId" = header."userId"',
+        )
+        .where('header."userId" = :userId', { userId })
+        .andWhere('header."accountId" IN (:...ids)', { ids })
+        .andWhere(
+          `header.provider = CASE WHEN owner."valuationMode" = 'holdings' THEN 'manual' ELSE 'plaid' END`,
+        )
+        .andWhere(
+          'header."snapshotDate" BETWEEN :startDate AND :endDate',
+          options,
+        )
+        .orderBy('header.snapshotDate', 'ASC')
+        .addOrderBy('header.accountId', 'ASC')
+        .take(limit + 1)
+        .getMany();
+      return {
+        data: headers.slice(0, limit).map((header) => ({
+          accountId: header.accountId,
+          snapshotId: header.id,
+          snapshotDate: header.snapshotDate,
+          provider: header.provider,
+          revision: header.revision,
+          completedAt: header.completedAt.toISOString(),
+        })),
+        truncated: headers.length > limit,
+        limit,
+        query: options,
+      };
+    });
+  }
+
+  private async loadAccounts(
     manager: EntityManager,
     userId: string,
     options: HoldingsReadOptions,
-  ): Promise<HoldingsReadResult[]> {
+  ): Promise<AccountEntity[]> {
     const query = manager
       .getRepository(AccountEntity)
       .createQueryBuilder('account')
@@ -85,6 +166,15 @@ export class HoldingsQueryService {
       throw new NotFoundException(
         'One or more investment accounts were not found',
       );
+    return accounts;
+  }
+
+  private async readSnapshot(
+    manager: EntityManager,
+    userId: string,
+    options: HoldingsReadOptions,
+  ): Promise<HoldingsReadResult[]> {
+    const accounts = await this.loadAccounts(manager, userId, options);
     if (accounts.length === 0) return [];
     const headersQuery = manager
       .getRepository(HoldingsSnapshotHeaderEntity)
@@ -106,8 +196,15 @@ export class HoldingsQueryService {
       .addOrderBy('header.snapshotDate', 'DESC')
       .addOrderBy('header.revision', 'DESC');
     if (options.snapshotDate)
-      headersQuery.andWhere('header."snapshotDate" = :snapshotDate', {
-        snapshotDate: options.snapshotDate,
+      headersQuery.andWhere(
+        `header."snapshotDate" ${options.dateMode === 'on_or_before' ? '<=' : '='} :snapshotDate`,
+        {
+          snapshotDate: options.snapshotDate,
+        },
+      );
+    if (options.minSnapshotDate)
+      headersQuery.andWhere('header."snapshotDate" >= :minSnapshotDate', {
+        minSnapshotDate: options.minSnapshotDate,
       });
     const headers = await headersQuery.getMany();
     const holdings = headers.length
@@ -156,6 +253,7 @@ export class HoldingsQueryService {
           : null;
       return {
         account,
+        header,
         snapshot: {
           accountId: account.id,
           snapshotDate: header?.snapshotDate ?? null,

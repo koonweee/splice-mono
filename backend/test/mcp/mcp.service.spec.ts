@@ -1,3 +1,4 @@
+import { buildBalanceAttribution } from '../../src/balance-query/balance-attribution';
 import {
   createMcpServer,
   createRequestContext,
@@ -45,6 +46,7 @@ const INTENTIONALLY_UPDATED_CASH_FLOW_GUIDANCE_TOOLS = new Set([
 ]);
 const INTENTIONALLY_UPDATED_EXACT_QUERY_TOOLS = new Set([
   'get_user_context',
+  'get_accounts_snapshot',
   'get_balance_history',
   'search_transactions',
   'list_balance_snapshots',
@@ -53,6 +55,11 @@ const INTENTIONALLY_UPDATED_EXACT_QUERY_TOOLS = new Set([
   'list_investment_activity',
   'preview_categorization_rule_draft',
   'collect_projection_assumptions',
+]);
+const ADDED_HISTORICAL_EVIDENCE_TOOLS = new Set([
+  'get_balance_change_attribution',
+  'list_holdings_snapshot_dates',
+  'get_historical_valuation_evidence',
 ]);
 const ADDED_CATEGORIZATION_LIFECYCLE_TOOLS = new Set([
   'set_transaction_categories',
@@ -112,6 +119,7 @@ describe('Splice MCP definition', () => {
   };
   const balanceHistorySurfaceService = {
     getBalanceHistorySummary: jest.fn(),
+    getBalanceChangeAttribution: jest.fn(),
   };
   const transactionsSurfaceService = {
     searchTransactions: jest.fn(),
@@ -121,6 +129,8 @@ describe('Splice MCP definition', () => {
     listBalanceSnapshots: jest.fn(),
     listCategories: jest.fn(),
     listInvestmentHoldings: jest.fn(),
+    listHoldingsDates: jest.fn(),
+    getHistoricalValuationEvidence: jest.fn(),
     listInvestmentActivity: jest.fn(),
     listRecurringManualTransactionSchedules: jest.fn(),
     listAnalysisRules: jest.fn(),
@@ -313,10 +323,12 @@ describe('Splice MCP definition', () => {
       const readOnlyToolNames = [
         'collect_projection_assumptions',
         'get_accounts_snapshot',
+        'get_balance_change_attribution',
         'get_balance_history',
         'get_cashflow_analysis',
         'get_cashflow_analysis_audit',
         'get_categorization_rule',
+        'get_historical_valuation_evidence',
         'get_user_context',
         'list_analysis_rules',
         'list_balance_snapshots',
@@ -324,6 +336,7 @@ describe('Splice MCP definition', () => {
         'list_categories',
         'list_categorization_rule_recommendations',
         'list_categorization_rules',
+        'list_holdings_snapshot_dates',
         'list_investment_activity',
         'list_investment_holdings',
         'list_manual_categorized_transaction_examples',
@@ -347,10 +360,12 @@ describe('Splice MCP definition', () => {
         'create_categorization_rule',
         'edit_categorization_rule',
         'get_accounts_snapshot',
+        'get_balance_change_attribution',
         'get_balance_history',
         'get_cashflow_analysis',
         'get_cashflow_analysis_audit',
         'get_categorization_rule',
+        'get_historical_valuation_evidence',
         'get_user_context',
         'list_analysis_rules',
         'list_balance_snapshots',
@@ -358,6 +373,7 @@ describe('Splice MCP definition', () => {
         'list_categories',
         'list_categorization_rule_recommendations',
         'list_categorization_rules',
+        'list_holdings_snapshot_dates',
         'list_investment_activity',
         'list_investment_holdings',
         'list_manual_categorized_transaction_examples',
@@ -378,7 +394,7 @@ describe('Splice MCP definition', () => {
       expect(result.tools.map((tool) => tool.name)).toEqual([
         ...SPLICE_MCP_TOOL_NAMES,
       ]);
-      expect(result.tools).toHaveLength(33);
+      expect(result.tools).toHaveLength(36);
       expect(toolsByName.has('show_cashflow_explorer')).toBe(false);
       expect(toolsByName.has('show_portfolio_viewer')).toBe(false);
       expect(toolsByName.get('visualize_cash_flow')).toMatchObject({
@@ -633,7 +649,10 @@ describe('Splice MCP definition', () => {
 
       const listedTools = await client.listTools();
       expect(SPLICE_MCP_TOOL_NAMES).toHaveLength(
-        retainedTools.length + 2 + ADDED_CATEGORIZATION_LIFECYCLE_TOOLS.size,
+        retainedTools.length +
+          2 +
+          ADDED_CATEGORIZATION_LIFECYCLE_TOOLS.size +
+          ADDED_HISTORICAL_EVIDENCE_TOOLS.size,
       );
       expect(
         listedTools.tools
@@ -642,7 +661,8 @@ describe('Splice MCP definition', () => {
             (name) =>
               name !== 'visualize_cash_flow' &&
               name !== 'visualize_portfolio' &&
-              !ADDED_CATEGORIZATION_LIFECYCLE_TOOLS.has(name),
+              !ADDED_CATEGORIZATION_LIFECYCLE_TOOLS.has(name) &&
+              !ADDED_HISTORICAL_EVIDENCE_TOOLS.has(name),
           ),
       ).toEqual(retainedTools);
       expect(
@@ -652,6 +672,7 @@ describe('Splice MCP definition', () => {
               tool.name !== 'visualize_cash_flow' &&
               tool.name !== 'visualize_portfolio' &&
               !ADDED_CATEGORIZATION_LIFECYCLE_TOOLS.has(tool.name) &&
+              !ADDED_HISTORICAL_EVIDENCE_TOOLS.has(tool.name) &&
               !UPDATED_CATEGORIZATION_GUIDANCE_TOOLS.has(tool.name) &&
               !INTENTIONALLY_UPDATED_CASH_FLOW_GUIDANCE_TOOLS.has(tool.name) &&
               !INTENTIONALLY_UPDATED_EXACT_QUERY_TOOLS.has(tool.name),
@@ -1309,6 +1330,118 @@ describe('Splice MCP definition', () => {
       });
     } finally {
       await close();
+    }
+  });
+
+  it('serves typed historical evidence reads with matching JSON fallback and denies missing read scope', async () => {
+    const range = { startDate: '2026-09-01', endDate: '2026-09-05' };
+    balanceHistorySurfaceService.getBalanceChangeAttribution.mockResolvedValue(
+      buildBalanceAttribution(
+        { date: range.startDate, balances: {} },
+        { date: range.endDate, balances: {} },
+        'USD',
+      ),
+    );
+    mcpReadService.listHoldingsDates.mockResolvedValue({
+      data: [],
+      truncated: false,
+      limit: 500,
+      query: range,
+    });
+    mcpReadService.getHistoricalValuationEvidence.mockResolvedValue({
+      basis: 'historical_valuation_evidence',
+      query: range,
+      data: [],
+      storedPricesTruncated: false,
+      fx: [],
+      limitations: [],
+    });
+    const calls = [
+      { name: 'get_balance_change_attribution', arguments: range },
+      { name: 'list_holdings_snapshot_dates', arguments: range },
+      {
+        name: 'get_historical_valuation_evidence',
+        arguments: {
+          ...range,
+          securityIds: [mockAccountId],
+          reportingCurrency: 'USD',
+        },
+      },
+    ];
+    const connected = await connect(createServer(mockUserId, ['splice:read']));
+    try {
+      for (const call of calls) {
+        const result = await connected.client.callTool(call);
+        expect(result.isError).toBe(false);
+        const fallback = result.content as Array<{
+          type: string;
+          text: string;
+        }>;
+        expect(JSON.parse(fallback[0].text)).toEqual(result.structuredContent);
+      }
+      expect(
+        balanceHistorySurfaceService.getBalanceChangeAttribution,
+      ).toHaveBeenCalledWith(mockUserId, range);
+      expect(mcpReadService.listHoldingsDates).toHaveBeenCalledWith(
+        mockUserId,
+        range,
+      );
+      expect(
+        mcpReadService.getHistoricalValuationEvidence,
+      ).toHaveBeenCalledWith(mockUserId, calls[2].arguments);
+    } finally {
+      await connected.close();
+    }
+    jest.clearAllMocks();
+    const denied = await connect(createServer(mockUserId, ['splice:write']));
+    try {
+      for (const call of calls)
+        expect((await denied.client.callTool(call)).isError).toBe(true);
+      expect(
+        balanceHistorySurfaceService.getBalanceChangeAttribution,
+      ).not.toHaveBeenCalled();
+      expect(mcpReadService.listHoldingsDates).not.toHaveBeenCalled();
+      expect(
+        mcpReadService.getHistoricalValuationEvidence,
+      ).not.toHaveBeenCalled();
+    } finally {
+      await denied.close();
+    }
+  });
+
+  it('rejects invalid historical evidence inputs and unbounded carry-forward before domain reads', async () => {
+    const connected = await connect(createServer(mockUserId));
+    try {
+      expect(
+        (
+          await connected.client.callTool({
+            name: 'get_historical_valuation_evidence',
+            arguments: {
+              securityIds: [],
+              startDate: '2026-09-01',
+              endDate: '2026-09-05',
+              reportingCurrency: 'USD',
+            },
+          })
+        ).isError,
+      ).toBe(true);
+      expect(
+        (
+          await connected.client.callTool({
+            name: 'list_investment_holdings',
+            arguments: {
+              snapshotDate: '2026-09-05',
+              dateMode: 'on_or_before',
+            },
+          })
+        ).isError,
+      ).toBe(true);
+      expect(
+        mcpReadService.getHistoricalValuationEvidence,
+      ).not.toHaveBeenCalled();
+      expect(mcpReadService.listInvestmentHoldings).not.toHaveBeenCalled();
+    } finally {
+      await connected.close();
     }
   });
 

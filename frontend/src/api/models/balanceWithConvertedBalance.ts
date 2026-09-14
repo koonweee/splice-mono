@@ -11,5 +11,6 @@ import type { RateWithSource } from './rateWithSource'
 export interface BalanceWithConvertedBalance {
   balance: MoneyWithSign
   convertedBalance?: MoneyWithSign
+  reportingBalance?: MoneyWithSign
   exchangeRate?: RateWithSource
 }

@@ -19,6 +19,24 @@ topology and Komodo values live in the separate `koonweee/stack` repository,
 under `control-plane/komodo/resources/apps/splice/` and
 `control-plane/komodo/stacks/splice-app/`.
 
+## Historical balances and valuation evidence
+
+`get_balance_change_attribution` reconciles opening and closing net worth with exact signed account contributions, ranked by absolute change. Credit and loan debt subtracts from net worth regardless of a positive stored debt sign. Effective balances use **current balance** for every account type. Contributions are recorded balance changes, including reporting FX effects; they do not establish spending causation or market P&L. `get_balance_history` preserves its chart and legacy summaries and adds the same endpoint evidence.
+
+Each historical endpoint exposes native/reporting balances, the selected snapshot ID/date/type, recording update timestamp, carried-forward/missing coverage, and actual FX rate/date/source. Selection uses the latest snapshot **on or before** the chart date. Missing snapshots contribute zero under chart semantics, with explicit missing coverage. Stored `FORWARD_FILL` records are labeled carried forward; original recording provenance is unavailable. Account metadata and asset/liability classifications reflect the current owned account set, including archived accounts. `latestAccountSyncAt` and legacy summary `syncedAt` are latest account sync timestamps; they may be later than the historical point and cannot explain its valuation.
+
+Reporting balances are explicit even for matching native/reporting currency. `IDENTITY` means rate 1. FX uses the chart date for carried balances; raw snapshots use their recording date. `DB`, `FORWARD_FILLED`, and `BACKWARD_FILLED` report exact, prior-date and later-date DB rate evidence respectively. Later-rate FX fallback does not imply a future balance snapshot. Upstream rate vendor metadata is not retained. Missing required nonzero FX fails history/attribution; current account and raw snapshot reads retain native evidence with null reporting balances. Zero balances need no FX quote. `get_accounts_snapshot` identifies current account records and its UTC current-date FX reference separately from historical snapshots. `list_balance_snapshots` pages recorded rows; missing daily rows may still produce carried chart values.
+
+`list_holdings_snapshot_dates` discovers provider-appropriate recorded headers, including empty portfolios, over at most 3660 inclusive days. It defaults to 500 rows (maximum 1000), sorts by date/account, and explicitly reports truncation. Narrow or partition a truncated query. `list_investment_holdings` preserves exact-date selection for `snapshotDate` and latest selection when omitted. Its additive `dateMode=on_or_before` requires `minSnapshotDate`, with at most 3660 inclusive days between bounds. It never selects future holdings. Missing coverage (`snapshotDate=null`) differs from a recorded empty portfolio (`holdingCount=0`). Position institution price timestamps are historical position evidence; security identifiers (ISIN/CUSIP/SEDOL/provider IDs), exchange/currency and close-price metadata are current security metadata and may have changed after the position snapshot.
+
+`get_historical_valuation_evidence` accepts 1–20 owned security IDs, an explicit reporting currency, and at most 366 inclusive days. Stored Yahoo identities reuse the existing Yahoo provider's daily chart capability; Plaid securities expose stored institution price-as-of records with explicit `unmapped` status. No ticker proxy is guessed. Provider `empty`, `error`, and `unavailable` differ, and missing/ambiguous endpoint prices are explicit. Stored position evidence is capped at 2000 rows with truncation reported. Yahoo dates use the exchange timezone; provider numeric quotes are serialized as decimal text without claiming exact trade-price precision. Endpoints select prices on or before within the requested evidence range; a missing opening quote can be investigated with a broader bounded range and explicit client selection. Quote-date and requested valuation-date FX rates remain distinct.
+
+The tool exposes closes and separate adjusted closes, price-basis limitations, and whether Yahoo returned corporate actions. Adjustment and corporate-action completeness are unverified. Institution adjustment basis is unknown. A client may calculate an **explicitly assumed constant-holdings estimate**; unchanged quantities, price basis, FX/date alignment, splits, dividends, trades, transfers, fees and cash all matter. Estimates must stay separate from observed chart values. The structured evidence supports checking alternative explanations without imposing a fixed investigation sequence or conclusion.
+
+Synthetic example: assets of USD 1000 and USD 500, less SGD 100 debt at 0.75 USD/SGD, give USD 1425 opening net worth. Closing assets of USD 900 and USD 450, less SGD 200 debt at 0.80, give USD 1190. Contributions are −100, −50 and −85 USD, exactly reconciling a −235 USD change. That arithmetic does not prove the investment decline was market loss or the cash decline was spending. An FX-only debt explanation would predict −5 USD with unchanged SGD 100 debt; native debt actually rose by SGD 100. The fixture and checks live in `backend/test/balance-query/balance-attribution.spec.ts`; no private records are used.
+
+All new tools require `splice:read` and are read-only, with validated structured output and equivalent JSON text fallback. Existing inputs/native fields remain usable; additions do not require an MCP App or financial writes. A requested unavailable/unowned attribution account or historical security fails rather than silently returning a partial reconciliation. Empty result arrays are successful coverage responses; transport/auth/provider/database errors are not empty portfolios.
+
 ## Authentication and identity
 
 The production OAuth contract is:
@@ -90,7 +108,7 @@ For each ChatGPT developer-mode plugin instance:
    authorization request should include `openid`, `email`, `offline_access`,
    `splice:read`, and `splice:write`, PKCE S256, and the exact MCP resource.
 5. Open the plugin in ChatGPT and select **Refresh**. Confirm that ChatGPT
-   discovers exactly 32 tools before testing a prompt.
+   discovers exactly 36 tools before testing a prompt.
 6. Change the Splice app/plugin permission mode so mutating actions are allowed
    or require an explicit prompt. The **Allow low-risk actions** mode is
    sufficient for reads and previews but may prevent ChatGPT from dispatching
@@ -188,12 +206,14 @@ listener-specific values and remain disabled.
 
 ## Capability and safety contract
 
-The server exposes 32 tools. All return validated `structuredContent` and a
+The server exposes 36 tools. All return validated `structuredContent` and a
 JSON-equivalent text fallback.
 
 - Context, accounts, balances, and transactions: `get_user_context`,
-  `get_accounts_snapshot`, `get_balance_history`, `list_balance_snapshots`,
+  `get_accounts_snapshot`, `get_balance_history`, `get_balance_change_attribution`, `list_balance_snapshots`,
   `list_transactions`, `search_transactions`, and `list_categories`.
+- Historical investment evidence: `list_holdings_snapshot_dates` and
+  `get_historical_valuation_evidence`.
 - Cash flow and rule context: `get_cashflow_analysis`,
   `get_cashflow_analysis_audit`, `list_cashflow_category_transactions`,
   `list_analysis_rules`, `list_categorization_rules`,
@@ -673,7 +693,7 @@ or stack configuration change.
 2. Promote only the reviewed `main` revision through the protected `main` to
    `deploy` workflow. Confirm the reviewed image is healthy on `splice-app-sf`;
    do not restart or reconfigure unrelated replicas.
-3. Through an authenticated production MCP client, confirm exactly 32 tools,
+3. Through an authenticated production MCP client, confirm exactly 36 tools,
    `visualize_portfolio` exactly once, no `show_portfolio_viewer`, and linkage
    to `ui://splice/portfolio/v3.html`. Read the resource and verify
    `splice:read`, canonical domain/CSP/border metadata, HTML MIME type, strict
@@ -813,7 +833,7 @@ database change.
    `deploy` workflow. Confirm the exact reviewed image is healthy on
    `splice-app-sf`; do not restart or reconfigure unrelated replicas.
 3. Use the existing OAuth-capable deterministic client to initialize production
-   and confirm exactly 32 tools. Discovery must contain
+   and confirm exactly 36 tools. Discovery must contain
    `visualize_cash_flow` once, omit `show_cashflow_explorer`, and link the tool
    to `ui://splice/cash-flow/v3.html`. Read that resource and verify
    `splice:read`, canonical widget origin/CSP/border metadata, HTML MIME type,
@@ -1117,7 +1137,7 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
 
 8. Use MCP Inspector or another deterministic OAuth-capable client before
    ChatGPT. Log in with the allowed Google account, initialize, confirm exactly
-   32 tools, read the guide/resource and one prompt, call a representative read,
+   36 tools, read the guide/resource and one prompt, call a representative read,
    complete projection input-required/resume, and verify an App result plus its
    structured fallback. Use a controlled categorization sample to preview and
    execute creation, edit, archive/restore, and historical application,
@@ -1129,7 +1149,7 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
    not contain bearer tokens, subjects or other claims, arguments, structured
    results, internal errors, or financial values.
 10. Connect ChatGPT only after the deterministic smoke passes. Refresh plugin
-    metadata, confirm 32 tools, attach Splice to a new supported Work
+    metadata, confirm 36 tools, attach Splice to a new supported Work
     conversation, set its permission mode to allow or prompt for mutating
     actions rather than **Allow low-risk actions**, and verify OAuth login,
     visible scopes/annotations, one read, and one previewed write. A Finance or

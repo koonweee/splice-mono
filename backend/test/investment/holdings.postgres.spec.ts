@@ -1,3 +1,4 @@
+import { McpHistoricalEvidenceService } from '../../src/mcp/mcp-historical-evidence.service';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ConflictException } from '@nestjs/common';
@@ -303,6 +304,112 @@ suite(
         '2026-09-05',
       );
       expect(historical.holdings).toHaveLength(1);
+    });
+
+    it('exposes sparse bounded holdings coverage and preserves exact versus on-or-before reads', async () => {
+      const exact = await reads.read(userId, {
+        accountIds: [accountIds[0]],
+        snapshotDate: '2026-09-07',
+      });
+      expect(exact[0].snapshot.snapshotDate).toBeNull();
+      const carried = await reads.read(userId, {
+        accountIds: [accountIds[0]],
+        snapshotDate: '2026-09-07',
+        dateMode: 'on_or_before',
+        minSnapshotDate: '2026-09-01',
+      });
+      expect(carried[0].snapshot).toMatchObject({
+        snapshotDate: '2026-09-06',
+        holdings: [],
+      });
+      expect(carried[0].header?.id).toBeDefined();
+      const bounded = await reads.read(userId, {
+        accountIds: [accountIds[0]],
+        snapshotDate: '2026-09-07',
+        dateMode: 'on_or_before',
+        minSnapshotDate: '2026-09-07',
+      });
+      expect(bounded[0].snapshot.snapshotDate).toBeNull();
+      const past = await reads.read(userId, {
+        accountIds: [accountIds[0]],
+        snapshotDate: '2026-09-04',
+        dateMode: 'on_or_before',
+        minSnapshotDate: '2026-09-01',
+      });
+      expect(past[0].snapshot.snapshotDate).toBe('2026-09-01');
+      const dates = await reads.listAvailableDates(userId, {
+        accountIds: [accountIds[0]],
+        startDate: '2026-09-01',
+        endDate: '2026-09-07',
+      });
+      expect(dates.data.map((row) => row.snapshotDate)).toEqual([
+        '2026-09-01',
+        '2026-09-05',
+        '2026-09-06',
+      ]);
+      const limited = await reads.listAvailableDates(userId, {
+        accountIds: [accountIds[0]],
+        startDate: '2026-09-01',
+        endDate: '2026-09-07',
+        limit: 1,
+      });
+      expect(limited.truncated).toBe(true);
+      await expect(
+        reads.listAvailableDates(randomUUID(), {
+          accountIds: [accountIds[0]],
+          startDate: '2026-09-01',
+          endDate: '2026-09-07',
+        }),
+      ).rejects.toThrow('not found');
+      await expect(
+        reads.read(userId, {
+          snapshotDate: '2026-09-07',
+          dateMode: 'on_or_before',
+        }),
+      ).rejects.toThrow('minSnapshotDate');
+    });
+
+    it('reads stored historical security price provenance and identity FX without an invented provider mapping', async () => {
+      const stored = await database
+        .getRepository(InvestmentSecurityEntity)
+        .findOneByOrFail({ userId, externalSecurityId: 'SECURITY' });
+      const fx = new CurrencyExchangeService(
+        database.getRepository(ExchangeRateEntity),
+        {} as never,
+        {} as never,
+      );
+      const evidence = new McpHistoricalEvidenceService(database, fx);
+      const result = await evidence.read(userId, {
+        securityIds: [stored.id],
+        startDate: '2026-09-01',
+        endDate: '2026-09-07',
+        reportingCurrency: 'USD',
+      });
+      expect(result.data[0]).toMatchObject({
+        mapping: 'unmapped',
+        providerStatus: 'unmapped',
+        proxy: null,
+      });
+      expect(result.data[0].storedPrices[0]).toMatchObject({
+        price: '10.000000000000',
+        priceDate: '2026-09-05',
+        source: 'stored_institution_price',
+      });
+      expect(result.data[0].endpoints.opening.status).toBe('missing');
+      expect(result.data[0].endpoints.closing.price?.priceDate).toBe(
+        '2026-09-05',
+      );
+      expect(
+        result.fx.every((rate) => rate.evidence?.source === 'IDENTITY'),
+      ).toBe(true);
+      await expect(
+        evidence.read(randomUUID(), {
+          securityIds: [stored.id],
+          startDate: '2026-09-01',
+          endDate: '2026-09-07',
+          reportingCurrency: 'USD',
+        }),
+      ).rejects.toThrow('not found');
     });
 
     it('rolls back every header/security/position write on a failed holding batch', async () => {

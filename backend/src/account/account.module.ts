@@ -1,3 +1,4 @@
+import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountController } from './account.controller';
@@ -16,6 +17,7 @@ import { UserModule } from '../user/user.module';
       BankLinkEntity,
     ]),
     UserModule,
+    CurrencyExchangeModule,
   ],
   controllers: [AccountController],
   providers: [AccountService, AccountsSurfaceService],

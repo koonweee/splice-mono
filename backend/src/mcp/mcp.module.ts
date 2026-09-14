@@ -1,3 +1,5 @@
+import { MarketPriceModule } from '../market-price/market-price.module';
+import { McpHistoricalEvidenceService } from './mcp-historical-evidence.service';
 import { McpTransactionCategoriesService } from './mcp-transaction-categories.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -35,6 +37,7 @@ import { SpliceMcpRuntimeService } from './mcp.runtime';
     BalanceQueryModule,
     CurrencyExchangeModule,
     InvestmentModule,
+    MarketPriceModule,
     RecurringManualTransactionModule,
     TransactionAnalysisModule,
     TransactionCategorizationModule,
@@ -45,6 +48,7 @@ import { SpliceMcpRuntimeService } from './mcp.runtime';
     McpTransactionCategoriesService,
     SpliceMcpRuntimeService,
     McpReadService,
+    McpHistoricalEvidenceService,
     McpPortfolioVisualizationService,
     McpCategorizationService,
   ],

@@ -1,3 +1,5 @@
+import { ExactDecimal } from '../common/exact-money';
+import { assertDateRange } from '../common/query-bounds';
 import { Injectable, Logger } from '@nestjs/common';
 import YahooFinance from 'yahoo-finance2';
 import { z } from 'zod';
@@ -7,7 +9,10 @@ import type {
   MarketSecuritySearchResult,
 } from '../types/MarketPrice';
 import { MarketPriceQuoteSchema } from '../types/MarketPrice';
-import type { MarketPriceProvider } from './market-price-provider.interface';
+import type {
+  HistoricalMarketPrices,
+  MarketPriceProvider,
+} from './market-price-provider.interface';
 
 const SUPPORTED_QUOTE_TYPES = new Set(['EQUITY', 'ETF']);
 const EXCHANGE_TO_MIC: Record<string, string> = {
@@ -51,6 +56,78 @@ export class YahooFinanceMarketPriceProvider implements MarketPriceProvider {
     fetch: (input: string | URL | Request, init?: RequestInit) =>
       fetch(input, { ...init, signal: AbortSignal.timeout(10_000) }),
   });
+
+  async getHistoricalPrices(
+    symbol: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<HistoricalMarketPrices> {
+    assertDateRange(startDate, endDate, { maxDays: 366 });
+    // Yahoo period2 is exclusive. Include a UTC day buffer then filter exchange-local dates.
+    const period1 = new Date(`${startDate}T00:00:00Z`);
+    period1.setUTCDate(period1.getUTCDate() - 1);
+    const period2 = new Date(`${endDate}T00:00:00Z`);
+    period2.setUTCDate(period2.getUTCDate() + 2);
+    const response = await this.client.chart(symbol, {
+      period1,
+      period2,
+      interval: '1d',
+      events: 'div,splits',
+      return: 'array',
+    });
+    if (response.meta.symbol.toUpperCase() !== symbol.toUpperCase())
+      throw new Error('Historical price provider returned a different symbol');
+    const currency = z
+      .string()
+      .regex(/^[A-Z]{3}$/)
+      .parse(response.meta.currency);
+    const timezone = z
+      .string()
+      .trim()
+      .min(1)
+      .parse(response.meta.exchangeTimezoneName);
+    const prices = response.quotes.flatMap((quote) => {
+      if (
+        quote.close === null ||
+        !Number.isFinite(quote.close) ||
+        quote.close <= 0
+      )
+        return [];
+      const date = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(quote.date);
+      if (date < startDate || date > endDate) return [];
+      return [
+        {
+          date,
+          priceDatetime: quote.date.toISOString(),
+          close: new ExactDecimal(String(quote.close)).toFixed(),
+          adjustedClose:
+            quote.adjclose !== undefined &&
+            quote.adjclose !== null &&
+            Number.isFinite(quote.adjclose) &&
+            quote.adjclose > 0
+              ? new ExactDecimal(String(quote.adjclose)).toFixed()
+              : null,
+        },
+      ];
+    });
+    return {
+      symbol: response.meta.symbol,
+      currency,
+      exchange: response.meta.exchangeName,
+      exchangeTimezone: timezone,
+      prices,
+      corporateActionsPresent:
+        !!response.events &&
+        Object.values(response.events).some(
+          (events) => Array.isArray(events) && events.length > 0,
+        ),
+    };
+  }
 
   async search(
     query: string,

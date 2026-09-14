@@ -1,5 +1,10 @@
 import { assertDateRange } from '../common/query-bounds';
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import {
@@ -276,6 +281,7 @@ export class BalanceQueryService {
       accountIds?: string[];
       boundaryOnly?: boolean;
       includeLatestSync?: boolean;
+      requireAllAccounts?: boolean;
     } = {},
   ) {
     assertDateRange(startDate, endDate, { maxDays: 10_000 });
@@ -328,6 +334,12 @@ export class BalanceQueryService {
             }),
           ]);
           if (!user) throw new UnauthorizedException();
+          if (
+            options.requireAllAccounts &&
+            options.accountIds &&
+            entities.length !== new Set(options.accountIds).size
+          )
+            throw new NotFoundException('One or more accounts were not found');
           const reportingCurrency = user.settings.currency ?? 'USD';
           assertDateRange(startDate, endDate, {
             maxDays: 10_000,
@@ -544,6 +556,23 @@ export class BalanceQueryService {
       effectiveBalance: convert(effectiveBalance, dateRates, targetDate),
       syncedAt,
       latestSyncedAt,
+      provenance: {
+        requestedDate: targetDate,
+        snapshotId: snapshot?.id ?? null,
+        snapshotDate: snapshot?.snapshotDate ?? null,
+        snapshotType: snapshot?.snapshotType ?? null,
+        snapshotUpdatedAt: snapshot?.updatedAt?.toISOString() ?? null,
+        carriedForward:
+          !!snapshot &&
+          (snapshot.snapshotDate !== targetDate ||
+            snapshot.snapshotType === String(BalanceSnapshotType.FORWARD_FILL)),
+        coverage: !snapshot
+          ? 'missing'
+          : snapshot.snapshotDate !== targetDate ||
+              snapshot.snapshotType === String(BalanceSnapshotType.FORWARD_FILL)
+            ? 'carried_forward'
+            : 'recorded',
+      },
     };
   }
 
