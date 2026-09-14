@@ -247,6 +247,8 @@ describe('native PWA service worker lifecycle', () => {
     await vi.advanceTimersByTimeAsync(45_000)
     await failure
     expect(remove).toHaveBeenCalledWith('statechange', expect.any(Function))
+    // Diagnostic requests have their own short deadline and never hold Retry.
+    await vi.advanceTimersByTimeAsync(4500)
     expect(vi.getTimerCount()).toBe(0)
   })
 

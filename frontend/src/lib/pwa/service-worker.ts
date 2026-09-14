@@ -1,3 +1,9 @@
+import {
+  diagnosticSnapshot,
+  preservePwaFailure,
+  recordPwaDiagnostic,
+  tracePwa,
+} from './diagnostics'
 import { isAppTransitionBlocked } from './app-transition'
 import { fetchWithDeadline, withDeadline } from './deadline'
 
@@ -72,8 +78,10 @@ function hasWaitingUpdate(current: ServiceWorkerRegistration) {
 }
 function watchRegistration(current: ServiceWorkerRegistration, token: number) {
   const hadController = Boolean(navigator.serviceWorker.controller)
+  recordPwaDiagnostic('worker:observed', workerStates(current))
   const changed = () => {
     if (token !== attempt) return
+    recordPwaDiagnostic('worker:statechange', workerStates(current))
     if (hasWaitingUpdate(current)) {
       needRefresh = true
       status = 'update-waiting'
@@ -98,6 +106,85 @@ function watchRegistration(current: ServiceWorkerRegistration, token: number) {
   })
   installing()
 }
+function workerStates(current: ServiceWorkerRegistration) {
+  return {
+    installing: current.installing?.state ?? null,
+    waiting: current.waiting?.state ?? null,
+    active: current.active?.state ?? null,
+    controller: navigator.serviceWorker.controller?.state ?? null,
+  }
+}
+function captureWorkerFailure(current: ServiceWorkerRegistration) {
+  recordPwaDiagnostic('worker:activation-failure', workerStates(current))
+  const page = diagnosticSnapshot()
+  preservePwaFailure([], page)
+  const workers = [
+    ...new Set(
+      [
+        current.installing,
+        current.waiting,
+        current.active,
+        navigator.serviceWorker.controller,
+      ].filter(Boolean),
+    ),
+  ]
+  if (typeof MessageChannel === 'undefined') return
+  void Promise.all(
+    workers.map(
+      (worker) =>
+        new Promise((resolve) => {
+          const channel = new MessageChannel()
+          const finish = (result: unknown) => {
+            clearTimeout(timer)
+            channel.port1.close()
+            channel.port2.close()
+            resolve(result)
+          }
+          const timer = setTimeout(
+            () => finish({ state: worker!.state, unavailable: true }),
+            1500,
+          )
+          channel.port1.onmessage = (event: MessageEvent) => finish(event.data)
+          try {
+            worker!.postMessage({ type: 'PWA_DIAGNOSTICS' }, [channel.port2])
+          } catch {
+            finish({ unavailable: true })
+          }
+        }),
+    ),
+  ).then(async (reports) => {
+    preservePwaFailure(reports, page)
+    try {
+      const response = await fetchWithDeadline(
+        '/_pwa/diagnostics',
+        { credentials: 'omit', cache: 'no-store' },
+        2000,
+      )
+      const value: unknown = await withDeadline(
+        response.json(),
+        1000,
+        'Diagnostics unavailable',
+      )
+      if (
+        response.ok &&
+        value &&
+        typeof value === 'object' &&
+        'instance' in value &&
+        typeof value.instance === 'string' &&
+        /^[a-f0-9]{12}$/.test(value.instance)
+      ) {
+        const routing = {
+          instance: value.instance,
+          edgeRequest: response.headers.get('cf-ray'),
+        }
+        recordPwaDiagnostic('routing:probe', routing)
+        preservePwaFailure([...reports, { routing }], page)
+      }
+    } catch {
+      recordPwaDiagnostic('routing:unavailable')
+    }
+  })
+}
 async function activeRegistration(current: ServiceWorkerRegistration) {
   if (current.active?.state === 'activated') return current
   await new Promise<void>((resolve, reject) => {
@@ -107,6 +194,7 @@ async function activeRegistration(current: ServiceWorkerRegistration) {
       current.active,
     ].filter(Boolean) as Array<ServiceWorker>
     const changed = () => {
+      recordPwaDiagnostic('worker:readiness', workerStates(current))
       if (current.active?.state === 'activated') {
         cleanup()
         resolve()
@@ -120,6 +208,7 @@ async function activeRegistration(current: ServiceWorkerRegistration) {
     }
     const timer = setTimeout(() => {
       cleanup()
+      captureWorkerFailure(current)
       reject(new Error('App installation timed out. Try again.'))
     }, 45_000)
     function cleanup() {
@@ -140,6 +229,7 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
     throw new Error('Installed app features are unavailable in this browser.')
   if (registrationPromise) return registrationPromise
   const token = ++attempt
+  recordPwaDiagnostic('registration:attempt', { attempt: token })
   cleanupListeners.forEach((cleanup) => cleanup())
   cleanupListeners = []
   status = 'registering'
@@ -150,7 +240,9 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
     if ('caches' in window)
       void window.caches.delete('splice-app-shell-v1').catch(() => false)
     const existing = await withDeadline(
-      navigator.serviceWorker.getRegistration('/'),
+      tracePwa('registration:lookup', () =>
+        navigator.serviceWorker.getRegistration('/'),
+      ),
       10_000,
       'Could not find the installed app worker. Try again.',
     ).catch(() => undefined)
@@ -165,16 +257,18 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
     const current = reusable
       ? existing
       : await withDeadline(
-          navigator.serviceWorker.register('/sw.js', {
-            scope: '/',
-            updateViaCache: 'none',
-          }),
+          tracePwa('registration:register', () =>
+            navigator.serviceWorker.register('/sw.js', {
+              scope: '/',
+              updateViaCache: 'none',
+            }),
+          ),
           10_000,
           'App registration timed out. Try again.',
         )
     if (token !== attempt) throw new Error('App registration was superseded.')
     watchRegistration(current, token)
-    await activeRegistration(current)
+    await tracePwa('registration:activation', () => activeRegistration(current))
     if (token !== attempt) throw new Error('App registration was superseded.')
     registration = current
     status = hasWaitingUpdate(current) ? 'update-waiting' : 'ready'
@@ -240,6 +334,10 @@ export async function checkForPwaUpdate(force = false) {
       typeof version.buildId !== 'string'
     )
       throw new Error('Invalid app version response.')
+    recordPwaDiagnostic('version:response', {
+      build: version.buildId,
+      edgeRequest: response.headers.get('cf-ray'),
+    })
     if (version.buildId !== APP_BUILD_ID) {
       needRefresh = true
       await withDeadline(

@@ -692,3 +692,20 @@ OLED had one geometry after first paint. Inspected phone/desktop screenshots and
 intermediate path coordinates; no browser runtime errors. This validates Chart
 internals; production cached-to-verified host continuity is covered separately by
 the synthetic PWA harness.
+
+### PWA timeout diagnostics
+
+Use `?frame=true&example=pwa-lifecycle&state=error&width=390` to inspect the
+Copy diagnostics action. On supported browsers it copies the bounded local
+lifecycle report; when clipboard access fails it exposes a selectable read-only
+field. Retry remains independently available. No financial data is recorded.
+The report preserves the latest timeout across reloads where local storage works,
+with worker states, outstanding cache/lock/download operations, lifecycle events
+and release IDs. Workers from older releases may report as unavailable.
+
+Verified OLED phone copy success and denied-clipboard fallback at 390×844,
+Light/Slate blue desktop at 1440×900, and Dark phone; no browser runtime errors.
+The routing probe records the instance serving that probe, not proof of which
+instance served an earlier download. Nonvisual diagnostic helpers are covered by
+`src/lib/pwa/diagnostics.test.ts` (bounded history, storage failure, frozen
+timeout snapshot, and persistence across reload).

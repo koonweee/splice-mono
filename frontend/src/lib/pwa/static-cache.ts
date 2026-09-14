@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 
+import { recordPwaDiagnostic, tracePwa } from './diagnostics'
 import { fetchWithDeadline } from './deadline'
 import { cachedHomeEnabled, isHomeLaunchUrl } from './launch-mode'
 
@@ -33,7 +34,11 @@ function serialize<T>(action: () => Promise<T>): Promise<T> {
   const locks = (self.navigator as { locks?: LockManager }).locks
   const exclusive = async (): Promise<T> =>
     locks
-      ? await locks.request('splice-static-cache-v2', action)
+      ? await tracePwa('cache:lock', () =>
+          locks.request('splice-static-cache-v2', () =>
+            tracePwa('cache:mutation', action),
+          ),
+        )
       : await action()
   const result = mutation.then(exclusive, exclusive)
   mutation = result.catch(() => undefined)
@@ -44,25 +49,33 @@ function metadataUrl(): string {
   return new URL(META_PATH, self.location.origin).href
 }
 async function metadata(cache: Cache): Promise<Metadata | null> {
-  const response = await cache.match(metadataUrl())
+  const response = await tracePwa('cache:metadata-read', () =>
+    cache.match(metadataUrl()),
+  )
   if (!response) return null
-  return response.json() as Promise<Metadata>
+  return tracePwa('cache:metadata-body', () =>
+    response.json(),
+  ) as Promise<Metadata>
 }
 async function writeMetadata(cache: Cache, value: Metadata): Promise<void> {
-  await cache.put(
-    metadataUrl(),
-    new Response(JSON.stringify(value), {
-      headers: { 'Content-Type': 'application/json' },
-    }),
+  await tracePwa('cache:metadata-write', () =>
+    cache.put(
+      metadataUrl(),
+      new Response(JSON.stringify(value), {
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ),
   )
 }
 async function inventories(): Promise<
   Array<{ name: string; cache: Cache; meta: Metadata }>
 > {
   const result = []
-  for (const name of await caches.keys()) {
+  for (const name of await tracePwa('cache:keys', () => caches.keys())) {
     if (!name.startsWith(PREFIX)) continue
-    const cache = await caches.open(name)
+    const cache = await tracePwa('cache:open-inventory', () =>
+      caches.open(name),
+    )
     const meta = await metadata(cache)
     if (meta) result.push({ name, cache, meta })
   }
@@ -166,7 +179,7 @@ async function store(
     }
     await serialize(async () => {
       const inventory = await inventories()
-      const cache = await caches.open(CACHE_NAME)
+      const cache = await tracePwa('cache:open', () => caches.open(CACHE_NAME))
       const meta = (await metadata(cache)) ?? {
         buildId: __SPLICE_BUILD_ID__,
         activated: true,
@@ -192,7 +205,9 @@ async function store(
       headers.delete('content-encoding')
       headers.delete('content-length')
       const body = new Blob(parts)
-      await cache.put(request, new Response(body, { status: 200, headers }))
+      await tracePwa('cache:asset-write', () =>
+        cache.put(request, new Response(body, { status: 200, headers })),
+      )
       meta.assets[url] = { bytes, revision }
       meta.lastUsedAt = Date.now()
       try {
@@ -213,7 +228,7 @@ export async function installStaticAssets(
 ): Promise<void> {
   // Static caching is an enhancement: even quota failure must allow recovery.
   try {
-    const cache = await caches.open(CACHE_NAME)
+    const cache = await tracePwa('cache:open', () => caches.open(CACHE_NAME))
     if (!(await metadata(cache)))
       await writeMetadata(cache, {
         buildId: __SPLICE_BUILD_ID__,
@@ -251,8 +266,21 @@ export async function installStaticAssets(
                 if (response) break
               }
             }
-            response ??= await fetch(request, { signal: controller.signal })
-            await store(request, response, entry.revision ?? null)
+            response ??= await tracePwa(
+              'asset:download',
+              () => fetch(request, { signal: controller.signal }),
+              { asset: new URL(request.url).pathname },
+            )
+            recordPwaDiagnostic('asset:response', {
+              asset: new URL(request.url).pathname,
+              status: response.status,
+              edgeRequest: response.headers.get('cf-ray'),
+            })
+            await tracePwa(
+              'asset:store',
+              () => store(request, response, entry.revision ?? null),
+              { asset: new URL(request.url).pathname },
+            )
           } catch {
             /* Keep the page online when caching is unavailable. */
           } finally {
@@ -276,7 +304,7 @@ export async function activateStaticAssets(): Promise<void> {
   }
   try {
     await serialize(async () => {
-      const cache = await caches.open(CACHE_NAME)
+      const cache = await tracePwa('cache:open', () => caches.open(CACHE_NAME))
       const meta = await metadata(cache)
       if (meta) {
         meta.activated = true
@@ -286,7 +314,7 @@ export async function activateStaticAssets(): Promise<void> {
   } catch {
     /* Storage failure cannot prevent activation. */
   }
-  await pruneStaticAssets()
+  await tracePwa('cache:prune', () => pruneStaticAssets())
 }
 
 /** Only our generic build shell is cacheable HTML, never a navigation response. */
@@ -301,7 +329,7 @@ export async function cachedLaunchResponse(
   )
     return null
   try {
-    const cache = await caches.open(CACHE_NAME)
+    const cache = await tracePwa('cache:open', () => caches.open(CACHE_NAME))
     const meta = await metadata(cache)
     if (!meta?.activated) return null
     // A partial install must not strand a cold launch offline. Every essential
@@ -362,10 +390,12 @@ async function pruneStaticAssets(): Promise<void> {
         ? await waitingBuildId(waiting)
         : null
     await serialize(async () => {
-      const clients = await self.clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true,
-      })
+      const clients = await tracePwa('cache:clients', () =>
+        self.clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true,
+        }),
+      )
       const live = new Set(clients.map((client) => client.id))
       for (const id of clientBuilds.keys())
         if (!live.has(id)) clientBuilds.delete(id)
@@ -407,7 +437,7 @@ async function pruneStaticAssets(): Promise<void> {
         )
           await caches.delete(item.name)
       }
-      for (const name of await caches.keys()) {
+      for (const name of await tracePwa('cache:keys', () => caches.keys())) {
         if (
           name === 'splice-app-shell-v1' ||
           name.startsWith('workbox-precache-v2-')

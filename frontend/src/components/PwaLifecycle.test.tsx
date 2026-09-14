@@ -193,6 +193,28 @@ describe('PwaLifecycle integration', () => {
     expect(screen.queryByText(/Live financial data may not load/)).toBeNull()
     expect(mocks.request).not.toHaveBeenCalled()
   })
+  it('provides selectable diagnostics when clipboard access fails', async () => {
+    mount()
+    act(() =>
+      emit({
+        needRefresh: false,
+        updateServiceWorker: null,
+        status: 'failed',
+        error: 'App installation timed out.',
+      }),
+    )
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostics' }))
+    const field = await screen.findByRole('textbox', {
+      name: 'Diagnostics — select and copy',
+    })
+    expect((field as HTMLTextAreaElement).value).toContain('"version": 1')
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+  })
   it('registers, reports its build, and retries a visible registration error', async () => {
     mount()
     await waitFor(() =>
