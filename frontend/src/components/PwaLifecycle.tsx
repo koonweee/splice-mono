@@ -1,8 +1,12 @@
-import { Alert, Button, Group, Text } from '@mantine/core'
+import { Alert, Button, Group, Text, Textarea } from '@mantine/core'
 import { CloudOff } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
+import {
+  exportPwaDiagnostics,
+  recordPwaDiagnostic,
+} from '../lib/pwa/diagnostics'
 import { useSession } from '../lib/session'
 import { applyNotificationSummaryBadge } from '../lib/pwa/app-badge'
 import {
@@ -56,6 +60,8 @@ export function PwaLifecycle({
   const updateInFlight = useRef(false)
   const [updateError, setUpdateError] = useState<string>()
   const [retrying, setRetrying] = useState(false)
+  const [diagnosticText, setDiagnosticText] = useState<string>()
+  const [copiedDiagnostics, setCopiedDiagnostics] = useState(false)
   const retryInFlight = useRef(false)
   const banner = useRef<HTMLDivElement>(null)
   const [deviceError, setDeviceError] = useState<string>()
@@ -221,12 +227,26 @@ export function PwaLifecycle({
     activeLifecycleMounted = true
     lifecycleLive.current = true
     setActive(true)
+    recordPwaDiagnostic('page:mount', {
+      visibility: document.visibilityState,
+      online: navigator.onLine,
+    })
     const onlineChanged = () => {
+      recordPwaDiagnostic('page:online', { online: navigator.onLine })
       setOnline(navigator.onLine)
       wake.current()
     }
-    const offlineChanged = () => setOnline(false)
-    const foreground = () => wake.current()
+    const offlineChanged = () => {
+      recordPwaDiagnostic('page:offline')
+      setOnline(false)
+    }
+    const foreground = () => {
+      recordPwaDiagnostic('page:foreground', {
+        visibility: document.visibilityState,
+        online: navigator.onLine,
+      })
+      wake.current()
+    }
     const controllerChanged = () => wake.current(true)
     const identityChanged = () => {
       badgeRevision.current++
@@ -403,6 +423,7 @@ export function PwaLifecycle({
   }
   const retry = async () => {
     if (retryInFlight.current) return
+    recordPwaDiagnostic('retry:start')
     retryInFlight.current = true
     setRetrying(true)
     setUpdateError(undefined)
@@ -411,6 +432,7 @@ export function PwaLifecycle({
       await checkForPwaUpdate(true)
       await reconcile(true)
     } finally {
+      recordPwaDiagnostic('retry:end')
       retryInFlight.current = false
       setRetrying(false)
     }
@@ -468,7 +490,37 @@ export function PwaLifecycle({
             >
               Retry
             </Button>
+            <Button
+              variant="default"
+              onClick={() => {
+                const text = exportPwaDiagnostics()
+                setCopiedDiagnostics(false)
+                if (!('clipboard' in navigator) || typeof navigator.clipboard.writeText !== 'function') {
+                  setDiagnosticText(text)
+                  return
+                }
+                void navigator.clipboard
+                  .writeText(text)
+                  .then(() => {
+                    setCopiedDiagnostics(true)
+                    setDiagnosticText(undefined)
+                  })
+                  .catch(() => setDiagnosticText(text))
+              }}
+            >
+              {copiedDiagnostics ? 'Copied diagnostics' : 'Copy diagnostics'}
+            </Button>
           </Group>
+          {diagnosticText && (
+            <Textarea
+              mt="sm"
+              label="Diagnostics — select and copy"
+              value={diagnosticText}
+              readOnly
+              rows={5}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+          )}
         </Alert>
       )}
       {!pendingLogout && update.needRefresh && (
