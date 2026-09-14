@@ -121,6 +121,7 @@ export function CompactAccountRow({
               </div>
             ) : (
               <ChangePercentPopover
+                hideZero
                 textRole="caption"
                 color={getChangeColorMantine(
                   isLiability,

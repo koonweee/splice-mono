@@ -89,6 +89,7 @@ export function AccountCard({
             </Text>
           )}
           <ChangePercentPopover
+            hideZero
             textRole="metadata"
             color={getChangeColorMantine(isLiability, account.changePercent)}
             changeAmount={account.changeAmount}
