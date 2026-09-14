@@ -11,6 +11,7 @@ import {
 } from '../lib/format'
 import { ChangePercentPopover } from './ChangePercentPopover'
 import { CompactAccountRowFrame } from './CompactAccountRowFrame'
+import styles from './CompactAccountRow.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
 const STALE_THRESHOLD_DAYS = 7
@@ -95,42 +96,43 @@ export function CompactAccountRow({
                   })}
             </Text>
           )}
-          {!overview && (
-            <Text
-              data-typography="caption"
-              component="div"
-              aria-busy={comparisonLoading}
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              {comparisonLoading ? (
-                <div
-                  aria-hidden="true"
-                  style={{
-                    height: 'var(--mantine-line-height-xs)',
-                    minHeight:
-                      'calc(var(--mantine-font-size-xs) * var(--mantine-line-height))',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Skeleton h={10} w={48} />
-                </div>
-              ) : (
-                <ChangePercentPopover
-                  textRole="caption"
-                  color={getChangeColorMantine(
-                    isLiability,
-                    account.changePercent,
-                  )}
-                  changeAmount={account.changeAmount}
-                  changePercent={account.changePercent}
-                  hidden={balancesHidden}
-                  testId="account-change-percent"
-                />
-              )}
-            </Text>
-          )}
+          <Text
+            data-typography="caption"
+            component="div"
+            className={
+              overview
+                ? styles.overviewChange
+                : 'splice-touch-target splice-change-trigger'
+            }
+            aria-busy={comparisonLoading}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            {comparisonLoading ? (
+              <div
+                aria-hidden="true"
+                style={{
+                  height: '1lh',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                }}
+              >
+                <Skeleton h={10} w={48} />
+              </div>
+            ) : (
+              <ChangePercentPopover
+                textRole="caption"
+                color={getChangeColorMantine(
+                  isLiability,
+                  account.changePercent,
+                )}
+                changeAmount={account.changeAmount}
+                changePercent={account.changePercent}
+                hidden={balancesHidden}
+                testId="account-change-percent"
+              />
+            )}
+          </Text>
           {!overview && !originalBalance && (
             <Text data-typography="caption" style={{ visibility: 'hidden' }}>
               {'\u00A0'}

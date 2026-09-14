@@ -48,10 +48,11 @@ const account: AccountSummaryData = {
   changePercent: 2,
 }
 
-function renderRow(onClick = vi.fn()) {
+function renderRow(onClick = vi.fn(), overview = false) {
   render(
     <MantineProvider>
       <CompactAccountRow
+        overview={overview}
         account={account}
         balancesHidden={false}
         isLiability={false}
@@ -64,23 +65,26 @@ function renderRow(onClick = vi.fn()) {
 }
 
 describe('CompactAccountRow', () => {
-  it('keeps the row action and change popover as separate controls', () => {
-    const onClick = renderRow()
-    const rowAction = screen.getByRole('button', {
-      name: 'Open account details for Everyday Checking',
-    })
-    const changeAction = screen.getByRole('button', {
-      name: /Show absolute change/,
-    })
+  it.each([false, true])(
+    'keeps the row action and change popover separate (overview=%s)',
+    (overview) => {
+      const onClick = renderRow(vi.fn(), overview)
+      const rowAction = screen.getByRole('button', {
+        name: 'Open account details for Everyday Checking',
+      })
+      const changeAction = screen.getByRole('button', {
+        name: /Show absolute change/,
+      })
 
-    expect(rowAction.contains(changeAction)).toBe(false)
+      expect(rowAction.contains(changeAction)).toBe(false)
 
-    fireEvent.click(changeAction)
-    expect(onClick).not.toHaveBeenCalled()
+      fireEvent.click(changeAction)
+      expect(onClick).not.toHaveBeenCalled()
 
-    fireEvent.click(rowAction)
-    expect(onClick).toHaveBeenCalledOnce()
-  })
+      fireEvent.click(rowAction)
+      expect(onClick).toHaveBeenCalledOnce()
+    },
+  )
 
   it('shows row press feedback for keyboard activation only', () => {
     const onClick = renderRow()
@@ -108,6 +112,7 @@ it('removes an open old comparison while preserving the account balance and acti
   const row = (comparisonLoading: boolean) => (
     <MantineProvider>
       <CompactAccountRow
+        overview
         account={account}
         balancesHidden={false}
         isLiability={false}

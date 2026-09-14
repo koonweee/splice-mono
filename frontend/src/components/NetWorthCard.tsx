@@ -41,7 +41,9 @@ export function NetWorthCard({
   onRetryChart,
   period,
   onPeriodChange,
+  readOnly = false,
 }: {
+  readOnly?: boolean
   period?: TimePeriod
   onPeriodChange?: (period: TimePeriod) => void
   balancesHidden: boolean
@@ -113,8 +115,7 @@ export function NetWorthCard({
                 visibility:
                   !comparisonLoading &&
                   !hoveredPoint &&
-                  changePercent !== undefined &&
-                  changePercent !== 0
+                  changePercent !== undefined
                     ? 'visible'
                     : 'hidden',
               }}
@@ -200,7 +201,11 @@ export function NetWorthCard({
       }
       period={
         period && onPeriodChange ? (
-          <HomePeriodControl period={period} onChange={onPeriodChange} />
+          <HomePeriodControl
+            period={period}
+            onChange={onPeriodChange}
+            disabled={readOnly}
+          />
         ) : undefined
       }
     />

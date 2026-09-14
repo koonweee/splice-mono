@@ -464,9 +464,42 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+describe('AccountModal opening', () => {
+  it.each([AccountType.depository, AccountType.investment])(
+    'starts on History when opening, switching and reopening a %s account',
+    (type) => {
+      const result = renderAccountModal(null, { type })
+      const expectHistory = () =>
+        expect(
+          screen
+            .getByRole('tab', { name: 'History' })
+            .getAttribute('aria-selected'),
+        ).toBe('true')
+      expectHistory()
+      fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
+      result.setOpened(false)
+      result.setOpened(true)
+      expectHistory()
+      fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
+      result.rerenderWithAccount({
+        ...accountSummary,
+        id: 'another-account',
+        type,
+      })
+      expectHistory()
+    },
+  )
+
+  it('displays a zero balance change', () => {
+    renderAccountModal(null, { changePercent: 0 })
+    expect(screen.getByText('0.00%')).toBeTruthy()
+  })
+})
+
 describe('AccountModal notes', () => {
   it('keeps an empty note collapsed until Add note is selected', () => {
     renderAccountModal(null)
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
 
     expect(screen.queryByLabelText('Account notes')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
@@ -482,6 +515,7 @@ describe('AccountModal notes', () => {
 
   it('shows a saved note as readable text before editing', () => {
     renderAccountModal('Use for household bills.')
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
 
     expect(screen.getByText('Use for household bills.')).toBeTruthy()
     expect(screen.queryByLabelText('Account notes')).toBeNull()
@@ -493,6 +527,7 @@ describe('AccountModal notes', () => {
 
   it('preserves the active notes draft across a rollback or background metadata refresh', () => {
     const { rerenderModal } = renderAccountModal('Original note')
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
     fireEvent.change(screen.getByLabelText('Account notes'), {
       target: { value: 'Unsaved draft' },
@@ -520,6 +555,7 @@ describe('AccountModal notes', () => {
 
   it('saves edited notes and returns to the compact preview', () => {
     renderAccountModal(null)
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
     fireEvent.change(screen.getByLabelText('Account notes'), {
       target: { value: 'New note' },
@@ -539,6 +575,7 @@ describe('AccountModal notes', () => {
 
   it('cancels a note edit without saving and restores the original draft', () => {
     renderAccountModal('Original note')
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
     fireEvent.change(screen.getByLabelText('Account notes'), {
       target: { value: 'Discard this edit' },
@@ -558,6 +595,7 @@ describe('AccountModal notes', () => {
       options?.onError?.(),
     )
     renderAccountModal(null)
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
     fireEvent.change(screen.getByLabelText('Account notes'), {
       target: { value: 'Retry this note' },
@@ -574,6 +612,7 @@ describe('AccountModal notes', () => {
 
   it('saves whitespace-only notes as null', () => {
     renderAccountModal('Old note')
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
     fireEvent.change(screen.getByLabelText('Account notes'), {
       target: { value: '   ' },
@@ -655,6 +694,7 @@ describe('AccountModal balance history', () => {
     expect(screen.queryByText('Unable to load account history')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
     expect(screen.getByText('Current balance')).toBeTruthy()
+    fireEvent.click(screen.getByRole('tab', { name: 'Details' }))
     expect(screen.getByRole('button', { name: 'Add note' })).toBeTruthy()
   })
 
@@ -754,7 +794,7 @@ describe('AccountModal balance history', () => {
 })
 
 describe('AccountModal holdings', () => {
-  it('opens holdings first and fetches activity only when its tab is selected', () => {
+  it('opens History first and fetches activity only when its tab is selected', () => {
     const result = renderAccountModal(null, {
       type: AccountType.investment,
       holdings: [investmentHolding],
@@ -762,7 +802,7 @@ describe('AccountModal holdings', () => {
 
     expect(
       screen
-        .getByRole('tab', { name: 'Holdings' })
+        .getByRole('tab', { name: 'History' })
         .getAttribute('aria-selected'),
     ).toBe('true')
     expect(screen.queryByLabelText('Account notes')).toBeNull()
@@ -804,6 +844,7 @@ describe('AccountModal holdings', () => {
       type: AccountType.investment,
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     expect(mockFns.useInvestmentHoldingsMock).toHaveBeenCalledWith(
       'account-id',
@@ -830,6 +871,7 @@ describe('AccountModal holdings', () => {
       balancesHidden: true,
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     expect(screen.getByText('VWRA')).toBeTruthy()
     expect(screen.getByText('10')).toBeTruthy()
@@ -841,6 +883,7 @@ describe('AccountModal holdings', () => {
       type: AccountType.investment,
       holdingsError: true,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     expect(screen.getByText('Holdings unavailable.')).toBeTruthy()
     expect(screen.getByText('Current balance')).toBeTruthy()
@@ -851,6 +894,7 @@ describe('AccountModal holdings', () => {
       type: AccountType.investment,
       holdingsError: true,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
     const dialog = screen.getByRole('dialog')
     const holdingsTab = screen.getByRole('tab', { name: 'Holdings' })
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
@@ -877,6 +921,7 @@ describe('AccountModal holdings', () => {
       type: AccountType.investment,
       investmentActivityInitialError: true,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
     fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
     const dialog = screen.getByRole('dialog')
     const activityTab = screen.getByRole('tab', { name: 'Activity' })
@@ -910,6 +955,7 @@ describe('AccountModal holdings', () => {
       type: AccountType.investment,
       investmentActivityLoading: true,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
 
@@ -925,6 +971,7 @@ describe('AccountModal holdings', () => {
       investmentActivity: [],
       investmentActivityTotal: 0,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
 
@@ -946,6 +993,7 @@ describe('AccountModal holdings', () => {
       hasMoreInvestmentActivity: true,
       loadMoreInvestmentActivity: loadMore,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
 
@@ -970,6 +1018,7 @@ describe('AccountModal holdings', () => {
       loadMoreInvestmentActivity: retry,
       investmentActivityLoadMoreError: true,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
 
@@ -991,6 +1040,7 @@ describe('AccountModal holdings', () => {
       valuationMode: 'holdings',
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     expect(screen.getByRole('button', { name: 'Edit holdings' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
@@ -1009,6 +1059,7 @@ describe('AccountModal holdings', () => {
       valuationMode: 'holdings',
       holdingsLoading: true,
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
     const loadingEditButton = screen.getByRole<HTMLButtonElement>('button', {
       name: 'Edit holdings',
     })
@@ -1047,6 +1098,7 @@ describe('AccountModal holdings', () => {
       valuationMode: 'holdings',
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
 
@@ -1076,6 +1128,7 @@ describe('AccountModal holdings', () => {
       valuationMode: 'holdings',
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
     fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
     expect(screen.getByRole('status').textContent).toContain('C6L.SI')
 
@@ -1100,6 +1153,7 @@ describe('AccountModal holdings', () => {
       valuationMode: 'holdings',
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
     fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
     expect(screen.getByRole('status').textContent).toContain('C6L.SI')
 
@@ -1115,6 +1169,7 @@ describe('AccountModal holdings', () => {
       valuationMode: 'holdings',
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
     const launcher = screen.getByRole('button', { name: 'Edit holdings' })
     launcher.focus()
     fireEvent.click(launcher)
@@ -1135,6 +1190,7 @@ describe('AccountModal holdings', () => {
       valuationMode: 'holdings',
       holdings: [investmentHolding],
     })
+    fireEvent.click(screen.getByRole('tab', { name: 'Holdings' }))
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit holdings' }))

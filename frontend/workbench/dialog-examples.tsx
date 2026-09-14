@@ -46,6 +46,15 @@ function AccountDialogs({ state, masked }: ExampleProps) {
   const onClose = () => setOpened(false)
   const account = {
     ...fixtureSummaries[0],
+    ...(state === 'account'
+      ? {
+          changePercent: 0,
+          changeAmount: {
+            money: { amount: '0', currency: 'USD' },
+            sign: 'positive' as const,
+          },
+        }
+      : {}),
     ...(state === 'holdings'
       ? {
           valuationMode: 'holdings' as const,

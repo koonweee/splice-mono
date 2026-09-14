@@ -178,9 +178,10 @@ function SavedHomeContent({
         unavailable.
       </VisuallyHidden>
       <HomePageFrame>
-        <div inert aria-label={`Saved Home for ${snapshot.endDate}`}>
+        <div aria-label={`Saved Home for ${snapshot.endDate}`}>
           <HomeContent
             {...content}
+            readOnly
             balancesHidden={maskBalances}
             onAccountClick={() => undefined}
             onPeriodChange={() => undefined}

@@ -26,6 +26,22 @@ afterEach(() => {
 })
 
 describe('absolute change popup', () => {
+  it('shows a zero percent and its zero amount', async () => {
+    render(
+      <MantineProvider>
+        <ChangePercentPopover
+          changePercent={0}
+          changeAmount={{
+            money: { amount: '0', currency: 'USD' },
+            sign: 'positive',
+          }}
+          color="dimmed"
+        />
+      </MantineProvider>,
+    )
+    fireEvent.click(screen.getByText('0.00%'))
+    expect(await screen.findByText('+$0.00')).toBeTruthy()
+  })
   it('opens on the first focused click and toggles through keyboard activation', async () => {
     render(
       <MantineProvider>

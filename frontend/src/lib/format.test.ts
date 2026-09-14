@@ -7,6 +7,7 @@ import {
   formatMoneyNumber,
   formatMoneyWithSign,
   formatPercent,
+  getChangeColorMantine,
   getDecimalPlaces,
 } from './format'
 
@@ -161,8 +162,11 @@ describe('format utils', () => {
       expect(formatPercent(-12.345)).toBe('-12.35%')
     })
 
-    it('should return undefined for 0', () => {
-      expect(formatPercent(0)).toBeUndefined()
+    it('should show zero and keep missing changes absent', () => {
+      expect(formatPercent(0)).toBe('0.00%')
+      expect(formatPercent()).toBeUndefined()
+      expect(getChangeColorMantine(false, 0)).toBe('dimmed')
+      expect(getChangeColorMantine(true, 0)).toBe('dimmed')
     })
   })
 

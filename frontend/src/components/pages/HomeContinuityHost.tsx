@@ -148,7 +148,6 @@ export function HomeContinuityHost() {
           hasData={Boolean(content)}
         >
           <div
-            inert={!live}
             aria-label={
               !live && snapshot
                 ? `Saved Home for ${snapshot.endDate}`
@@ -156,7 +155,11 @@ export function HomeContinuityHost() {
             }
           >
             {content && (
-              <HomeContent {...content} balancesHidden={maskBalances} />
+              <HomeContent
+                {...content}
+                readOnly={!live}
+                balancesHidden={maskBalances}
+              />
             )}
           </div>
         </DataState>
