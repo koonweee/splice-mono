@@ -143,9 +143,7 @@ export function AccountModal({
   const activeSection =
     selectedSection && selectedSection.accountId === account?.id
       ? selectedSection.value
-      : isInvestmentAccount
-        ? 'holdings'
-        : 'details'
+      : 'history'
   const summaryIsHoldingsValued = account?.valuationMode === 'holdings'
   const {
     holdings,

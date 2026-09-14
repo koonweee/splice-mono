@@ -87,6 +87,33 @@ describe('NetWorthCard', () => {
     expect(screen.getByText('$123')).toBeTruthy()
   })
 
+  it('keeps a zero comparison visible', () => {
+    renderNetWorthCard({ changePercent: 0 })
+    const comparison = screen.getByText('0.00%')
+    expect(getComputedStyle(comparison).visibility).toBe('visible')
+    expect(screen.getByText('from last month')).toBeTruthy()
+  })
+
+  it('allows saved graph inspection while period changes are disabled', () => {
+    const onPeriodChange = vi.fn()
+    renderNetWorthCard({
+      readOnly: true,
+      period: TimePeriod.month,
+      onPeriodChange,
+    })
+
+    const chartControl = screen.getByRole('button', { name: 'hover point' })
+    expect(chartControl.closest('[inert]')).toBeNull()
+    fireEvent.click(chartControl)
+    expect(screen.getByText('$4,321')).toBeTruthy()
+    expect(screen.getByText('Apr 1')).toBeTruthy()
+
+    const week = screen.getByRole('button', { name: 'Week' })
+    expect((week as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(week)
+    expect(onPeriodChange).not.toHaveBeenCalled()
+  })
+
   it('masks the summary value and hovered chart value when hidden', () => {
     renderNetWorthCard({ balancesHidden: true })
 

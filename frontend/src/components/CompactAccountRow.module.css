@@ -13,3 +13,25 @@
     var(--mantine-spacing-sm)
   );
 }
+
+.overviewChange {
+  position: relative;
+}
+
+@media (--touch-controls) {
+  .overviewChange :global(.splice-change-trigger) {
+    min-height: 0 !important;
+    position: static;
+  }
+
+  /* The balance is not a separate action, so the tap target can extend over it. */
+  .overviewChange :global(.splice-change-trigger)::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-width: var(--splice-size-touch-target);
+    height: var(--splice-size-touch-target);
+  }
+}

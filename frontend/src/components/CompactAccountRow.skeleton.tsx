@@ -1,5 +1,6 @@
 import { Box, Group, Skeleton, Text } from '@mantine/core'
 import { CompactAccountRowFrame } from './CompactAccountRowFrame'
+import styles from './CompactAccountRow.module.css'
 
 function RowTextPlaceholder({
   role,
@@ -33,12 +34,17 @@ export function CompactAccountRowSkeleton({
       balance={
         <>
           <RowTextPlaceholder role="amountSmall" width={80} />
-          {!overview && (
-            <>
-              <RowTextPlaceholder role="caption" width={48} />
-              <Text data-typography="caption">{'\u00A0'}</Text>
-            </>
-          )}
+          <Group
+            justify="flex-end"
+            className={
+              overview
+                ? styles.overviewChange
+                : 'splice-touch-target splice-change-trigger'
+            }
+          >
+            <RowTextPlaceholder role="caption" width={48} />
+          </Group>
+          {!overview && <Text data-typography="caption">{'\u00A0'}</Text>}
         </>
       }
     />

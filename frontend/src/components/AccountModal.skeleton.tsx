@@ -20,7 +20,7 @@ export function AccountDetailsSkeleton({
 }) {
   const investment =
     account?.type === 'investment' || account?.type === 'brokerage'
-  const selected = section ?? (investment ? 'holdings' : 'details')
+  const selected = section ?? 'history'
   const convertedBalance =
     account?.valuationMode !== 'holdings' &&
     account?.convertedEffectiveBalance &&

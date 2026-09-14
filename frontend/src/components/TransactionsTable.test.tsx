@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -251,6 +252,36 @@ describe('TransactionsTable', () => {
     expect(screen.queryByText('User')).toBeNull()
   })
 
+  it('keeps another category editor and its search open when an earlier save completes', () => {
+    renderTable([
+      makeTransaction({ id: 'first', category: foodCategory }),
+      makeTransaction({ id: 'second', category: foodCategory }),
+    ])
+
+    fireEvent.click(screen.getAllByLabelText('Edit category')[0])
+    fireEvent.click(screen.getByRole('textbox', { name: 'Category' }))
+    fireEvent.click(screen.getByText('Hardware').closest('[role="option"]')!)
+    expect(mockFns.updateCategoryMutateMock).toHaveBeenCalledWith({
+      id: 'first',
+      data: { categoryId: hardwareCategory.id },
+    })
+
+    fireEvent.click(screen.getAllByLabelText('Edit category')[1])
+    const input = screen.getByRole('textbox', { name: 'Category' })
+    fireEvent.change(input, { target: { value: 'Hard' } })
+
+    act(() => {
+      mockFns.useTransactionControllerUpdateCategoryMock.mock.lastCall![0].mutation.onSuccess(
+        undefined,
+        { id: 'first' },
+      )
+    })
+
+    expect(screen.getByRole('textbox', { name: 'Category' })).toBe(input)
+    expect((input as HTMLInputElement).value).toBe('Hard')
+    expect(screen.getByRole('listbox')).toBeTruthy()
+  })
+
   it('shows rule assignment provenance on rule-categorized rows', () => {
     renderTable([
       makeTransaction({
@@ -372,9 +403,7 @@ describe('TransactionsTable', () => {
       }),
     ])
 
-    fireEvent.click(
-      screen.getByLabelText('Show transaction details for Store'),
-    )
+    fireEvent.click(screen.getByLabelText('Show transaction details for Store'))
 
     expect(screen.queryByText('Displayed amount')).toBeNull()
     expect(await screen.findByText('Original amount')).toBeTruthy()

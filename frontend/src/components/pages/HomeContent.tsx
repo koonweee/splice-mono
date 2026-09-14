@@ -16,6 +16,7 @@ export function HomeContent({
   chartDisplayData,
   seriesLoading = false,
   seriesError = false,
+  readOnly = false,
   onPeriodChange,
   onAccountClick,
   onRetrySeries,
@@ -29,6 +30,7 @@ export function HomeContent({
   chartDisplayData?: Array<ChartDataPoint>
   seriesLoading?: boolean
   seriesError?: boolean
+  readOnly?: boolean
   onPeriodChange?: (period: TimePeriod) => void
   onAccountClick: (account: AccountSummaryData) => void
   onRetrySeries?: () => void
@@ -36,6 +38,7 @@ export function HomeContent({
   return (
     <>
       <NetWorthCard
+        readOnly={readOnly}
         period={period}
         onPeriodChange={onPeriodChange}
         balancesHidden={balancesHidden}
@@ -50,7 +53,7 @@ export function HomeContent({
         onRetryChart={onRetrySeries}
       />
 
-      <Grid>
+      <Grid inert={readOnly}>
         <Grid.Col span={{ base: 12, md: 6 }}>
           <AccountSection
             title="Assets"

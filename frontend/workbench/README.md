@@ -1,5 +1,33 @@
 # Splice component workbench
 
+## Transaction category editing
+
+`page-transactions` includes two provider rows, including a single-line
+uncategorized row. Use `latency=4000` to save a category on one, then open the
+other before the response completes. Its input, search and dropdown should stay
+open through the save and refetch. Editing must preserve the resting row height.
+
+Verified at 1440×900 in Light/Slate blue and Dark: the single-line row remained
+48px with the 28px inline input. A delayed save retained the other input DOM node
+and open dropdown after the saved category appeared. OLED at 390×844 covers the
+mobile list. Initial loading still uses the existing table skeleton; resting row
+geometry is unchanged. The component regression test covers retained search text.
+
+## Home account change percentages
+
+Home account rows again show the selected period's percentage directly below the
+balance, including neutral `0.00%`; missing comparisons stay absent. Use
+`account-overview` for positive, negative, zero and missing values and the exact
+amount popups. On touch layouts the popup target extends upward over the balance
+to retain a 44px hit area without adding visible space. The account navigation
+action remains separate.
+
+Measured rows at about 61px both before and after on 1440px desktop and 390px
+phone. Checked Dark desktop, Light phone popup/hit area and the OLED phone
+`page-home&hold=reads` loading/ready pair. The paired row skeleton now reserves
+the percentage line, and period loading uses the same line height. The change
+popup opened without selecting the account. No browser runtime errors.
+
 ## PWA launch screen
 
 `/?frame=true&example=launch-screen&state=checking&mode=oled&width=430`
@@ -476,8 +504,12 @@ rather than showing a misleading combined amount. Shared behavior and exact sums
 are covered by AccountSection.test.tsx and ChangePercentPopover.test.tsx.
 
 Account modal tabs are ordered History, Details, then Holdings/Activity where
-available. The account-dialogs example and its loading skeleton use these labels;
-existing account-type defaults are retained.
+available. Every account now opens and reopens on History, including the loading
+skeleton. The `account-dialogs/account` fixture has a zero change to check its
+visible, neutral `0.00%` readout and amount popup. Missing changes remain absent.
+Checked History selection and reopen on desktop Dark/Slate blue, plus phone
+OLED module-loading/ready and Light ready at 390×844. The Home net worth
+comparison also keeps zero changes visible.
 
 Amount font preference: General exposes “Use monospace font for amounts” below
 Hide zero balances on Home. It previews immediately and follows Save/Cancel;
@@ -610,7 +642,7 @@ snapshot in an isolated presentation scope; cookies/storage are never read or
 written by the adapter. Log out uses the fixture action. Retry simulates a
 2.5-second refresh. These fixtures do not validate network session handoff.
 
-Inspected the saved preview at 320×800 OLED masked, 390×844 Light missing-series,
+Previously inspected the saved preview at 320×800 OLED masked, 390×844 Light missing-series,
 and 1440×900 Dark validating/no-snapshot. The preview shares the live Home inset
 (16px desktop) and preserves period controls visibly inside an inert content
 region. Navigation is disabled; masking and sign out remain available. Confirmed
@@ -619,6 +651,19 @@ accessibility tree. Missing series retains the chart region with its existing
 empty-history message; no-snapshot shows the launch screen. Browser runtime
 errors were empty and the isolated browser was closed. Workbench tests cover
 initial saved masking plus cookie/storage isolation.
+
+Saved graph inspection now works during validation, offline, and refresh failure.
+The graph and local comparison readout remain interactive; period buttons are
+disabled and the account area remains inert until the live handoff. Inspect
+`cached-home/cached-validating` and `masked` with mouse hover, keyboard arrows,
+and touch. Missing-series still uses its existing empty-history presentation.
+
+Verified mouse hover at 1440×900 Dark/Slate blue, and synthetic touch at 390×844
+Light and OLED masked: saved dates and values update without any refresh, and
+masked values stay hidden. No browser errors. The production
+`yarn pwa:cached-home-test` harness holds session validation while checking saved
+graph hover, disabled periods and inert accounts, then verifies the live handoff
+retains its SVG and masking. All cached-launch lifecycle checks passed.
 
 ## Chart refresh continuity
 

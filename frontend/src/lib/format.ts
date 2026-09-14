@@ -172,16 +172,16 @@ export function formatMoneyNumber(
 
 /**
  * Format a percentage value with sign prefix
- * Returns null for 0% changes (to hide them in the UI)
+ * Keeps zero changes visible; missing values remain absent.
  *
  * @example
  * formatPercent(3.5)   // => "+3.50%"
  * formatPercent(-2.1)  // => "-2.10%"
- * formatPercent(0)     // => null
- * formatPercent(null)  // => null
+ * formatPercent(0)     // => "0.00%"
+ * formatPercent()      // => undefined
  */
 export function formatPercent(value?: number): string | undefined {
-  if (value === undefined || value === 0) return undefined
+  if (value === undefined) return undefined
   const sign = value > 0 ? '+' : ''
   return `${sign}${value.toFixed(2)}%`
 }
@@ -190,7 +190,7 @@ export function getChangeColorMantine(
   isLiability: boolean,
   changePercent?: number,
 ): string {
-  if (changePercent === undefined) return 'dimmed'
+  if (changePercent === undefined || changePercent === 0) return 'dimmed'
   const isPositive = changePercent > 0
   const isGood = isLiability ? !isPositive : isPositive
   return isGood ? 'var(--splice-positive)' : 'var(--splice-negative)'

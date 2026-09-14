@@ -104,6 +104,7 @@ export const fixtureTransactions: Array<Transaction> = [
   {
     ...base,
     id: 'uncategorized',
+    source: 'provider',
     amount: money('0'),
     merchantName: null,
     categoryId: null,

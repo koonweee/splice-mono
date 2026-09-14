@@ -22,14 +22,14 @@ describe('rule preview and application fixtures', () => {
     const preview = await api<PreviewCategorizationRuleApplicationResponse>({
       url: `${path}/application-preview`,
     })
-    expect(preview).toMatchObject({ matched: 4, updated: 1, skippedManual: 3 })
+    expect(preview).toMatchObject({ matched: 4, updated: 2, skippedManual: 2 })
     expect(await api({ url: '/transaction/travel-transaction' })).toMatchObject(
       { categoryId: 'travel' },
     )
     expect(await api({ url: `${path}/apply`, method: 'POST' })).toEqual({
       matched: 4,
-      updated: 1,
-      skippedManual: 3,
+      updated: 2,
+      skippedManual: 2,
     })
     expect(await api({ url: '/transaction/travel-transaction' })).toMatchObject(
       {

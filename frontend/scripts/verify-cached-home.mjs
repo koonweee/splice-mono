@@ -348,7 +348,7 @@ try {
             root: getComputedStyle(document.documentElement).backgroundColor,
             body: getComputedStyle(document.body).backgroundColor,
             saved: Boolean(
-              document.querySelector('[inert][aria-label^="Saved Home"]'),
+              document.querySelector('[aria-label^="Saved Home"]'),
             ),
           })
         if (evidence.frames.length < 300) requestAnimationFrame(frame)
@@ -359,7 +359,7 @@ try {
       waitUntil: 'domcontentloaded',
     })
     await page
-      .locator('[inert][aria-label^="Saved Home"]')
+      .locator('[aria-label^="Saved Home"]')
       .waitFor()
       .catch(async (error) => {
         console.error('Cold preview diagnostics:', {
@@ -401,6 +401,39 @@ try {
       .locator('path.recharts-area-curve')
       .first()
       .getAttribute('d')
+    assert.equal(
+      await savedChart.evaluate((element) =>
+        Boolean(element.closest('[inert]')),
+      ),
+      false,
+      'Saved graph is available while session validation is held',
+    )
+    assert.equal(
+      await page
+        .getByRole('button', { name: 'Week', exact: true })
+        .isDisabled(),
+      true,
+    )
+    assert.equal(
+      await page
+        .getByText('ACCOUNT_ALICE', { exact: true })
+        .first()
+        .evaluate((element) => Boolean(element.closest('[inert]'))),
+      true,
+      'Saved accounts cannot navigate before live handoff',
+    )
+    const savedBounds = await savedChart.boundingBox()
+    await page.mouse.move(
+      savedBounds.x + 8,
+      savedBounds.y + savedBounds.height / 2,
+    )
+    await page
+      .getByRole('heading', { name: 'Net worth: $1,200', exact: true })
+      .waitFor()
+    await page.mouse.move(0, 0)
+    console.log(
+      'PASS: saved graph responds before validation; account and period actions stay gated',
+    )
     const initialEvidence = await page.evaluate(() => window.__launchEvidence)
     assert.equal(
       initialEvidence.branded,
@@ -454,7 +487,7 @@ try {
       .waitFor()
     releaseFirstDashboard()
     await page
-      .locator('[inert][aria-label^="Saved Home"]')
+      .locator('[aria-label^="Saved Home"]')
       .waitFor({ state: 'detached' })
     await page.getByText('ACCOUNT_ALICE', { exact: true }).first().waitFor()
     await page
@@ -717,7 +750,7 @@ try {
       'Period changes keep the verified live shell mounted',
     )
     assert.equal(
-      await page.locator('[inert][aria-label^="Saved Home"]').count(),
+      await page.locator('[aria-label^="Saved Home"]').count(),
       0,
       'Period changes never re-enter launch preview',
     )
@@ -749,7 +782,7 @@ try {
       'Retained live content uses the currently selected period controls',
     )
     assert.equal(
-      await page.locator('[inert][aria-label^="Saved Home"]').count(),
+      await page.locator('[aria-label^="Saved Home"]').count(),
       0,
       'Held new-period series does not restore read-only saved launch',
     )
@@ -778,7 +811,7 @@ try {
     await context.setOffline(true)
     page = await context.newPage()
     await page.goto(`${origin}/home`, { waitUntil: 'domcontentloaded' })
-    await page.locator('[inert][aria-label^="Saved Home"]').waitFor()
+    await page.locator('[aria-label^="Saved Home"]').waitFor()
     await page.getByRole('button', { name: /^Offline/ }).waitFor()
     console.log(
       'PASS: offline cold restart boots saved Home and offline header icon',
@@ -828,7 +861,7 @@ try {
     page = await context.newPage()
     await page.goto(`${origin}/home`, { waitUntil: 'domcontentloaded' })
     await page.getByRole('button', { name: /^Couldn't refresh/ }).waitFor()
-    await page.locator('[inert][aria-label^="Saved Home"]').waitFor()
+    await page.locator('[aria-label^="Saved Home"]').waitFor()
     await page.getByText('ACCOUNT_ALICE', { exact: true }).first().waitFor()
     console.log(
       'PASS: yesterday snapshot remains a truthful saved preview when today summary fails',
@@ -875,7 +908,7 @@ try {
       .first()
       .waitFor({ state: 'detached' })
     assert.equal(
-      await page.locator('[inert][aria-label^="Saved Home"]').count(),
+      await page.locator('[aria-label^="Saved Home"]').count(),
       0,
       'Old identity preview must disappear while new dashboard is held',
     )
@@ -916,10 +949,7 @@ try {
       await page.getByText('ACCOUNT_BOB', { exact: true }).count(),
       0,
     )
-    assert.equal(
-      await page.locator('[inert][aria-label^="Saved Home"]').count(),
-      0,
-    )
+    assert.equal(await page.locator('[aria-label^="Saved Home"]').count(), 0)
     console.log('PASS: pending offline logout prevents cached private preview')
     await page.evaluate(() => localStorage.removeItem('splice:pending-logout'))
     await page.close()
@@ -935,7 +965,7 @@ try {
     await page.goto(`${origin}/home`, { waitUntil: 'domcontentloaded' })
     await page.getByText('ACCOUNT_BOB', { exact: true }).first().waitFor()
     await page
-      .locator('[inert][aria-label^="Saved Home"]')
+      .locator('[aria-label^="Saved Home"]')
       .waitFor({ state: 'detached' })
     const headerBefore = await page.locator('header').boundingBox()
     const accountBefore = await page
