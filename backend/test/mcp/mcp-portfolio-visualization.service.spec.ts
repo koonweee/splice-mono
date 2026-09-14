@@ -40,6 +40,20 @@ function holding(
     currency: 'USD',
     vestedQuantity: null,
     vestedValue: null,
+    institutionPriceAsOf: null,
+    institutionPriceDatetime: null,
+    securityIdentifiers: {
+      isin: null,
+      cusip: null,
+      sedol: null,
+      externalSecurityId: null,
+      provider: null,
+    },
+    marketIdentifierCode: null,
+    securityCurrency: null,
+    securityClosePrice: null,
+    securityClosePriceAsOf: null,
+    securityUpdatedAt: null,
     ...overrides,
   };
 }

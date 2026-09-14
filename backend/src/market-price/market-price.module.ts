@@ -15,6 +15,6 @@ import { YahooFinanceMarketPriceProvider } from './yahoo-finance-market-price.pr
     },
     MarketPriceService,
   ],
-  exports: [MarketPriceService],
+  exports: [MarketPriceService, MARKET_PRICE_PROVIDER],
 })
 export class MarketPriceModule {}

@@ -12,6 +12,8 @@ This directory tracks product and implementation plans for Splice.
 
 ## Directory
 
+- [MCP Historical Financial Evidence](./mcp-historical-financial-evidence.md) — In Progress; additive balance attribution, snapshot provenance, holdings coverage, and bounded price/FX evidence.
+
 - [Home Startup And Refresh Continuity](./home-startup-and-refresh-continuity.md) — Completed and deployed (frontend 0.0.129). Appearance-matched cached launch, foreground Home refresh, and continuous chart updates.
 
 - [Cached Home Launch And Periodic Refresh](./cached-home-launch-and-periodic-refresh.md) — Done; deployed 2026-09-08. Saved Home on cold PWA launch, subtle header-edge refresh status, offline/failure detail beside Splice, and hourly visible-page refreshes.

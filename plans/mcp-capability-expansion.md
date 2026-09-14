@@ -279,3 +279,7 @@ cd frontend && yarn orval
 - `InvestmentService.findActivity()` uses page-index pagination today. MCP should use cursor pagination for consistency unless the implementation intentionally documents a page-index exception.
 - Rule introspection can expose sensitive user behavior patterns to any holder of a personal access token. This matches existing MCP transaction access risk, but docs should continue to emphasize PAT handling.
 - Documentation should avoid saying MCP mirrors every web-app action; it should describe a read-only analysis surface.
+
+## Historical Evidence Follow-up
+
+The additive historical semantics, balance attribution, holdings coverage and price/FX evidence extension is tracked in [MCP Historical Financial Evidence](./mcp-historical-financial-evidence.md). Original rollout evidence above remains historical.

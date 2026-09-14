@@ -1,3 +1,4 @@
+import { buildBalanceAttribution } from '../../src/balance-query/balance-attribution';
 import {
   Client,
   StreamableHTTPClientTransport,
@@ -88,6 +89,7 @@ async function startRuntime(
   const accountsSurfaceService = { getAccountsSnapshot: jest.fn() };
   const balanceHistorySurfaceService = {
     getBalanceHistorySummary: jest.fn(),
+    getBalanceChangeAttribution: jest.fn(),
   };
   const transactionsSurfaceService = { searchTransactions: jest.fn() };
   const mcpReadService = {
@@ -95,6 +97,8 @@ async function startRuntime(
     listBalanceSnapshots: jest.fn(),
     listCategories: jest.fn(),
     listInvestmentHoldings: jest.fn(),
+    listHoldingsDates: jest.fn(),
+    getHistoricalValuationEvidence: jest.fn(),
     listInvestmentActivity: jest.fn(),
     listRecurringManualTransactionSchedules: jest.fn(),
     listAnalysisRules: jest.fn(),
@@ -232,6 +236,69 @@ describe('SpliceMcpRuntimeService', () => {
       'google-123',
     );
     expect(harness.userService.findOne).toHaveBeenCalledWith(USER_ID);
+    await client.close();
+  });
+
+  it('discovers and executes new typed evidence tools over authenticated HTTP', async () => {
+    const harness = await trackedRuntime();
+    const range = { startDate: '2026-09-01', endDate: '2026-09-05' };
+    harness.balanceHistorySurfaceService.getBalanceChangeAttribution.mockResolvedValue(
+      buildBalanceAttribution(
+        { date: range.startDate, balances: {} },
+        { date: range.endDate, balances: {} },
+        'USD',
+      ),
+    );
+    harness.mcpReadService.listHoldingsDates.mockResolvedValue({
+      data: [],
+      truncated: false,
+      limit: 500,
+      query: range,
+    });
+    harness.mcpReadService.getHistoricalValuationEvidence.mockResolvedValue({
+      basis: 'historical_valuation_evidence',
+      query: range,
+      data: [],
+      storedPricesTruncated: false,
+      fx: [],
+      limitations: [],
+    });
+    const { client, transport } = clientFor(
+      harness.url,
+      await harness.authority.sign({
+        subject: 'google-oauth2|google-123',
+        scope: 'splice:read',
+      }),
+    );
+    await client.connect(transport);
+    const tools = await client.listTools();
+    for (const call of [
+      { name: 'get_balance_change_attribution', arguments: range },
+      { name: 'list_holdings_snapshot_dates', arguments: range },
+      {
+        name: 'get_historical_valuation_evidence',
+        arguments: {
+          ...range,
+          securityIds: ['10000000-0000-4000-8000-000000000001'],
+          reportingCurrency: 'USD',
+        },
+      },
+    ]) {
+      expect(
+        tools.tools.find((tool) => tool.name === call.name)?.annotations
+          ?.readOnlyHint,
+      ).toBe(true);
+      const result = await client.callTool(call);
+      expect(result.isError).toBe(false);
+      expect(result.structuredContent).toBeDefined();
+      expect(
+        JSON.parse((result.content as Array<{ text: string }>)[0].text),
+      ).toEqual(result.structuredContent);
+    }
+    expect(harness.mcpReadService.listHoldingsDates).toHaveBeenCalledWith(
+      USER_ID,
+      range,
+    );
     await client.close();
   });
 

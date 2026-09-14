@@ -1,3 +1,9 @@
+import { buildBalanceWithConversion } from '../balance-query/balance-projection';
+import type { RateWithSource } from '../types/ExchangeRate';
+import {
+  McpHistoricalEvidenceService,
+  type HistoricalEvidenceOptions,
+} from './mcp-historical-evidence.service';
 import { createHash } from 'node:crypto';
 import { TransactionQueryService } from '../transaction/transaction-query.service';
 import {
@@ -10,7 +16,12 @@ import type { InvestmentHoldingSnapshot } from '../types/Investment';
 import { fxRequestKey } from '../currency-exchange/currency-exchange.service';
 import { CalendarDateSchema, assertDateRange } from '../common/query-bounds';
 import type { RateSource } from '../types/ExchangeRate';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Brackets,
@@ -186,6 +197,11 @@ export interface McpBalanceSnapshot {
   snapshotType: string;
   currentBalance: McpMoney;
   availableBalance: McpMoney;
+  reportingCurrentBalance: McpMoney | null;
+  reportingAvailableBalance: McpMoney | null;
+  currentBalanceFx: RateWithSource | null;
+  availableBalanceFx: RateWithSource | null;
+  snapshotUpdatedAt: string | null;
 }
 
 export interface McpListBalanceSnapshotsResult {
@@ -234,6 +250,8 @@ export interface McpListInvestmentHoldingsOptions {
   accountIds?: string[];
   snapshotDate?: string;
   latestOnly?: boolean;
+  dateMode?: 'exact' | 'on_or_before';
+  minSnapshotDate?: string;
 }
 
 export interface McpInvestmentHolding {
@@ -250,6 +268,20 @@ export interface McpInvestmentHolding {
   quantity: string | null;
   costBasis: string | null;
   institutionPrice: string | null;
+  institutionPriceAsOf: string | null;
+  institutionPriceDatetime: string | null;
+  securityIdentifiers: {
+    isin: string | null;
+    cusip: string | null;
+    sedol: string | null;
+    externalSecurityId: string | null;
+    provider: string | null;
+  };
+  marketIdentifierCode: string | null;
+  securityCurrency: string | null;
+  securityClosePrice: string | null;
+  securityClosePriceAsOf: string | null;
+  securityUpdatedAt: string | null;
   institutionValue: McpMoney | null;
   currency: string | null;
   vestedQuantity: string | null;
@@ -262,11 +294,17 @@ export interface McpListInvestmentHoldingsResult {
     accountId: string;
     snapshotDate: string | null;
     holdingCount: number;
+    snapshotId: string | null;
+    completedAt: string | null;
+    carriedForward: boolean;
+    coverage: 'missing' | 'empty' | 'recorded';
   }>;
   query: {
     accountIds?: string[];
     snapshotDate?: string;
     latestOnly: boolean;
+    dateMode: 'latest' | 'exact' | 'on_or_before';
+    minSnapshotDate?: string;
   };
 }
 
@@ -522,6 +560,8 @@ export class McpReadService {
     private readonly transactionQueries: TransactionQueryService = new TransactionQueryService(
       transactionRepository,
     ),
+    @Optional()
+    private readonly historicalEvidenceService?: McpHistoricalEvidenceService,
   ) {}
 
   withReadSnapshot<T>(
@@ -763,9 +803,29 @@ export class McpReadService {
     const rows = await query.getMany();
     const pageRows = rows.slice(0, pageSize);
     const last = pageRows[pageRows.length - 1];
-
+    const reportingCurrency =
+      await this.currencyConversionService.getPreferredCurrency(userId);
+    const requests = pageRows.flatMap((snapshot) =>
+      [snapshot.currentBalance, snapshot.availableBalance]
+        .filter(
+          (balance) =>
+            balance.amount !== '0' && balance.currency !== reportingCurrency,
+        )
+        .map((balance) => ({
+          baseCurrency: balance.currency,
+          targetCurrency: reportingCurrency,
+          requestedDate: snapshot.snapshotDate,
+        })),
+    );
+    const rates = await this.currencyConversionService.getResolvedRates(
+      requests,
+      undefined,
+      { allowMissing: true },
+    );
     return {
-      data: pageRows.map((snapshot) => this.toMcpBalanceSnapshot(snapshot)),
+      data: pageRows.map((snapshot) =>
+        this.toMcpBalanceSnapshot(snapshot, reportingCurrency, rates),
+      ),
       pageInfo: {
         nextCursor:
           rows.length > pageSize && last
@@ -864,6 +924,8 @@ export class McpReadService {
       {
         accountIds: options.accountIds,
         snapshotDate: options.snapshotDate,
+        dateMode: options.dateMode,
+        minSnapshotDate: options.minSnapshotDate,
       },
       manager,
     );
@@ -880,13 +942,52 @@ export class McpReadService {
         accountId: result.account.id,
         snapshotDate: result.snapshot.snapshotDate,
         holdingCount: result.snapshot.holdings.length,
+        snapshotId: result.header?.id ?? null,
+        completedAt: result.header?.completedAt?.toISOString() ?? null,
+        carriedForward:
+          !!options.snapshotDate &&
+          !!result.snapshot.snapshotDate &&
+          result.snapshot.snapshotDate !== options.snapshotDate,
+        coverage:
+          result.snapshot.snapshotDate === null
+            ? 'missing'
+            : result.snapshot.holdings.length === 0
+              ? 'empty'
+              : 'recorded',
       })),
       query: {
         accountIds: options.accountIds,
         snapshotDate: options.snapshotDate,
         latestOnly: !options.snapshotDate,
+        dateMode: !options.snapshotDate
+          ? 'latest'
+          : (options.dateMode ?? 'exact'),
+        minSnapshotDate: options.minSnapshotDate,
       },
     };
+  }
+
+  getHistoricalValuationEvidence(
+    userId: string,
+    options: HistoricalEvidenceOptions,
+  ) {
+    if (!this.historicalEvidenceService)
+      throw new ServiceUnavailableException(
+        'Historical evidence service is unavailable',
+      );
+    return this.historicalEvidenceService.read(userId, options);
+  }
+
+  listHoldingsDates(
+    userId: string,
+    options: {
+      accountIds?: string[];
+      startDate: string;
+      endDate: string;
+      limit?: number;
+    },
+  ) {
+    return this.holdingsQueryService.listAvailableDates(userId, options);
   }
 
   async listInvestmentActivity(
@@ -1059,6 +1160,20 @@ export class McpReadService {
       quantity: holding.quantity,
       costBasis: holding.costBasis,
       institutionPrice: holding.institutionPrice,
+      institutionPriceAsOf: holding.institutionPriceAsOf,
+      institutionPriceDatetime: holding.institutionPriceDatetime,
+      securityIdentifiers: {
+        isin: holding.security?.isin ?? null,
+        cusip: holding.security?.cusip ?? null,
+        sedol: holding.security?.sedol ?? null,
+        externalSecurityId: holding.security?.externalSecurityId ?? null,
+        provider: holding.security?.provider ?? null,
+      },
+      marketIdentifierCode: holding.security?.marketIdentifierCode ?? null,
+      securityCurrency: holding.security?.isoCurrencyCode ?? null,
+      securityClosePrice: holding.security?.closePrice ?? null,
+      securityClosePriceAsOf: holding.security?.closePriceAsOf ?? null,
+      securityUpdatedAt: holding.security?.updateDatetime ?? null,
       institutionValue: mcpMoneyFromDecimalString(
         holding.institutionValue,
         currency,
@@ -1284,12 +1399,42 @@ export class McpReadService {
 
   private toMcpBalanceSnapshot(
     snapshot: BalanceSnapshotEntity,
+    reportingCurrency: string,
+    rates: Map<string, RateWithSource>,
   ): McpBalanceSnapshot {
     const account = snapshot.account;
     const accountType = String(account.type);
     const accountSubType = account.subType ?? null;
     const grouping = getAccountGrouping(accountType);
-
+    const convert = (
+      balance: ReturnType<
+        BalanceSnapshotEntity['currentBalance']['toMoneyWithSign']
+      >,
+    ) => {
+      const rate = rates.get(
+        fxRequestKey({
+          baseCurrency: balance.money.currency,
+          targetCurrency: reportingCurrency,
+          requestedDate: snapshot.snapshotDate,
+        }),
+      );
+      if (
+        balance.money.amount !== '0' &&
+        balance.money.currency !== reportingCurrency &&
+        !rate
+      )
+        return null;
+      return buildBalanceWithConversion(
+        balance,
+        reportingCurrency,
+        rate
+          ? new Map([[`${rate.baseCurrency}:${rate.targetCurrency}`, rate]])
+          : undefined,
+        snapshot.snapshotDate,
+      );
+    };
+    const current = convert(snapshot.currentBalance.toMoneyWithSign());
+    const available = convert(snapshot.availableBalance.toMoneyWithSign());
     return {
       id: snapshot.id,
       accountId: snapshot.accountId,
@@ -1307,6 +1452,15 @@ export class McpReadService {
       snapshotType: snapshot.snapshotType,
       currentBalance: toMcpMoney(snapshot.currentBalance.toMoneyWithSign()),
       availableBalance: toMcpMoney(snapshot.availableBalance.toMoneyWithSign()),
+      reportingCurrentBalance: current?.reportingBalance
+        ? toMcpMoney(current.reportingBalance)
+        : null,
+      reportingAvailableBalance: available?.reportingBalance
+        ? toMcpMoney(available.reportingBalance)
+        : null,
+      currentBalanceFx: current?.exchangeRate ?? null,
+      availableBalanceFx: available?.exchangeRate ?? null,
+      snapshotUpdatedAt: snapshot.updatedAt?.toISOString() ?? null,
     };
   }
 
