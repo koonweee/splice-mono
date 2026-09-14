@@ -114,3 +114,5 @@ All six requested scope areas implemented and verified with additive compatibili
 
 - Pre-rollout SF backend image ID/digest: `sha256:0bf6c515e838b71e4c854fa154c0c4dda8c43656b08143b32d17571895b2e986`; frontend: `sha256:c062107d8a50f058f83c4413ec819dfdd96c4cd5c994e14a0c888156d498e806`. Read-only ListStackServices confirmed both healthy before rollout.
 - Main PR: [#303](https://github.com/koonweee/splice-mono/pull/303); initial implementation commit `9851184`. Required CI running; no finance mutation performed.
+
+- Final full relevant suite outside sandbox, with the isolated benchmark DB: 31 suites / 377 tests passed. Public Yahoo historical capability smoke returned 4 in-range daily quotes with USD currency and exchange timezone. Final review additionally rejects mixed-case unofficial price units as FX inputs rather than silently uppercasing GBp into GBP.

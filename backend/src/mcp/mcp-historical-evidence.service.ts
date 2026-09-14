@@ -231,11 +231,17 @@ export class McpHistoricalEvidenceService {
       ),
     ]);
     const uniqueRequests = new Map(
-      requests.map((request) => [fxRequestKey(request), request]),
+      requests.map((request) => [
+        `${request.baseCurrency}:${request.targetCurrency}:${request.requestedDate}`,
+        request,
+      ]),
     );
     // Request each quote currency/date and both valuation-date FX bases, without a currency/date Cartesian grid.
     const rates = await this.fx.resolveRequests(
-      [...uniqueRequests.values()],
+      [...uniqueRequests.values()].filter(
+        (request) =>
+          request.baseCurrency === request.baseCurrency.toUpperCase(),
+      ),
       undefined,
       { allowMissing: true },
     );
@@ -244,10 +250,19 @@ export class McpHistoricalEvidenceService {
       query: options,
       data,
       storedPricesTruncated: storedTruncated,
-      fx: [...uniqueRequests.entries()].map(([key, request]) => ({
+      fx: [...uniqueRequests.values()].map((request) => ({
         ...request,
-        status: rates.has(key) ? ('available' as const) : ('missing' as const),
-        evidence: rates.get(key) ?? null,
+        currencyUnitSupported:
+          request.baseCurrency === request.baseCurrency.toUpperCase(),
+        status:
+          request.baseCurrency === request.baseCurrency.toUpperCase() &&
+          rates.has(fxRequestKey(request))
+            ? ('available' as const)
+            : ('missing' as const),
+        evidence:
+          request.baseCurrency === request.baseCurrency.toUpperCase()
+            ? (rates.get(fxRequestKey(request)) ?? null)
+            : null,
       })),
       limitations: [
         'Evidence is not observed chart P&L. A constant-holdings estimate requires explicit unchanged-quantity, currency, date and price-basis assumptions.',
@@ -255,6 +270,7 @@ export class McpHistoricalEvidenceService {
         'Yahoo numeric provider quotes are serialized as decimal text; provider precision is not an exact trade-price guarantee. Close adjustments are unverified; adjustedClose is separate and must not be mixed with close.',
         'Corporate actions, dividends, splits, trading, transfers, fees, and cash are not reconciled. Constant quantities across splits can be invalid. Institution price adjustment basis is unknown.',
         'FX source is database identity/exact/fill evidence, not retained upstream vendor metadata. Backward-filled FX uses a later rate and is explicitly labeled; it does not describe a future balance snapshot.',
+        'Mixed-case price currency units are not converted by uppercasing them (for example GBp is not assumed to mean GBP).',
         'Unmapped securities have no automatic ticker/exchange proxy. Provider failure is separate from empty quotes; stored evidence does not imply complete historical coverage.',
       ],
     };

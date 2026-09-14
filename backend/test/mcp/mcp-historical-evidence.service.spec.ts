@@ -185,6 +185,37 @@ describe('MCP bounded historical price/FX evidence', () => {
     });
     expect(result.data[0].storedPrices).toHaveLength(2);
   });
+  it('preserves non-ISO price units without uppercasing them into a different currency', async () => {
+    securities.find.mockResolvedValueOnce([{ ...security, provider: 'plaid' }]);
+    query.getMany.mockResolvedValueOnce([
+      {
+        id: '20000000-0000-4000-8000-000000000001',
+        securityId,
+        snapshotDate: '2026-09-01',
+        institutionPriceAsOf: '2026-09-01',
+        institutionPrice: '80',
+        institutionPriceDatetime: null,
+        isoCurrencyCode: null,
+        unofficialCurrencyCode: 'GBp',
+      },
+    ] as never);
+    const result = await service.read('owner', options);
+    const parsed = HistoricalValuationEvidenceOutputSchema.parse(result);
+    expect(parsed.fx[0].currencyUnitSupported).toBe(false);
+    expect(result.data[0].prices[0].currency).toBe('GBp');
+    expect(fx.resolveRequests).toHaveBeenCalledWith([], undefined, {
+      allowMissing: true,
+    });
+    expect(
+      result.fx.every(
+        (rate) =>
+          !rate.currencyUnitSupported &&
+          rate.status === 'missing' &&
+          rate.evidence === null,
+      ),
+    ).toBe(true);
+  });
+
   it('reports unavailable capability, preserves stored evidence after provider failure, and rejects cross-owner/bounds', async () => {
     const unavailable = new McpHistoricalEvidenceService(
       database as never,

@@ -295,6 +295,7 @@ export const HistoricalValuationEvidenceOutputSchema = z.object({
       baseCurrency: z.string(),
       targetCurrency: z.string(),
       requestedDate: DateStringSchema,
+      currencyUnitSupported: z.boolean(),
       status: z.enum(['available', 'missing']),
       evidence: RateWithSourceSchema.nullable(),
     }),
