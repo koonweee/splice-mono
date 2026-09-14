@@ -661,8 +661,10 @@ export function TransactionsTable({
   })
   const updateCategory = useTransactionControllerUpdateCategory({
     mutation: {
-      onSuccess: () => {
-        closeCategoryEditor()
+      onSuccess: (_transaction, { id }) => {
+        setEditingTransactionId((currentId) =>
+          currentId === id ? null : currentId,
+        )
         invalidateTransactionQueries(queryClient)
       },
     },

@@ -144,7 +144,9 @@
   max-width: 100%;
 }
 
-.categorySelectInput {
+.categoryCell .categorySelectInput {
+  /* Outrank Mantine's input class regardless of stylesheet load order. */
+  --input-size: 28px;
   height: 28px;
   min-height: 28px;
 }

@@ -1,5 +1,18 @@
 # Splice component workbench
 
+## Transaction category editing
+
+`page-transactions` includes two provider rows, including a single-line
+uncategorized row. Use `latency=4000` to save a category on one, then open the
+other before the response completes. Its input, search and dropdown should stay
+open through the save and refetch. Editing must preserve the resting row height.
+
+Verified at 1440×900 in Light/Slate blue and Dark: the single-line row remained
+48px with the 28px inline input. A delayed save retained the other input DOM node
+and open dropdown after the saved category appeared. OLED at 390×844 covers the
+mobile list. Initial loading still uses the existing table skeleton; resting row
+geometry is unchanged. The component regression test covers retained search text.
+
 ## PWA launch screen
 
 `/?frame=true&example=launch-screen&state=checking&mode=oled&width=430`
