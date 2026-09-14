@@ -715,3 +715,17 @@ milestones, the worker's own observed state, and a bounded fresh-registration
 lookup on timeout. These are observational only and do not bypass readiness.
 In `pwa-lifecycle&state=error`, a failed Retry stops before update/notification
 setup, clears its spinner, and leaves the copy action available.
+
+Readiness recovery now probes the exact active worker when the page reports
+`activating`. It requires the worker's own `self` and `active` states to both be
+`activated`; it never treats a generic response as readiness or reloads the page.
+Reports retain `readiness:probe-*` events and `registration:ready` with the
+confirmation source. Regression coverage lives in `service-worker.test.ts`,
+including stale page state, still-activating/malformed responses, and worker
+replacement during a probe. The existing diagnostic protocol supports recovery
+with workers from the previous release.
+
+Browser validation used the real built worker and bundled readiness module with
+a simulated stale page-side `state` getter. The page stayed `activating` while
+readiness resolved through the worker handshake in 2 ms without navigation.
+The iPhone-specific browser defect itself was not reproduced in Chromium.

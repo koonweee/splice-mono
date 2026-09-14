@@ -215,26 +215,98 @@ async function activeRegistration(current: ServiceWorkerRegistration) {
       current.waiting,
       current.active,
     ].filter(Boolean) as Array<ServiceWorker>
+    let settled = false
+    let cancelProbe: (() => void) | undefined
+    const ready = (source: string) => {
+      if (settled) return
+      recordPwaDiagnostic('registration:ready', { source })
+      cleanup()
+      resolve()
+    }
+    const probe = () => {
+      const worker = current.active
+      if (
+        settled ||
+        cancelProbe ||
+        typeof MessageChannel === 'undefined' ||
+        worker?.state !== 'activating' ||
+        current.scope !== new URL('/', window.location.href).href ||
+        worker.scriptURL !== new URL('/sw.js', window.location.href).href
+      )
+        return
+      const channel = new MessageChannel()
+      const started = Date.now()
+      const finish = () => {
+        clearTimeout(deadline)
+        channel.port1.close()
+        channel.port2.close()
+        cancelProbe = undefined
+      }
+      const deadline = setTimeout(() => {
+        recordPwaDiagnostic('readiness:probe-timeout')
+        finish()
+      }, 1500)
+      cancelProbe = finish
+      recordPwaDiagnostic('readiness:probe-start')
+      channel.port1.onmessage = (event: MessageEvent<unknown>) => {
+        const response = event.data
+        const state =
+          response && typeof response === 'object' && 'workerState' in response
+            ? response.workerState
+            : null
+        const confirmed =
+          state &&
+          typeof state === 'object' &&
+          'self' in state &&
+          state.self === 'activated' &&
+          'active' in state &&
+          state.active === 'activated'
+        recordPwaDiagnostic('readiness:probe-result', {
+          confirmed: Boolean(confirmed),
+          elapsed: Date.now() - started,
+        })
+        finish()
+        // The response belongs to this dedicated port. A superseded, waiting, or
+        // merely responsive worker must never release the readiness gate.
+        if (
+          !settled &&
+          confirmed &&
+          current.active === worker &&
+          worker.state !== 'redundant'
+        )
+          ready('worker-confirmation')
+      }
+      try {
+        // Compatible with already-deployed workers, so recovery does not depend
+        // on first activating an updated worker through the broken page state.
+        worker.postMessage({ type: 'PWA_DIAGNOSTICS' }, [channel.port2])
+      } catch {
+        recordPwaDiagnostic('readiness:probe-error')
+        finish()
+      }
+    }
     const changed = () => {
       recordPwaDiagnostic('worker:readiness', workerStates(current))
-      if (current.active?.state === 'activated') {
-        cleanup()
-        resolve()
-      } else if (
+      if (current.active?.state === 'activated') ready('page-state')
+      else if (
         workers.length &&
         workers.every((worker) => worker.state === 'redundant')
       ) {
         cleanup()
         reject(new Error('App installation failed. Try again.'))
-      }
+      } else probe()
     }
+    const poll = setInterval(changed, 2000)
     const timer = setTimeout(() => {
       cleanup()
       captureWorkerFailure(current)
       reject(new Error('App installation timed out. Try again.'))
     }, 45_000)
     function cleanup() {
+      settled = true
       clearTimeout(timer)
+      clearInterval(poll)
+      cancelProbe?.()
       workers.forEach((worker) =>
         worker.removeEventListener('statechange', changed),
       )
@@ -275,7 +347,8 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
       existing?.scope === new URL('/', window.location.href).href &&
       existing.active?.scriptURL ===
         new URL('/sw.js', window.location.href).href &&
-      existing.active.state === 'activated'
+      (existing.active.state === 'activated' ||
+        existing.active.state === 'activating')
     const current = reusable
       ? existing
       : await withDeadline(

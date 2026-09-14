@@ -71,6 +71,127 @@ afterEach(() => {
 })
 
 describe('native PWA service worker lifecycle', () => {
+  function mockChannels() {
+    const channels: Array<{
+      port1: {
+        onmessage: ((event: { data: unknown }) => void) | null
+        close: ReturnType<typeof vi.fn>
+      }
+      port2: {
+        postMessage: (data: unknown) => void
+        close: ReturnType<typeof vi.fn>
+      }
+    }> = []
+    vi.stubGlobal(
+      'MessageChannel',
+      class {
+        port1 = {
+          onmessage: null as ((event: { data: unknown }) => void) | null,
+          close: vi.fn(),
+        }
+        port2 = {
+          close: vi.fn(),
+          postMessage: (data: unknown) => this.port1.onmessage?.({ data }),
+        }
+        constructor() {
+          channels.push(this)
+        }
+      },
+    )
+    return channels
+  }
+  it('recovers stale activating state from the exact active worker without re-registering', async () => {
+    const channels = mockChannels()
+    const worker = new Worker('activating')
+    registration.active = worker
+    container.getRegistration.mockResolvedValue(registration)
+    worker.postMessage.mockImplementation(
+      (
+        _message: unknown,
+        ports: Array<{ postMessage: (data: unknown) => void }>,
+      ) => {
+        ports[0].postMessage({
+          workerState: { self: 'activated', active: 'activated' },
+        })
+      },
+    )
+    expect(await getServiceWorkerRegistration()).toBe(registration)
+    expect(getPwaUpdateState().status).toBe('ready')
+    expect(worker.state).toBe('activating')
+    expect(container.register).not.toHaveBeenCalled()
+    expect(channels[0].port1.close).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
+    expect(reload).not.toHaveBeenCalled()
+  })
+  it.each([
+    {},
+    { workerState: { self: 'activating', active: 'activated' } },
+    { workerState: { self: 'activated', active: 'activating' } },
+  ])(
+    'does not treat a responsive but unconfirmed worker as ready: %j',
+    async (response) => {
+      mockChannels()
+      registration.active = new Worker('activating')
+      registration.active.postMessage.mockImplementation(
+        (
+          _message: unknown,
+          ports: Array<{ postMessage: (data: unknown) => void }>,
+        ) => ports[0].postMessage(response),
+      )
+      const failure = expect(getServiceWorkerRegistration()).rejects.toThrow(
+        'timed out',
+      )
+      await vi.advanceTimersByTimeAsync(45_000)
+      await failure
+      expect(getPwaUpdateState().status).toBe('failed')
+      await vi.advanceTimersByTimeAsync(4500)
+    },
+  )
+  it('rechecks a genuinely activating worker and accepts confirmation when it finishes', async () => {
+    mockChannels()
+    registration.active = new Worker('activating')
+    let activated = false
+    registration.active.postMessage.mockImplementation(
+      (
+        _message: unknown,
+        ports: Array<{ postMessage: (data: unknown) => void }>,
+      ) =>
+        ports[0].postMessage({
+          workerState: {
+            self: activated ? 'activated' : 'activating',
+            active: activated ? 'activated' : 'activating',
+          },
+        }),
+    )
+    const result = getServiceWorkerRegistration()
+    await flush()
+    expect(getPwaUpdateState().status).toBe('registering')
+    activated = true
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(await result).toBe(registration)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+  it('ignores a confirmation from a worker replaced while the probe was pending', async () => {
+    const channels = mockChannels()
+    registration.active = new Worker('activating')
+    const failure = expect(getServiceWorkerRegistration()).rejects.toThrow(
+      'timed out',
+    )
+    await flush()
+    const oldReply = channels[0].port1.onmessage!
+    registration.active = new Worker('activating')
+    oldReply({
+      data: { workerState: { self: 'activated', active: 'activated' } },
+    })
+    expect(getPwaUpdateState().status).toBe('registering')
+    await vi.advanceTimersByTimeAsync(45_000)
+    await failure
+    oldReply({
+      data: { workerState: { self: 'activated', active: 'activated' } },
+    })
+    expect(getPwaUpdateState().status).toBe('failed')
+    await vi.advanceTimersByTimeAsync(4500)
+  })
   it('deduplicates registration, waits for activation, and reports offline readiness once active', async () => {
     const worker = new Worker('installing')
     registration.active = null
