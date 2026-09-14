@@ -1,4 +1,8 @@
-import { diagnosticSnapshot, tracePwa } from './lib/pwa/diagnostics'
+import {
+  diagnosticSnapshot,
+  recordPwaDiagnostic,
+  tracePwa,
+} from './lib/pwa/diagnostics'
 /// <reference lib="webworker" />
 import {
   activateStaticAssets,
@@ -19,6 +23,7 @@ declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision?: string | null }>
 }
 
+recordPwaDiagnostic('worker:runtime')
 const essentialEntries = self.__WB_MANIFEST
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -27,17 +32,29 @@ self.addEventListener('install', (event) => {
 })
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    (async () => {
+    tracePwa('worker:activate', async () => {
       await tracePwa('worker:activate-cache', () => activateStaticAssets())
       await tracePwa('worker:claim', () => self.clients.claim())
-    })(),
+    }),
   )
 })
 self.addEventListener('message', (event) => {
   const data: unknown = event.data
   if (!data || typeof data !== 'object' || !('type' in data)) return
   if (data.type === 'PWA_DIAGNOSTICS')
-    event.ports[0]?.postMessage(diagnosticSnapshot())
+    event.ports[0]?.postMessage({
+      ...diagnosticSnapshot(),
+      observedAt: Date.now(),
+      workerState: {
+        // Older WebKit may not expose self.serviceWorker; null is explicit.
+        self:
+          (self as { serviceWorker?: ServiceWorker }).serviceWorker?.state ??
+          null,
+        active: self.registration.active?.state ?? null,
+        waiting: self.registration.waiting?.state ?? null,
+        installing: self.registration.installing?.state ?? null,
+      },
+    })
   else if (data.type === 'PWA_BUILD_ID')
     event.ports[0]?.postMessage({ buildId: __SPLICE_BUILD_ID__ })
   else if (data.type === 'SKIP_WAITING') event.waitUntil(self.skipWaiting())

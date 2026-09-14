@@ -428,9 +428,16 @@ export function PwaLifecycle({
     setRetrying(true)
     setUpdateError(undefined)
     try {
-      await registerPwaServiceWorker().catch(() => undefined)
+      await registerPwaServiceWorker()
       await checkForPwaUpdate(true)
       await reconcile(true)
+    } catch (cause) {
+      recordPwaDiagnostic('retry:failed')
+      setUpdateError(
+        cause instanceof Error
+          ? cause.message
+          : 'Could not restore app features. Try again.',
+      )
     } finally {
       recordPwaDiagnostic('retry:end')
       retryInFlight.current = false
@@ -495,7 +502,10 @@ export function PwaLifecycle({
               onClick={() => {
                 const text = exportPwaDiagnostics()
                 setCopiedDiagnostics(false)
-                if (!('clipboard' in navigator) || typeof navigator.clipboard.writeText !== 'function') {
+                if (
+                  !('clipboard' in navigator) ||
+                  typeof navigator.clipboard.writeText !== 'function'
+                ) {
                   setDiagnosticText(text)
                   return
                 }

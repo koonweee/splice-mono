@@ -215,6 +215,27 @@ describe('PwaLifecycle integration', () => {
     expect((field as HTMLTextAreaElement).value).toContain('"version": 1')
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
   })
+  it('stops a failed Retry before update checks and allows another attempt', async () => {
+    mount()
+    await waitFor(() => expect(mocks.postBuild).toHaveBeenCalled())
+    act(() =>
+      emit({
+        needRefresh: false,
+        updateServiceWorker: null,
+        status: 'failed',
+        error: 'Setup timed out.',
+      }),
+    )
+    mocks.check.mockClear()
+    mocks.reconcile.mockClear()
+    mocks.register.mockRejectedValueOnce(new Error('Setup timed out again.'))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await screen.findByText('Setup timed out again.')
+    expect(mocks.check).not.toHaveBeenCalled()
+    expect(mocks.reconcile).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(mocks.check).toHaveBeenCalledWith(true))
+  })
   it('registers, reports its build, and retries a visible registration error', async () => {
     mount()
     await waitFor(() =>

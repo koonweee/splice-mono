@@ -128,62 +128,84 @@ function captureWorkerFailure(current: ServiceWorkerRegistration) {
       ].filter(Boolean),
     ),
   ]
-  if (typeof MessageChannel === 'undefined') return
-  void Promise.all(
-    workers.map(
-      (worker) =>
-        new Promise((resolve) => {
-          const channel = new MessageChannel()
-          const finish = (result: unknown) => {
-            clearTimeout(timer)
-            channel.port1.close()
-            channel.port2.close()
-            resolve(result)
+  const workerReports =
+    typeof MessageChannel === 'undefined'
+      ? []
+      : workers.map(
+          (worker) =>
+            new Promise((resolve) => {
+              const channel = new MessageChannel()
+              const finish = (result: unknown) => {
+                clearTimeout(timer)
+                channel.port1.close()
+                channel.port2.close()
+                resolve(result)
+              }
+              const timer = setTimeout(
+                () => finish({ state: worker!.state, unavailable: true }),
+                1500,
+              )
+              channel.port1.onmessage = (event: MessageEvent) =>
+                finish(event.data)
+              try {
+                worker!.postMessage({ type: 'PWA_DIAGNOSTICS' }, [
+                  channel.port2,
+                ])
+              } catch {
+                finish({ unavailable: true })
+              }
+            }),
+        )
+  const freshRegistration = withDeadline(
+    navigator.serviceWorker.getRegistration('/'),
+    1500,
+    'Diagnostic lookup timed out',
+  )
+    .then((fresh) => ({
+      freshRegistration: {
+        observedAt: Date.now(),
+        found: Boolean(fresh),
+        sameRegistrationObject: fresh === current,
+        states: fresh ? workerStates(fresh) : null,
+      },
+    }))
+    .catch(() => ({
+      freshRegistration: { unavailable: true, observedAt: Date.now() },
+    }))
+  void Promise.all([...workerReports, freshRegistration]).then(
+    async (reports) => {
+      preservePwaFailure(reports, page)
+      try {
+        const response = await fetchWithDeadline(
+          '/_pwa/diagnostics',
+          { credentials: 'omit', cache: 'no-store' },
+          2000,
+        )
+        const value: unknown = await withDeadline(
+          response.json(),
+          1000,
+          'Diagnostics unavailable',
+        )
+        if (
+          response.ok &&
+          value &&
+          typeof value === 'object' &&
+          'instance' in value &&
+          typeof value.instance === 'string' &&
+          /^[a-f0-9]{12}$/.test(value.instance)
+        ) {
+          const routing = {
+            instance: value.instance,
+            edgeRequest: response.headers.get('cf-ray'),
           }
-          const timer = setTimeout(
-            () => finish({ state: worker!.state, unavailable: true }),
-            1500,
-          )
-          channel.port1.onmessage = (event: MessageEvent) => finish(event.data)
-          try {
-            worker!.postMessage({ type: 'PWA_DIAGNOSTICS' }, [channel.port2])
-          } catch {
-            finish({ unavailable: true })
-          }
-        }),
-    ),
-  ).then(async (reports) => {
-    preservePwaFailure(reports, page)
-    try {
-      const response = await fetchWithDeadline(
-        '/_pwa/diagnostics',
-        { credentials: 'omit', cache: 'no-store' },
-        2000,
-      )
-      const value: unknown = await withDeadline(
-        response.json(),
-        1000,
-        'Diagnostics unavailable',
-      )
-      if (
-        response.ok &&
-        value &&
-        typeof value === 'object' &&
-        'instance' in value &&
-        typeof value.instance === 'string' &&
-        /^[a-f0-9]{12}$/.test(value.instance)
-      ) {
-        const routing = {
-          instance: value.instance,
-          edgeRequest: response.headers.get('cf-ray'),
+          recordPwaDiagnostic('routing:probe', routing)
+          preservePwaFailure([...reports, { routing }], page)
         }
-        recordPwaDiagnostic('routing:probe', routing)
-        preservePwaFailure([...reports, { routing }], page)
+      } catch {
+        recordPwaDiagnostic('routing:unavailable')
       }
-    } catch {
-      recordPwaDiagnostic('routing:unavailable')
-    }
-  })
+    },
+  )
 }
 async function activeRegistration(current: ServiceWorkerRegistration) {
   if (current.active?.state === 'activated') return current
