@@ -12,7 +12,7 @@ This directory tracks product and implementation plans for Splice.
 
 ## Directory
 
-- [MCP Historical Financial Evidence](./mcp-historical-financial-evidence.md) — In Progress; additive balance attribution, snapshot provenance, holdings coverage, and bounded price/FX evidence.
+- [MCP Historical Financial Evidence](./mcp-historical-financial-evidence.md) — Blocked at release approval; implementation and CI pass in PR #303, protected-main merge rejected by automatic approval review. Not deployed.
 
 - [Home Startup And Refresh Continuity](./home-startup-and-refresh-continuity.md) — Completed and deployed (frontend 0.0.129). Appearance-matched cached launch, foreground Home refresh, and continuous chart updates.
 

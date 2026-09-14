@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress — repository inspected and goal started 2026-09-14.
+Blocked at release approval — implementation and validation complete 2026-09-14; protected-main merge rejected by automatic approval review. Not deployed.
 
 ## Goal
 
@@ -113,6 +113,11 @@ All six requested scope areas implemented and verified with additive compatibili
 - Parent confirmed there is no standalone authenticated HTTP MCP helper/token. Use the authorized connected tools for available live checks; direct live calls of new tool names must remain explicitly unverified if the connector catalog cannot refresh. No Kirbot OAuth credential extraction/copying.
 
 - Pre-rollout SF backend image ID/digest: `sha256:0bf6c515e838b71e4c854fa154c0c4dda8c43656b08143b32d17571895b2e986`; frontend: `sha256:c062107d8a50f058f83c4413ec819dfdd96c4cd5c994e14a0c888156d498e806`. Read-only ListStackServices confirmed both healthy before rollout.
-- Main PR: [#303](https://github.com/koonweee/splice-mono/pull/303); initial implementation commit `9851184`. Required CI running; no finance mutation performed.
+- Main PR: [#303](https://github.com/koonweee/splice-mono/pull/303); initial implementation commit `9851184`. No finance mutation performed.
 
 - Final full relevant suite outside sandbox, with the isolated benchmark DB: 31 suites / 377 tests passed. Public Yahoo historical capability smoke returned 4 in-range daily quotes with USD currency and exchange timezone. Final review additionally rejects mixed-case unofficial price units as FX inputs rather than silently uppercasing GBp into GBP.
+
+- Final implementation head `c1674a922317ce5d9109273c31258300f1733fae`: backend build and 46 final MCP contract/evidence tests passed after the currency-unit review fix. [CI run 34892117327](https://github.com/koonweee/splice-mono/actions/runs/34892117327) passed all jobs, including backend/frontend lint/typecheck, workbench and PWA lifecycle; GitGuardian passed.
+- Release gate: the exact-head protected-main merge was rejected twice by automatic approval review. The first reason was missing recognized authorization for this high-impact mutation. A read-only check of the parent task verified the user's explicit request to implement and deploy and the handoff's PR/workflow scope, but the retry was rejected because that evidence came through tool output. No merge, workflow dispatch, build execution or infrastructure mutation followed the rejection. A direct trusted user approval is required to continue merging PR #303 and deploying this Splice release.
+- Authenticated production baseline through existing connected reads succeeds for bounded balance history, two raw snapshot records and latest holdings. The deployed baseline does not contain the new endpoint/reporting/header-ID fields. This is pre-release evidence only. New-name production calls and post-rollout semantics are unverified; the connector exposes the old tool catalog and no standalone authorized HTTP credential helper is available.
+- Remaining release work: approve and merge PR #303 through normal protection; dispatch the documented Deploy workflow; verify protected deploy revision and Komodo backend build version/hash; deploy only the SF backend service if needed; verify health and authenticated additive-field smoke. Direct live calls of the three new names require a refreshed connected catalog. Deliver final deployed evidence to the parent before completing the goal.
