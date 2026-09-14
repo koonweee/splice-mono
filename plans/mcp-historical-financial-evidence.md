@@ -111,3 +111,6 @@ All six requested scope areas implemented and verified with additive compatibili
 - Backend lint/typecheck/build passed. Frontend lint/typecheck passed; 25 existing frontend warnings, no errors. No UI changes or browser validation.
 - Main ruleset requires Backend Lint, Backend Typecheck, Detect Changes, Frontend Typecheck; no required PR review rule. Protected rollback deploy revision `47db6255455176d4c286858e32b4fe792c697f9f`; prior backend build 0.0.141 and frontend 0.0.138, built from `47db625`. Stack source revision `8e304e0182977dd5ac7068fe731f759d7c1bac96`; SF running stack metadata deployed `f6db4cb` before rollout.
 - Parent confirmed there is no standalone authenticated HTTP MCP helper/token. Use the authorized connected tools for available live checks; direct live calls of new tool names must remain explicitly unverified if the connector catalog cannot refresh. No Kirbot OAuth credential extraction/copying.
+
+- Pre-rollout SF backend image ID/digest: `sha256:0bf6c515e838b71e4c854fa154c0c4dda8c43656b08143b32d17571895b2e986`; frontend: `sha256:c062107d8a50f058f83c4413ec819dfdd96c4cd5c994e14a0c888156d498e806`. Read-only ListStackServices confirmed both healthy before rollout.
+- Main PR: [#303](https://github.com/koonweee/splice-mono/pull/303); initial implementation commit `9851184`. Required CI running; no finance mutation performed.

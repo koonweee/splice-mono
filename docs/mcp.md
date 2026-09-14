@@ -212,6 +212,8 @@ JSON-equivalent text fallback.
 - Context, accounts, balances, and transactions: `get_user_context`,
   `get_accounts_snapshot`, `get_balance_history`, `get_balance_change_attribution`, `list_balance_snapshots`,
   `list_transactions`, `search_transactions`, and `list_categories`.
+- Historical investment evidence: `list_holdings_snapshot_dates` and
+  `get_historical_valuation_evidence`.
 - Cash flow and rule context: `get_cashflow_analysis`,
   `get_cashflow_analysis_audit`, `list_cashflow_category_transactions`,
   `list_analysis_rules`, `list_categorization_rules`,
@@ -1135,7 +1137,7 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
 
 8. Use MCP Inspector or another deterministic OAuth-capable client before
    ChatGPT. Log in with the allowed Google account, initialize, confirm exactly
-   32 tools, read the guide/resource and one prompt, call a representative read,
+   36 tools, read the guide/resource and one prompt, call a representative read,
    complete projection input-required/resume, and verify an App result plus its
    structured fallback. Use a controlled categorization sample to preview and
    execute creation, edit, archive/restore, and historical application,
@@ -1147,7 +1149,7 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
    not contain bearer tokens, subjects or other claims, arguments, structured
    results, internal errors, or financial values.
 10. Connect ChatGPT only after the deterministic smoke passes. Refresh plugin
-    metadata, confirm 32 tools, attach Splice to a new supported Work
+    metadata, confirm 36 tools, attach Splice to a new supported Work
     conversation, set its permission mode to allow or prompt for mutating
     actions rather than **Allow low-risk actions**, and verify OAuth login,
     visible scopes/annotations, one read, and one previewed write. A Finance or
