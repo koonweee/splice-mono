@@ -892,8 +892,8 @@ describe('Splice MCP definition', () => {
           resources.resources.find((resource) => resource.uri === uri),
         ).toMatchObject({
           _meta: {
-            ui: { domain: 'https://splice-mcp.kw0.dev' },
-            'openai/widgetDomain': 'https://splice-mcp.kw0.dev',
+            ui: { domain: 'https://splice-mcp.sf.ext.kw0.dev' },
+            'openai/widgetDomain': 'https://splice-mcp.sf.ext.kw0.dev',
           },
         });
       }
@@ -906,7 +906,7 @@ describe('Splice MCP definition', () => {
           mimeType: 'text/html;profile=mcp-app',
           _meta: {
             ui: {
-              domain: 'https://splice-mcp.kw0.dev',
+              domain: 'https://splice-mcp.sf.ext.kw0.dev',
               csp: {
                 connectDomains: [],
                 resourceDomains: [],
@@ -915,7 +915,7 @@ describe('Splice MCP definition', () => {
               },
               prefersBorder: true,
             },
-            'openai/widgetDomain': 'https://splice-mcp.kw0.dev',
+            'openai/widgetDomain': 'https://splice-mcp.sf.ext.kw0.dev',
             'openai/widgetCSP': {
               connect_domains: [],
               resource_domains: [],
