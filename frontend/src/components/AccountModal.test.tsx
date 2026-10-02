@@ -1203,7 +1203,7 @@ describe('AccountModal holdings', () => {
       expect(mockFns.replaceHoldingsMutateAsyncMock).toHaveBeenCalledWith({
         accountId: 'account-id',
         data: {
-          positions: [{ symbol: 'VWRA', quantity: '12.5', costBasis: '1000' }],
+          positions: [{ symbol: 'VWRA', quantity: '12.5', costBasis: '1250' }],
         },
       }),
     )

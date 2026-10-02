@@ -2,7 +2,7 @@
 
 # Preserve the currently deployed asset graph for clients using its service worker.
 # Advance this digest to the deployed frontend before the next production release.
-ARG PREVIOUS_FRONTEND_IMAGE=ghcr.io/koonweee/splice-frontend:sf-pwa-default-compat-8cd84c8@sha256:5bb1ccca1757e30058422220088fc5122f3015ce3891b6d529abbec7c6f37198
+ARG PREVIOUS_FRONTEND_IMAGE=ghcr.io/koonweee/splice-frontend:ec9102f@sha256:50230dc63f24b5f8dc097794e9181593048bfdd89e782ca27429799de6fb7318
 FROM ${PREVIOUS_FRONTEND_IMAGE} AS previous
 
 # Build stage

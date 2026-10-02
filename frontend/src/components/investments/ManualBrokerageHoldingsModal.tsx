@@ -6,6 +6,7 @@ import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import {
   ManualBrokeragePositionsEditor,
+  averageCostForInput,
   isValidManualPosition,
   toManualPositionInput,
 } from './ManualBrokeragePositionsEditor'
@@ -49,10 +50,19 @@ function toDraft(
 ): ManualBrokeragePositionDraft {
   const symbol =
     holding.security.tickerSymbol ?? holding.security.externalSecurityId
+  const quantity = formatQuantityForInput(holding.quantity)
+  const averageCostPerShare = averageCostForInput(
+    holding.costBasis,
+    holding.quantity,
+  )
   return {
     symbol,
-    quantity: formatQuantityForInput(holding.quantity),
-    costBasis: formatQuantityForInput(holding.costBasis),
+    quantity,
+    averageCostPerShare,
+    savedBasis:
+      holding.costBasis !== null && averageCostPerShare !== ''
+        ? { costBasis: holding.costBasis, quantity, averageCostPerShare }
+        : undefined,
     security: {
       symbol,
       name: holding.security.name ?? symbol,
