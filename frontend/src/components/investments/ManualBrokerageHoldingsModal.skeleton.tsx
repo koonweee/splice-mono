@@ -33,7 +33,7 @@ export function ManualBrokerageHoldingsModalSkeleton({
             {holdings.map((holding) => (
               <div className={styles.positionRow} key={holding.id}>
                 <div className={styles.positionDetails}>
-                  <Text data-typography="rowTitleSmall">
+                  <Text data-typography="rowTitleSmall" truncate>
                     {holding.security.tickerSymbol ??
                       holding.security.externalSecurityId}
                     {holding.security.name ? ` · ${holding.security.name}` : ''}
