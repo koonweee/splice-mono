@@ -25,7 +25,7 @@ COPY . .
 # Include the previous asset graph before Nitro creates its static asset index.
 COPY --from=previous /app/.output/public /previous-public
 RUN mkdir -p public/assets && \
-    cp -rn /previous-public/assets/. public/assets/ && \
+    cp -r /previous-public/assets/. public/assets/ && \
     for asset in /previous-public/pwa-shell-*.html /previous-public/pwa-offline-*.js; do \
       if [ -f "$asset" ]; then cp -n "$asset" public/; fi; \
     done && \
