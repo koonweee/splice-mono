@@ -1,5 +1,11 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   InvestmentHoldingSnapshotProvider,
@@ -124,6 +130,8 @@ describe('InvestmentHoldingsTable', () => {
     expect(screen.getByText('10.123456')).toBeTruthy()
     expect(screen.getByText('$120.25')).toBeTruthy()
     expect(screen.getByText('$1,217.35')).toBeTruthy()
+    expect(screen.getByText('+21.73%')).toBeTruthy()
+    expect(screen.getByText('+$217.35')).toBeTruthy()
     expect(screen.queryByText('Account value')).toBeNull()
   })
 
@@ -132,7 +140,7 @@ describe('InvestmentHoldingsTable', () => {
 
     expect(screen.getByText('VWRA')).toBeTruthy()
     expect(screen.getByText('10.123456')).toBeTruthy()
-    expect(screen.getAllByText('****')).toHaveLength(2)
+    expect(screen.getAllByText('****')).toHaveLength(3)
   })
 
   it('preserves fractional quotes while rounding holding values to currency precision', () => {
@@ -253,7 +261,7 @@ describe('InvestmentHoldingsTable', () => {
       ],
     })
 
-    expect(screen.getAllByText('****')).toHaveLength(2)
+    expect(screen.getAllByText('****')).toHaveLength(3)
   })
 
   it('renders the normalized holding layout at a mobile width', () => {
@@ -288,5 +296,39 @@ describe('InvestmentHoldingsTable', () => {
     expect(screen.getByText(/SGD\s+7\.0512/)).toBeTruthy()
     expect(screen.getByText(/SGD\s+1,410\.00/)).toBeTruthy()
     expect(screen.getByText('$1,099.80')).toBeTruthy()
+  })
+  it('uses native value rather than the FX-converted account value for gain', () => {
+    renderTable({
+      holdings: [
+        createHolding({
+          costBasis: '1000',
+          institutionValue: '1410',
+          isoCurrencyCode: 'SGD',
+          accountValue: '1099.8',
+          accountCurrency: 'USD',
+        }),
+      ],
+    })
+    expect(screen.getByText('+41.00%')).toBeTruthy()
+    expect(screen.getByText(/\+SGD\s+410\.00/)).toBeTruthy()
+  })
+  it('reveals the absolute gain by tapping the mobile percentage and respects masking', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation(() => ({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    })
+    renderTable({ balancesHidden: true })
+    fireEvent.click(
+      screen.getByRole('button', { name: /Unrealized gain or loss for VWRA/ }),
+    )
+    expect(screen.getByText('+21.73%')).toBeTruthy()
+    expect(screen.queryByText('+$217.35')).toBeNull()
+    await waitFor(() =>
+      expect(screen.getAllByText('****').length).toBeGreaterThanOrEqual(3),
+    )
   })
 })

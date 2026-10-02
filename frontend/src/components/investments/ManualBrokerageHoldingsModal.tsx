@@ -6,9 +6,13 @@ import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import {
   ManualBrokeragePositionsEditor,
-  isPositiveDecimal,
+  isValidManualPosition,
+  toManualPositionInput,
 } from './ManualBrokeragePositionsEditor'
-import type { InvestmentHoldingSnapshot } from '../../api/models'
+import type {
+  InvestmentHoldingSnapshot,
+  ManualBrokeragePositionInput,
+} from '../../api/models'
 import type {
   ManualBrokeragePositionDraft,
   ManualBrokerageSecurityResult,
@@ -28,7 +32,7 @@ interface ManualBrokerageHoldingsModalProps {
     signal?: AbortSignal,
   ) => Promise<Array<ManualBrokerageSecurityResult>>
   saveHoldings: (
-    positions: Array<{ symbol: string; quantity: string }>,
+    positions: Array<ManualBrokeragePositionInput>,
   ) => Promise<ManualBrokerageSaveResult>
   onSaved?: (result: ManualBrokerageSaveResult) => void
 }
@@ -48,6 +52,7 @@ function toDraft(
   return {
     symbol,
     quantity: formatQuantityForInput(holding.quantity),
+    costBasis: formatQuantityForInput(holding.costBasis),
     security: {
       symbol,
       name: holding.security.name ?? symbol,
@@ -94,9 +99,7 @@ export function ManualBrokerageHoldingsModal({
     previousAccountId.current = accountId
   }, [accountId, holdings, opened])
 
-  const allQuantitiesValid = positions.every((position) =>
-    isPositiveDecimal(position.quantity),
-  )
+  const allQuantitiesValid = positions.every(isValidManualPosition)
 
   const handleSave = async () => {
     if (!allQuantitiesValid || saving.current) return
@@ -104,12 +107,7 @@ export function ManualBrokerageHoldingsModal({
     setIsSaving(true)
     setError(null)
     try {
-      const result = await saveHoldings(
-        positions.map(({ symbol, quantity }) => ({
-          symbol,
-          quantity: quantity.trim(),
-        })),
-      )
+      const result = await saveHoldings(positions.map(toManualPositionInput))
       onSaved?.(result)
       notifications.show({
         title: 'Holdings updated',

@@ -248,6 +248,113 @@ describe('ManualBrokerageService', () => {
     );
   });
 
+  it('persists native total basis when creating and replacing a snapshot', async () => {
+    await service.createManualBrokerageAccount(
+      {
+        name: 'Brokerage',
+        accountCurrency: 'USD',
+        positions: [
+          { symbol: 'AAPL', quantity: '2', costBasis: '150.50' },
+          { symbol: 'C6L.SI', quantity: '200', costBasis: '0' },
+        ],
+      },
+      userId,
+    );
+    expect(holdingRepository.save).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ quantity: '2', costBasis: '150.5' }),
+        expect.objectContaining({ quantity: '200', costBasis: '0' }),
+      ]),
+    );
+    holdingRepository.save.mockClear();
+    accountRepository.findOne.mockResolvedValue(buildAccount());
+    await service.replaceManualBrokerageHoldings(
+      accountId,
+      { positions: [{ symbol: 'AAPL', quantity: '3', costBasis: null }] },
+      userId,
+    );
+    expect(holdingRepository.save).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ quantity: '3', costBasis: null }),
+      ]),
+    );
+  });
+  it.each(['-1', 'NaN', '1e2', '1000000000000000000', '1.123'])(
+    'rejects invalid or excessive-precision native basis %s',
+    async (costBasis) => {
+      await expect(
+        service.createManualBrokerageAccount(
+          {
+            name: 'Brokerage',
+            accountCurrency: 'USD',
+            positions: [{ symbol: 'AAPL', quantity: '2', costBasis }],
+          },
+          userId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    },
+  );
+  it('preserves basis across manual and scheduled price refreshes', async () => {
+    const account = buildAccount();
+    const positions = [
+      {
+        quantity: '2',
+        costBasis: '150.500000000000',
+        security: { externalSecurityId: 'AAPL' },
+      },
+    ];
+    accountRepository.findOne.mockResolvedValue(account);
+    accountRepository.find.mockResolvedValue([account]);
+    holdingRepository.find.mockResolvedValue(positions);
+    investmentService.findLatestHoldingsForAccount.mockResolvedValue({
+      accountId,
+      snapshotDate: '2026-08-16',
+      holdings: positions,
+    });
+    await service.refreshManualBrokeragePrices(accountId, userId);
+    expect(holdingRepository.save).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ costBasis: '150.500000000000' }),
+      ]),
+    );
+    holdingRepository.save.mockClear();
+    marketPriceService.resolveQuotesForUsers.mockResolvedValue(
+      new Map([[userId, { quotes, staleSymbols: [], missingSymbols: [] }]]),
+    );
+    const response = await service.refreshAllManualBrokerages();
+    expect(response).toEqual({ refreshed: 1, skipped: 0 });
+    expect(holdingRepository.save).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ costBasis: '150.500000000000' }),
+      ]),
+    );
+  });
+  it('rejects a price refresh when only cost basis changed concurrently', async () => {
+    accountRepository.findOne.mockResolvedValue(buildAccount());
+    investmentService.findLatestHoldingsForAccount.mockResolvedValueOnce({
+      accountId,
+      holdings: [
+        {
+          quantity: '2',
+          costBasis: '150',
+          security: { externalSecurityId: 'AAPL' },
+        },
+      ],
+    });
+    holdingRepository.find.mockResolvedValue([
+      {
+        quantity: '2',
+        costBasis: '175',
+        security: { externalSecurityId: 'AAPL' },
+      },
+    ]);
+    await expect(
+      service.refreshManualBrokeragePrices(accountId, userId),
+    ).rejects.toThrow(ConflictException);
+    expect(holdingRepository.save).not.toHaveBeenCalled();
+  });
+
   it('deterministically values the five-position reference portfolio', async () => {
     const referenceQuotes = new Map([
       [

@@ -9,7 +9,7 @@ import type {
 const draft = {
   name: 'Fixture portfolio',
   accountCurrency: 'USD',
-  positions: [{ symbol: 'EXM', quantity: '2' }],
+  positions: [{ symbol: 'EXM', quantity: '2', costBasis: '65' }],
 }
 
 describe('investment workbench fixtures', () => {
@@ -48,6 +48,7 @@ describe('investment workbench fixtures', () => {
     )
     expect(created.snapshot.holdings[0]).toMatchObject({
       quantity: '2',
+      costBasis: '65',
       institutionValue: '84.2468',
       accountValue: '92.67148',
     })
@@ -56,7 +57,7 @@ describe('investment workbench fixtures', () => {
       method: 'PUT',
       data: {
         positions: [
-          { symbol: 'EXM', quantity: '3' },
+          { symbol: 'EXM', quantity: '3', costBasis: '95' },
           { symbol: 'ZERO', quantity: '100' },
         ],
       },

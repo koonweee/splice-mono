@@ -15,15 +15,22 @@ import { useDebouncedValue } from '@mantine/hooks'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Search, Trash2 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
+import { DecimalInput } from '../forms/DecimalInput'
+import { moneyToMajorString, tryParseMoneyDraft } from '../../lib/money'
+import { getDecimalPlaces } from '../../lib/format'
 import { foundation } from '../../lib/design-system/foundation'
 import styles from './ManualBrokeragePositionsEditor.module.css'
-import type { MarketSecuritySearchResult } from '../../api/models'
+import type {
+  ManualBrokeragePositionInput,
+  MarketSecuritySearchResult,
+} from '../../api/models'
 
 export type ManualBrokerageSecurityResult = MarketSecuritySearchResult
 
 export interface ManualBrokeragePositionDraft {
   symbol: string
   quantity: string
+  costBasis?: string
   security?: ManualBrokerageSecurityResult
 }
 
@@ -42,6 +49,39 @@ export function isPositiveDecimal(value: string): boolean {
     return false
   }
   return /[1-9]/.test(value)
+}
+
+export function parsePositionCostBasis(
+  position: ManualBrokeragePositionDraft,
+): string | null | undefined {
+  const draft = position.costBasis?.trim() ?? ''
+  if (!draft) return null
+  const money = tryParseMoneyDraft(draft, position.security?.currency ?? 'USD')
+  if (!money || money.sign === 'negative') return undefined
+  const value = moneyToMajorString(money)
+  return /^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$/.test(value) ? value : undefined
+}
+
+export function isValidManualPosition(
+  position: ManualBrokeragePositionDraft,
+): boolean {
+  return (
+    isPositiveDecimal(position.quantity) &&
+    parsePositionCostBasis(position) !== undefined
+  )
+}
+
+export function toManualPositionInput(
+  position: ManualBrokeragePositionDraft,
+): ManualBrokeragePositionInput {
+  const costBasis = parsePositionCostBasis(position)
+  if (!isPositiveDecimal(position.quantity) || costBasis === undefined)
+    throw new Error('Invalid position')
+  return {
+    symbol: position.symbol,
+    quantity: position.quantity.trim(),
+    costBasis,
+  }
 }
 
 export function ManualBrokeragePositionsEditor({
@@ -87,6 +127,7 @@ export function ManualBrokeragePositionsEditor({
       {
         symbol: security.symbol,
         quantity: '1',
+        costBasis: '',
         security,
       },
     ])
@@ -100,6 +141,14 @@ export function ManualBrokeragePositionsEditor({
     onChange(
       positions.map((position, positionIndex) =>
         positionIndex === index ? { ...position, quantity } : position,
+      ),
+    )
+  }
+
+  const updateCostBasis = (index: number, costBasis: string) => {
+    onChange(
+      positions.map((position, positionIndex) =>
+        positionIndex === index ? { ...position, costBasis } : position,
       ),
     )
   }
@@ -267,11 +316,10 @@ export function ManualBrokeragePositionsEditor({
         </Paper>
       ) : (
         <Stack gap="xs">
-          <div aria-hidden="true" className={styles.positionHeader}>
-            <Text data-typography="caption">Stock</Text>
-            <Text data-typography="caption">Shares</Text>
-            <span />
-          </div>
+          <Text data-typography="caption" c="dimmed">
+            Total cost basis is optional, in each security’s currency. Update it
+            when your holdings change.
+          </Text>
           {positions.map((position, index) => {
             const quantityIsValid = isPositiveDecimal(position.quantity)
             return (
@@ -293,6 +341,7 @@ export function ManualBrokeragePositionsEditor({
                 <TextInput
                   aria-label={`${position.symbol} quantity`}
                   className={styles.quantityInput}
+                  label="Shares"
                   disabled={disabled}
                   error={
                     quantityIsValid
@@ -309,7 +358,23 @@ export function ManualBrokeragePositionsEditor({
                   }}
                   value={position.quantity}
                 />
+                <DecimalInput
+                  aria-label={`${position.symbol} total cost basis`}
+                  label={`Total cost basis (${position.security?.currency ?? 'USD'})`}
+                  className={styles.costBasisInput}
+                  placeholder="Optional"
+                  disabled={disabled}
+                  error={
+                    parsePositionCostBasis(position) === undefined
+                      ? `Enter a nonnegative amount with at most ${getDecimalPlaces(position.security?.currency ?? 'USD')} decimals`
+                      : undefined
+                  }
+                  size="md"
+                  value={position.costBasis ?? ''}
+                  onChange={(value) => updateCostBasis(index, value)}
+                />
                 <ActionIcon
+                  className={styles.removePosition}
                   aria-label={`Remove ${position.symbol}`}
                   color="red"
                   disabled={disabled}
