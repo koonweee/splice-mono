@@ -25,7 +25,10 @@ export function InvestmentHoldingsTableSkeleton({
                 <Skeleton height={14} width="45%" />
                 <Skeleton height={14} width="55%" />
               </Stack>
-              <Skeleton height={18} width={85} />
+              <Stack gap={4} align="flex-end">
+                <Skeleton height={18} width={85} />
+                <Skeleton height={14} width={50} />
+              </Stack>
             </Group>
           </Box>
         ))}

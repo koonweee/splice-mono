@@ -12,6 +12,12 @@ export interface ManualBrokeragePositionInput {
    * @maxLength 32
    */
   symbol: string
+  /**
+   * Total cost basis in the security native currency; null or omitted means unknown
+   * @nullable
+   * @pattern ^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$
+   */
+  costBasis?: string | null
   /** @pattern ^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$ */
   quantity: string
 }

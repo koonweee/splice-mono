@@ -275,3 +275,5 @@ list sections; `tab=analysis` includes the single-action matching-window case.
 Chart motion states: `history` / unchanged-refresh, small-change, new-date, period-change, response-burst. Click Refresh series to update the real Chart instance; geometry motion helper is covered by `src/lib/chart-motion.test.tsx`.
 
 - `HomeContinuityHost`: [cached-home](http://localhost:4001/?example=cached-home&state=cached-validating) demonstrates its shared HomeContent presentation; production `pwa:cached-home-test` exercises the actual stable host/auth handoff. Runtime launch resources and publication helpers are nonvisual and tested by launch/coordinator tests and that harness.
+
+Holdings `investments/ready` includes positive, negative, flat, missing-basis and zero-basis gains. `positions/ready` and `account-dialogs/holdings` include total native cost basis; edit or clear it, save, then refresh prices. Nonvisual gain arithmetic is covered by `src/lib/investment-format.test.ts`; position draft parsing is covered by `ManualBrokeragePositionsEditor.test.tsx`.

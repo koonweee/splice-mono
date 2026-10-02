@@ -1,54 +1,29 @@
-.positionHeader,
 .positionRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 8rem var(--splice-size-touch-target);
-  column-gap: var(--mantine-spacing-sm);
-  align-items: center;
-}
-
-.positionHeader {
-  padding: 0 4px 7px;
-  color: var(--mantine-color-dimmed);
-}
-
-.positionRow {
-  min-height: 66px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) var(
+      --splice-size-touch-target
+    );
+  gap: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  align-items: start;
   border-top: 1px solid var(--mantine-color-default-border);
-  padding: 7px 4px;
+  padding: var(--mantine-spacing-sm) 0;
 }
 
 .positionDetails {
   min-width: 0;
+  grid-column: 1 / 3;
+  align-self: center;
 }
 
 .quantityInput {
-  width: 100%;
+  grid-column: 1;
+  grid-row: 2;
 }
-
-@media (--compact-layout) {
-  .positionHeader,
-  .positionRow {
-    grid-template-columns: minmax(0, 1fr) 6.5rem var(--splice-size-touch-target);
-    column-gap: var(--mantine-spacing-xs);
-  }
-
-  .positionHeader {
-    padding-right: 0;
-    padding-left: 0;
-  }
-
-  .positionRow {
-    min-height: 72px;
-    padding-right: 0;
-    padding-left: 0;
-  }
+.costBasisInput {
+  grid-column: 2 / 4;
+  grid-row: 2;
 }
-
-@media (max-width: 23.125em) {
-  .positionHeader,
-  .positionRow {
-    grid-template-columns: minmax(0, 1fr) 5.75rem var(
-        --splice-size-touch-target
-      );
-  }
+.removePosition {
+  grid-column: 3;
+  grid-row: 1;
 }

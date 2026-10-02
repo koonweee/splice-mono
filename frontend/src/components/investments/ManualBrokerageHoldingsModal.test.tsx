@@ -186,7 +186,7 @@ describe('ManualBrokerageHoldingsModal', () => {
 
     await waitFor(() =>
       expect(saveHoldings).toHaveBeenCalledWith([
-        { symbol: 'GOOGL', quantity: '3.125' },
+        { symbol: 'GOOGL', quantity: '3.125', costBasis: null },
       ]),
     )
   })
@@ -275,5 +275,32 @@ describe('ManualBrokerageHoldingsModal', () => {
     expect(
       screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value,
     ).toBe('99')
+  })
+  it('loads, edits and clears total native cost basis in the complete snapshot', async () => {
+    const saveHoldings = renderModal({
+      holdings: [{ ...holding, costBasis: '325.120000000000' }],
+    })
+    const basis = screen.getByLabelText<HTMLInputElement>(
+      'GOOGL total cost basis',
+    )
+    expect(basis.value).toBe('325.12')
+    fireEvent.change(basis, { target: { value: '400.50' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save holdings' }))
+    await waitFor(() =>
+      expect(saveHoldings).toHaveBeenCalledWith([
+        { symbol: 'GOOGL', quantity: '2.5', costBasis: '400.5' },
+      ]),
+    )
+  })
+  it('rejects negative and excessive-precision basis before saving', () => {
+    const saveHoldings = renderModal({})
+    const basis = screen.getByLabelText('GOOGL total cost basis')
+    for (const value of ['-1', '1.123', 'NaN']) {
+      fireEvent.change(basis, { target: { value } })
+      fireEvent.submit(
+        screen.getByRole('button', { name: 'Save holdings' }).closest('form')!,
+      )
+    }
+    expect(saveHoldings).not.toHaveBeenCalled()
   })
 })

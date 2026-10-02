@@ -8,6 +8,7 @@ export const holdingsColumns = [
   'Quantity',
   'Price',
   'Value',
+  'Gain / loss',
 ]
 export const activityColumns = [
   'Date',
@@ -29,7 +30,7 @@ export function InvestmentTableFrame({
 }) {
   const widths =
     columns === holdingsColumns
-      ? [34, 10, 16, 19, 21]
+      ? [28, 9, 12, 15, 18, 18]
       : [17, 19, 12, 11, 13, 11, 17]
   return (
     <ScrollArea type="auto">
@@ -45,6 +46,11 @@ export function InvestmentTableFrame({
             {columns.map((label, index) => (
               <Table.Th
                 key={label}
+                title={
+                  label === 'Gain / loss'
+                    ? 'Unrealized gain or loss based on the latest cost basis'
+                    : undefined
+                }
                 style={{ width: `${widths[index]}%` }}
                 ta={
                   index >= (columns === holdingsColumns ? 2 : 3)

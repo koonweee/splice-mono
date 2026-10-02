@@ -24,11 +24,10 @@ export function ManualBrokerageHoldingsModalSkeleton({
             />
           </div>
           <Stack gap="xs">
-            <div className={styles.positionHeader}>
-              <Text data-typography="caption">Stock</Text>
-              <Text data-typography="caption">Shares</Text>
-              <span />
-            </div>
+            <Text data-typography="caption" c="dimmed">
+              Total cost basis is optional, in each security’s currency. Update
+              it when your holdings change.
+            </Text>
             {holdings.map((holding) => (
               <div className={styles.positionRow} key={holding.id}>
                 <div className={styles.positionDetails}>
@@ -37,8 +36,23 @@ export function ManualBrokerageHoldingsModalSkeleton({
                   </Text>
                   <Skeleton height={14} width="75%" />
                 </div>
-                <TextInput disabled />
-                <Skeleton height={34} width={34} />
+                <TextInput
+                  label="Shares"
+                  className={styles.quantityInput}
+                  size="md"
+                  disabled
+                />
+                <TextInput
+                  label={`Total cost basis (${holding.isoCurrencyCode ?? holding.security.isoCurrencyCode ?? 'USD'})`}
+                  className={styles.costBasisInput}
+                  size="md"
+                  disabled
+                />
+                <Skeleton
+                  className={styles.removePosition}
+                  height="var(--splice-size-touch-target)"
+                  width="var(--splice-size-touch-target)"
+                />
               </div>
             ))}
           </Stack>

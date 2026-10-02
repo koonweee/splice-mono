@@ -3,6 +3,7 @@ import {
   formatInvestmentQuantity,
   formatInvestmentQuote,
   formatInvestmentValue,
+  getInvestmentGain,
 } from './investment-format'
 
 describe('investment display formatting', () => {
@@ -89,5 +90,37 @@ describe('investment display formatting', () => {
     }
     expect(formatInvestmentQuantity(null)).toBe('--')
     expect(formatInvestmentQuantity('not-a-number')).toBe('not-a-number')
+  })
+})
+
+describe('native unrealized holding gain', () => {
+  it('calculates decimal gain without converting to a floating point number', () => {
+    expect(
+      getInvestmentGain('9007199254740993.01', '9007199254740993.00')?.amount,
+    ).toBe('0.01')
+    expect(getInvestmentGain('125.5', '100')).toMatchObject({
+      amount: '25.5',
+      percent: '+25.50%',
+    })
+    expect(getInvestmentGain('75.25', '100')).toMatchObject({
+      amount: '-24.75',
+      percent: '-24.75%',
+    })
+    expect(getInvestmentGain('100', '100')).toMatchObject({
+      amount: '0',
+      percent: '0.00%',
+    })
+    expect(getInvestmentGain('1', '3')?.percent).toBe('-66.67%')
+  })
+  it('distinguishes zero basis from unavailable or unsupported basis', () => {
+    expect(getInvestmentGain('10', '0')).toMatchObject({
+      amount: '10',
+      percent: null,
+    })
+    for (const basis of [null, 'invalid', '-10'])
+      expect(getInvestmentGain('10', basis)).toBeNull()
+    expect(getInvestmentGain(null, '10')).toBeNull()
+    expect(getInvestmentGain('bad', '10')).toBeNull()
+    expect(getInvestmentGain('10', '10', '-1')).toBeNull()
   })
 })

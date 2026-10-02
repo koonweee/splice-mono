@@ -729,3 +729,11 @@ Browser validation used the real built worker and bundled readiness module with
 a simulated stale page-side `state` getter. The page stayed `activating` while
 readiness resolved through the worker handshake in 2 ms without navigation.
 The iPhone-specific browser defect itself was not reproduced in Chromium.
+
+## Brokerage gains and basis
+
+`investments/ready` includes positive, negative, flat, missing-basis and zero-basis holdings. Gain uses native value and basis, while cross-currency account value remains a separate phone caption. Desktop adds Gain / loss; phone percentages reuse the existing tap/hover amount disclosure. Masking retains percentages and masks every monetary amount, including popups.
+
+`positions/ready` and `account-dialogs/holdings` expose optional total native cost basis in the shared editor. Select Holdings before Edit holdings. Blank basis clears it; editing quantity does not estimate a replacement basis. Price refresh preserves the saved basis. The companion module skeleton reserves the same labels, inputs, remove action and footer.
+
+Inspected Light/Dark/OLED with Warm clay accent at 390×1000 and 1440×1000: gain states, native currency labels, amount popup and fullscreen/desktop editor. No browser runtime errors. Behavioral coverage includes exact decimal arithmetic, basis validation/save/refresh and concurrent basis edits; no DB migration is required.

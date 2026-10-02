@@ -194,6 +194,7 @@ export class ManualBrokerageService {
     const positions = latest.holdings.map((holding) => ({
       symbol: holding.security.externalSecurityId,
       quantity: holding.quantity ?? '0',
+      costBasis: holding.costBasis ?? null,
     }));
     const snapshotDate = await this.getSnapshotDate(userId);
     const resolved = await this.marketPriceService.resolveQuotes(
@@ -251,6 +252,7 @@ export class ManualBrokerageService {
           positions: latest.holdings.map((holding) => ({
             symbol: holding.security.externalSecurityId,
             quantity: holding.quantity ?? '0',
+            costBasis: holding.costBasis ?? null,
           })),
         };
       }),
@@ -341,6 +343,10 @@ export class ManualBrokerageService {
       return {
         symbol: parsed.data.symbol.trim().toUpperCase(),
         quantity: new Decimal(parsed.data.quantity).toString(),
+        costBasis:
+          parsed.data.costBasis == null
+            ? null
+            : new Decimal(parsed.data.costBasis).toFixed(),
       };
     });
     const unique = new Set(normalized.map(({ symbol }) => symbol));
@@ -426,6 +432,15 @@ export class ManualBrokerageService {
       const quote = quotes.get(input.symbol);
       if (!quote)
         throw new BadRequestException(`Missing quote for ${input.symbol}`);
+      if (
+        input.costBasis != null &&
+        new Decimal(input.costBasis).decimalPlaces() >
+          getDecimalPlaces(quote.currency)
+      ) {
+        throw new BadRequestException(
+          `${input.symbol} cost basis must use ${quote.currency} currency precision`,
+        );
+      }
       const nativeValue = new Decimal(input.quantity)
         .mul(quote.price)
         .toDecimalPlaces(12, Decimal.ROUND_HALF_UP);
@@ -634,7 +649,7 @@ export class ManualBrokerageService {
         provider: 'manual',
         snapshotDate,
         quantity: position.input.quantity,
-        costBasis: null,
+        costBasis: position.input.costBasis ?? null,
         institutionPrice: quote.price,
         institutionPriceAsOf: quote.priceAsOf,
         institutionPriceDatetime: quote.priceDatetime,
@@ -705,8 +720,8 @@ export class ManualBrokerageService {
   ): string {
     return positions
       .map(
-        ({ symbol, quantity }) =>
-          `${symbol.toUpperCase()}:${new Decimal(quantity).toString()}`,
+        ({ symbol, quantity, costBasis }) =>
+          `${symbol.toUpperCase()}:${new Decimal(quantity).toString()}:${costBasis == null ? 'unknown' : new Decimal(costBasis).toFixed()}`,
       )
       .sort()
       .join('|');
@@ -725,6 +740,7 @@ export class ManualBrokerageService {
     return result.snapshot.holdings.map((holding) => ({
       symbol: holding.security.externalSecurityId,
       quantity: holding.quantity ?? '0',
+      costBasis: holding.costBasis ?? null,
     }));
   }
 

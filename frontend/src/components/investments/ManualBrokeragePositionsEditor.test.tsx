@@ -9,7 +9,11 @@ import {
 } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ManualBrokeragePositionsEditor } from './ManualBrokeragePositionsEditor'
+import {
+  ManualBrokeragePositionsEditor,
+  parsePositionCostBasis,
+  toManualPositionInput,
+} from './ManualBrokeragePositionsEditor'
 import type {
   ManualBrokeragePositionDraft,
   ManualBrokerageSecurityResult,
@@ -249,5 +253,30 @@ describe('ManualBrokeragePositionsEditor', () => {
         'Stock search failed',
       ),
     )
+  })
+})
+
+describe('manual position basis input', () => {
+  it('normalizes optional, zero and decimal native amounts while preserving draft text', () => {
+    const position = { symbol: 'C6L.SI', quantity: '2', security: result }
+    expect(parsePositionCostBasis(position)).toBeNull()
+    expect(parsePositionCostBasis({ ...position, costBasis: '' })).toBeNull()
+    expect(parsePositionCostBasis({ ...position, costBasis: '0.00' })).toBe('0')
+    expect(toManualPositionInput({ ...position, costBasis: '001.50' })).toEqual(
+      { symbol: 'C6L.SI', quantity: '2', costBasis: '1.5' },
+    )
+    expect(
+      parsePositionCostBasis({ ...position, costBasis: '1.234' }),
+    ).toBeUndefined()
+    expect(
+      parsePositionCostBasis({ ...position, costBasis: '-1' }),
+    ).toBeUndefined()
+    expect(
+      parsePositionCostBasis({
+        ...position,
+        security: { ...result, currency: 'JPY' },
+        costBasis: '1.5',
+      }),
+    ).toBeUndefined()
   })
 })

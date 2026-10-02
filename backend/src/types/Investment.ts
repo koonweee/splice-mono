@@ -186,6 +186,17 @@ export const ManualBrokeragePositionInputSchema = registerSchema(
   'ManualBrokeragePositionInput',
   z.object({
     symbol: z.string().trim().min(1).max(32),
+    costBasis: z
+      .string()
+      .regex(
+        /^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$/,
+        'Cost basis must be a nonnegative decimal with at most 18 integer and 12 fractional digits',
+      )
+      .nullable()
+      .optional()
+      .describe(
+        'Total cost basis in the security native currency; null or omitted means unknown',
+      ),
     quantity: z
       .string()
       .regex(

@@ -62,3 +62,40 @@ export function formatInvestmentValue({
       showCurrencyCode && currency.length === 3 ? 'code' : 'symbol',
   })
 }
+
+/** Unrealized gain for a long position, in the same native currency as its basis. */
+export function getInvestmentGain(
+  value: string | null,
+  costBasis: string | null,
+  quantity?: string | null,
+) {
+  if (value === null || costBasis === null) return null
+  try {
+    const marketValue = decimalFromString(value)
+    const basis = decimalFromString(costBasis)
+    if (
+      basis.isNegative() ||
+      marketValue.isNegative() ||
+      (quantity != null && decimalFromString(quantity).isNegative())
+    )
+      return null
+    const gain = marketValue.sub(basis)
+    const percentValue = basis.isZero()
+      ? null
+      : gain.div(basis).mul(100).toDecimalPlaces(2)
+    return {
+      amount: gain.toFixed(),
+      percent:
+        percentValue === null
+          ? null
+          : `${percentValue.isPositive() && !percentValue.isZero() ? '+' : ''}${percentValue.toFixed(2)}%`,
+      color: gain.isZero()
+        ? 'dimmed'
+        : gain.isPositive()
+          ? 'var(--splice-positive)'
+          : 'var(--splice-negative)',
+    }
+  } catch {
+    return null
+  }
+}
