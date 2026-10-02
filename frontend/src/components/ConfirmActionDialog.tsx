@@ -1,4 +1,5 @@
-import { Alert, Button, Modal, Stack, Text } from '@mantine/core'
+import { Alert, Button, Stack, Text } from '@mantine/core'
+import { ResponsiveModal } from './ResponsiveModal'
 import { FormActions } from './forms/FormActions'
 import type { ReactNode } from 'react'
 
@@ -31,7 +32,7 @@ export function ConfirmActionDialog({
   }
 
   return (
-    <Modal
+    <ResponsiveModal
       opened={opened}
       onClose={close}
       title={title}
@@ -86,6 +87,6 @@ export function ConfirmActionDialog({
           </Button>
         </FormActions>
       </Stack>
-    </Modal>
+    </ResponsiveModal>
   )
 }

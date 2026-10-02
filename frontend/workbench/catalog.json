@@ -873,13 +873,13 @@
     "component": "EditorModal",
     "source": "components/forms/EditorModal.tsx",
     "example": "editors",
-    "states": ["ready", "error", "pending", "validation-pending"]
+    "states": ["ready", "error", "pending", "validation-pending", "touch"]
   },
   {
     "component": "FormActions",
     "source": "components/forms/FormActions.tsx",
     "example": "editors",
-    "states": ["ready", "error", "pending", "validation-pending"]
+    "states": ["ready", "error", "pending", "validation-pending", "touch"]
   },
   {
     "source": "components/investments/InvestmentActivityTable.skeleton.tsx",
@@ -2046,5 +2046,18 @@
       "refresh-failure"
     ],
     "composition": "Runtime owner for the same HomeContent presentation demonstrated by cached-home. Stable pending-to-verified host ownership is exercised by the production cached-home harness; the workbench uses isolated presentation inputs, not live auth/storage."
+  },
+  {
+    "component": "ResponsiveModal",
+    "source": "components/ResponsiveModal.tsx",
+    "example": "editors",
+    "states": [
+      "ready",
+      "confirm-ready",
+      "confirm-pending",
+      "confirm-error",
+      "touch"
+    ],
+    "composition": "Shared compact bottom-sheet frame composed through EditorModal/ConfirmActionDialog; account-dialogs and deferred cover loaded and loading shells."
   }
 ]

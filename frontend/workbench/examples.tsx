@@ -590,9 +590,10 @@ function Rows({ state, masked }: ExampleProps) {
 }
 
 function Editors({ state }: ExampleProps) {
+  const touchInput = state === 'touch'
   const confirmationState = state.startsWith('confirm-')
   const pending = state === 'pending' || state === 'validation-pending'
-  const [opened, setOpened] = useState(confirmationState)
+  const [opened, setOpened] = useState(!touchInput)
   const [confirm, setConfirm] = useState(confirmationState)
   const [range, setRange] = useState<DatesRangeValue>([
     '2026-08-01',
@@ -603,9 +604,20 @@ function Editors({ state }: ExampleProps) {
     if (!pending && !confirm) setOpened(false)
   }
   return (
-    <Stack>
+    <Stack
+      onPointerDownCapture={
+        touchInput
+          ? () =>
+              document.dispatchEvent(
+                new PointerEvent('pointerdown', { pointerType: 'touch' }),
+              )
+          : undefined
+      }
+    >
       <PageHeader title="Editors and portals" />
-      <Button onClick={() => setOpened(true)}>Open editor</Button>
+      <Button onClick={() => setOpened(true)}>
+        {touchInput ? 'Open editor with touch input' : 'Open editor'}
+      </Button>
       <EditorModal
         opened={opened}
         onClose={closeEditor}
@@ -868,6 +880,7 @@ export const examples = [
     component: Editors,
     states: [
       'ready',
+      'touch',
       'pending',
       'error',
       'confirm-ready',
@@ -877,6 +890,7 @@ export const examples = [
     ],
     components: [
       'EditorModal',
+      'ResponsiveModal',
       'FormActions',
       'DateRangeControl',
       'DateRangeFields',

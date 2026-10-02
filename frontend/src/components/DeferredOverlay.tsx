@@ -1,7 +1,8 @@
-import { Box, Drawer, Modal, Stack } from '@mantine/core'
+import { Box, Drawer, Stack } from '@mantine/core'
 import { useEffect, useState } from 'react'
 import { foundation } from '../lib/design-system/foundation'
-import { useCompactLayout } from '../lib/responsive'
+import { useSheetLayout } from '../lib/responsive'
+import { ResponsiveModal } from './ResponsiveModal'
 import styles from './DeferredOverlay.module.css'
 import { DeferredFeature } from './DeferredFeature'
 import { EditorModal } from './forms/EditorModal'
@@ -56,7 +57,7 @@ export function DeferredOverlay({
     },
     [returnTarget],
   )
-  const isCompact = useCompactLayout()
+  const isCompact = useSheetLayout()
   const frame = (content: ReactNode) => {
     const body = (
       <Box mih={minHeight} className={styles.body}>
@@ -89,12 +90,11 @@ export function DeferredOverlay({
       )
     if (kind === 'drilldown')
       return (
-        <Modal
+        <ResponsiveModal
           opened
           onClose={onClose}
           title={title}
           size={1200}
-          fullScreen={isCompact}
           classNames={{
             body: drilldownStyles.drilldownModalBody,
             content: drilldownStyles.drilldownModalContent,
@@ -105,7 +105,7 @@ export function DeferredOverlay({
           }}
         >
           {body}
-        </Modal>
+        </ResponsiveModal>
       )
     return (
       <EditorModal

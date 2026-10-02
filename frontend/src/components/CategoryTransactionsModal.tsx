@@ -1,8 +1,9 @@
-import { Box, Modal } from '@mantine/core'
+import { Box } from '@mantine/core'
 import { foundation } from '../lib/design-system/foundation'
 import { useTransactionAnalysisControllerGetTransactions } from '../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../lib/format'
 import { useCompactLayout } from '../lib/responsive'
+import { ResponsiveModal } from './ResponsiveModal'
 import { TransactionsSkeleton } from './TransactionsTable.skeleton'
 import { DataState } from './DataState'
 import { TransactionsTable } from './TransactionsTable'
@@ -83,12 +84,11 @@ export function CategoryTransactionsModal({
   }
 
   return (
-    <Modal
+    <ResponsiveModal
       opened={opened}
       onClose={onClose}
       title={title}
       size={1200}
-      fullScreen={isMobile}
       classNames={{
         body: styles.drilldownModalBody,
         content: styles.drilldownModalContent,
@@ -101,6 +101,6 @@ export function CategoryTransactionsModal({
       <Box className={styles.drilldownBody}>
         <TransactionsDrilldown />
       </Box>
-    </Modal>
+    </ResponsiveModal>
   )
 }
