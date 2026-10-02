@@ -5,6 +5,8 @@
 }
 
 .drilldownModalBody {
+  --splice-sheet-body-overflow: hidden;
+  --splice-sheet-body-inset: 0px;
   display: flex;
   min-height: 0;
   flex: 1 1 auto;
@@ -31,7 +33,11 @@
   overflow: auto;
 }
 
-@media (--compact-layout) {
+@media (--sheet-layout) {
+  .drilldownModalContent {
+    height: 90dvh;
+  }
+
   .drilldownModalBody {
     padding: 0;
   }

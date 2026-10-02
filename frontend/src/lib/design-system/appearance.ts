@@ -2,16 +2,26 @@ import { DEFAULT_THEME, createTheme } from '@mantine/core'
 import { typographyFonts, typographyScale } from './typography'
 import { BASES, NEUTRAL_GRAY } from './bases'
 import { components } from './components'
-import { DEFAULT_APPEARANCE, parseAppearance } from './appearance-preference'
+import {
+  DEFAULT_APPEARANCE,
+  appearanceAccent,
+  appearanceBaseMode,
+  parseAppearance,
+} from './appearance-preference'
 import type { MantineColorsTuple } from '@mantine/core'
 
 export {
   DEFAULT_APPEARANCE,
   ACCENT_SWATCHES,
   parseAppearance,
+  appearanceBaseMode,
+  appearanceAccent,
+  selectAppearanceMode,
+  selectAppearanceAccent,
 } from './appearance-preference'
 export type {
   AppearanceMode,
+  AppearanceBaseMode,
   AppearancePreference,
 } from './appearance-preference'
 
@@ -79,17 +89,22 @@ function tuple(values: Array<string>): MantineColorsTuple {
   return values as unknown as MantineColorsTuple
 }
 
-export function resolveAppearance(input: unknown) {
+export function resolveAppearance(
+  input: unknown,
+  deviceMode: 'light' | 'dark' = 'dark',
+) {
   const preference = parseAppearance(input) ?? { ...DEFAULT_APPEARANCE }
-  const light = preference.mode === 'light'
-  const oled = preference.mode === 'oled'
-  const base = BASES[preference.mode]
-  const seed = preference.accent ?? base.action
+  const mode = appearanceBaseMode(preference, deviceMode)
+  const accent = appearanceAccent(preference, mode)
+  const light = mode === 'light'
+  const oled = mode === 'oled'
+  const base = BASES[mode]
+  const seed = accent ?? base.action
   // One strength adjustment for personal accent mixtures, including feedback.
   const accentMix = (color: string, amount: number) =>
-    mixColor(color, seed, amount * (preference.accent === null ? 1 : 1.25))
+    mixColor(color, seed, amount * (accent === null ? 1 : 1.25))
   const tint = (color: string, amount: number) =>
-    preference.accent === null ? color : accentMix(color, amount * 0.75)
+    accent === null ? color : accentMix(color, amount * 0.75)
   const canvas = oled ? base.canvas : tint(base.canvas, light ? 0.035 : 0.06)
   const raised = tint(
     base.raised,

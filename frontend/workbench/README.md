@@ -745,3 +745,58 @@ Average-entry validation: Light at 390×1000, Dark at 1440×1000 and OLED at 320
 Focus outlines and input focus borders are suppressed for touch/pen interaction and autofocus on coarse-pointer devices. Keyboard navigation restores the indicators on the same device; focus and editing remain functional. Selection boundaries and validation errors remain visible. `src/lib/input-modality.test.ts` covers modality changes, navigation/typing distinction and listener cleanup.
 
 Inspected positions and the portaled holdings editor at 320/390px touch and 1440px desktop in Light/Dark/OLED with Warm clay. Checked tap, keyboard Tab, masked amount popup, failed-save draft retention and the held module skeleton. The real local app created a synthetic AAPL portfolio through the API, retained basis on refresh, and saved a basis edit through the Home account modal.
+
+## Uniform mobile sheets (October 2)
+
+All dialog examples use the real ResponsiveModal/EditorModal shell, with the
+same compact frame as the existing drawers. `editors&state=ready` now opens the
+editor immediately; the reopen trigger remains available after dismissal.
+`--sheet-layout` includes widths up to 768px and short landscape viewports up
+to 1024×576. Page/table layout keeps its existing breakpoints.
+
+Inspected using the Codex in-app browser (agent-browser was unavailable), on a
+separate workbench at port 4002 because the existing 4001 server did not observe
+filesystem updates. Existing app/workbench servers were preserved.
+
+- 390×844 Dark: `page-home/ready` checking account sheet, `account-dialogs/account`
+  loading/ready long title, and `page-analysis/ready` audit and category drilldown
+  loading/ready. Headers remained outside scrolling content; drilldown had one
+  nested list scroller. The saved preview uses synthetic workbench data.
+- 390×844 Light with accent `#ce9a7e`: `editors/confirm-error`, retained editor and
+  nested date sheet. Escape closed only the top sheet and restored picker focus.
+  `page-settings&tab=categorization` covered Apply rule, scrolling to footer,
+  recommendations and their nested preview. Header/close stayed visible.
+- 320×568 OLED with accent `#ce9a7e`: `editors/confirm-pending`; pending close,
+  Cancel and confirmation controls were disabled and labels fit.
+- 744×1000 Light with accent `#ce9a7e`: `notification-inbox/ready`; shared frame
+  with edge-to-edge rows and its own scroller.
+- 932×430 OLED: `account-dialogs/account` used a bottom sheet, including loading.
+- 1440×900 Dark: `account-dialogs/account` retained the bounded desktop dialog.
+
+Lint (existing warnings only), typecheck, token ownership, workbench build and
+production build passed. 87 tests passed across workbench, DeferredOverlay,
+DateRangeControl, ConfirmActionDialog, SettingsRowActions and ManualTransactionModal.
+Date tests used `TZ=UTC`; their existing preset assertion otherwise advances a
+calendar day in the Singapore environment. A broader initial run also exposed
+the pre-existing ManualBalancePayloads brokerage mock missing
+`isValidManualPosition`; that unrelated test was not changed. Native Safari
+keyboard/safe-area behavior requires device validation; these were viewport
+checks with keyboard/pointer input, not device emulation.
+
+Touch follow-up: `editors&state=touch` opens from a fixture that forwards touch
+pointer events to the real input-modality listener (including React portals).
+At 390×844 Dark, the autofocus Close editor and nested confirmation Cancel had
+computed `outline-style: none`; the touched Name input kept a transparent
+border. Tab restored the keyboard border; another touch removed it. The same
+opening was checked on a wide desktop viewport. The shared autofocus rule now
+uses `any-pointer: coarse` so hybrid touch hardware is covered too. Selection
+and validation feedback are preserved. This fixture validates touch input
+semantics; it does not emulate native device hardware.
+
+## Auto appearance
+
+`appearance/ready&mode=auto&lightAccent=%23ce9a7e&darkAccent=%23b399cf` uses the real AppThemeProvider and follows emulated device color scheme. Light/Dark/OLED each remember an accent, and Auto edits the active Light or Dark accent. The gallery offers Auto as a comparison mode. Paired Settings route holds use the same preference parameters with `example=page-settings&tab=general&holdRoute=true`; release the route in the same document.
+
+Inspected 320px Light, 390px Dark and 1440px desktop, with Warm clay for Light and Dusty plum for Dark. Confirmed device changes preserve Auto selection and select the corresponding accent, while explicit OLED remains black when the device changes. Appearance controls and copy keep their geometry across held/ready Settings. The full form footer shifts about 27px because the existing loaded Timezone group adds its detected-browser caption; this is separate from appearance. No horizontal overflow or browser runtime errors occurred. A real local synthetic-user save/reload retained Auto and both accents; subsequent device changes neither wrote preferences nor marked Settings dirty. Provider tests cover subscription cleanup, browser chrome updates and fixed-mode behavior; no standalone tile is needed for the nonvisual device hook.
+
+Validation: 90 targeted frontend tests, 83 backend preference/service/controller tests and 58 workbench tests passed. Backend/frontend lint and typecheck, token checks, production frontend and workbench builds passed (frontend lint retains 25 existing warnings). The API client was regenerated from the local API. Preferences remain in JSONB; no migration is required.

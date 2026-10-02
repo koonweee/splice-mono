@@ -2,9 +2,12 @@
 export const mediaQueries = {
   '--phone-layout': '(max-width: 36em)',
   '--compact-layout': '(max-width: 48em)',
+  '--sheet-layout':
+    '(max-width: 48em), (max-width: 64em) and (max-height: 36em)',
   '--data-list-layout': '(max-width: 50em)',
   '--supports-hover': '(hover: hover) and (pointer: fine)',
   '--coarse-pointer': '(pointer: coarse)',
+  '--touch-pointer': '(any-pointer: coarse)',
   '--touch-controls': '(max-width: 48em), (any-pointer: coarse)',
 } as const
 

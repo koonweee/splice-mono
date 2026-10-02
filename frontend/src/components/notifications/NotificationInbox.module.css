@@ -24,6 +24,11 @@
 }
 
 .body {
+  /* The nested scroller owns edge-to-edge rows and its safe-area inset. */
+  --splice-sheet-body-overflow: hidden;
+  --splice-sheet-body-inset: 0px;
+  --splice-sheet-body-bottom: 0px;
+  --splice-sheet-body-safe-bottom: 0px;
   display: flex;
   flex-direction: column;
   flex: 1;

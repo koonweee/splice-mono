@@ -265,7 +265,8 @@ export const components: MantineThemeOverride['components'] = {
     },
     classNames: {
       body: 'splice-overlay-body',
-      content: 'splice-overlay-content',
+      content: 'splice-overlay-content splice-modal-content',
+      inner: 'splice-modal-inner',
       header: 'splice-overlay-header',
       title: 'splice-overlay-title',
     },

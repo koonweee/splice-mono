@@ -16,6 +16,24 @@ const defaultNotificationSettings = {
 };
 
 describe('UserSettings types', () => {
+  it('preserves Auto and independent mode accents through validation and stored normalization', () => {
+    const appearance = {
+      mode: 'auto',
+      accent: '#83b59b',
+      accents: { light: null, dark: '#AABBCC', oled: '#b399cf' },
+    };
+    const expected = {
+      ...appearance,
+      accents: { ...appearance.accents, dark: '#aabbcc' },
+    };
+    expect(UpdateUserSettingsDtoSchema.parse({ appearance })).toEqual({
+      appearance: expected,
+    });
+    expect(
+      normalizeUserSettings({ appearance: { ...appearance, mode: 'auto' } })
+        .appearance,
+    ).toEqual(expected);
+  });
   it.each([true, false])(
     'accepts and preserves monospaceAmounts=%s',
     (monospaceAmounts) => {
@@ -36,7 +54,7 @@ describe('UserSettings types', () => {
       }),
     ).toThrow();
   });
-  it.each(['light', 'dark', 'oled'])(
+  it.each(['light', 'dark', 'oled', 'auto'])(
     'accepts atomic %s appearance and normalizes hex',
     (mode) => {
       expect(
@@ -56,7 +74,10 @@ describe('UserSettings types', () => {
     {},
     { mode: 'dark' },
     { accent: null },
-    { mode: 'auto', accent: null },
+    { mode: 'system', accent: null },
+    { mode: 'auto', accent: null, accents: { light: '#fff' } },
+    { mode: 'auto', accent: null, accents: { auto: '#123456' } },
+    { mode: 'auto', accent: null, accents: [] },
     { mode: 'light', accent: '#fff' },
     { mode: 'dark', accent: '#1234567' },
     { mode: 'dark', accent: 'x'.repeat(1000) },

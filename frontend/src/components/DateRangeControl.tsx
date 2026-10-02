@@ -14,7 +14,7 @@ import { useDisclosure } from '@mantine/hooks'
 import dayjs from 'dayjs'
 import { X } from 'lucide-react'
 import { useId, useRef } from 'react'
-import { useCompactLayout } from '../lib/responsive'
+import { useSheetLayout } from '../lib/responsive'
 import { formatDateRangeLabel } from '../lib/date-range'
 import styles from './DateRangeControl.module.css'
 import type { DatesRangeValue } from '@mantine/dates'
@@ -157,7 +157,7 @@ export function DateRangeControl({
   value,
   width = 300,
 }: DateRangeControlProps) {
-  const isMobile = useCompactLayout()
+  const isMobile = useSheetLayout()
   const [opened, { close, toggle }] = useDisclosure(false)
   const dropdownId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)

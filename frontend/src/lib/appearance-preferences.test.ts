@@ -12,6 +12,31 @@ import { DEFAULT_APPEARANCE } from './design-system/appearance'
 
 afterEach(() => vi.unstubAllGlobals())
 describe('appearance persistence', () => {
+  it('round-trips per-mode accents and detects changes in an inactive mode', () => {
+    const value = {
+      mode: 'auto' as const,
+      accent: '#83b59b',
+      accents: { light: '#ce9a7e', dark: null, oled: '#b399cf' },
+      monospaceAmounts: true,
+    }
+    expect(decodeAppearance(encodeAppearance(value))).toEqual(value)
+    expect(
+      appearanceEqual(value, {
+        ...value,
+        accents: { ...value.accents, light: '#86aee0' },
+      }),
+    ).toBe(false)
+    expect(
+      appearanceEqual(
+        { mode: 'dark', accent: null },
+        {
+          mode: 'dark',
+          accent: null,
+          accents: { light: null, dark: null, oled: null },
+        },
+      ),
+    ).toBe(true)
+  })
   it('round-trips the amount-font choice and treats omitted/false as the same default', () => {
     const value = {
       mode: 'dark' as const,
@@ -40,7 +65,7 @@ describe('appearance persistence', () => {
     for (const value of [
       'dracula',
       '%',
-      'x'.repeat(257),
+      'x'.repeat(1025),
       encodeURIComponent('{"mode":"oled"}'),
       encodeURIComponent('{"mode":"light","accent":"#fff"}'),
     ])
