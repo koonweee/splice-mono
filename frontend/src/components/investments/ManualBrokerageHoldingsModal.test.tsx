@@ -276,15 +276,15 @@ describe('ManualBrokerageHoldingsModal', () => {
       screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value,
     ).toBe('99')
   })
-  it('loads, edits and clears total native cost basis in the complete snapshot', async () => {
+  it('loads a per-share average and submits the calculated total basis', async () => {
     const saveHoldings = renderModal({
       holdings: [{ ...holding, costBasis: '325.120000000000' }],
     })
     const basis = screen.getByLabelText<HTMLInputElement>(
-      'GOOGL total cost basis',
+      'GOOGL average cost per share',
     )
-    expect(basis.value).toBe('325.12')
-    fireEvent.change(basis, { target: { value: '400.50' } })
+    expect(basis.value).toBe('130.048')
+    fireEvent.change(basis, { target: { value: '160.20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save holdings' }))
     await waitFor(() =>
       expect(saveHoldings).toHaveBeenCalledWith([
@@ -294,13 +294,62 @@ describe('ManualBrokerageHoldingsModal', () => {
   })
   it('rejects negative and excessive-precision basis before saving', () => {
     const saveHoldings = renderModal({})
-    const basis = screen.getByLabelText('GOOGL total cost basis')
-    for (const value of ['-1', '1.123', 'NaN']) {
+    const basis = screen.getByLabelText('GOOGL average cost per share')
+    for (const value of ['-1', '1.1234567890123', 'NaN']) {
       fireEvent.change(basis, { target: { value } })
       fireEvent.submit(
         screen.getByRole('button', { name: 'Save holdings' }).closest('form')!,
       )
     }
     expect(saveHoldings).not.toHaveBeenCalled()
+  })
+  it('preserves the exact saved total when a rounded recurring average is unchanged', async () => {
+    const saveHoldings = renderModal({
+      holdings: [
+        {
+          ...holding,
+          quantity: '300000000000000000',
+          costBasis: '100000000000000000.010000000000',
+        },
+      ],
+    })
+    expect(
+      screen.getByLabelText<HTMLInputElement>('GOOGL average cost per share')
+        .value,
+    ).toBe('0.333333333333')
+    fireEvent.click(screen.getByRole('button', { name: 'Save holdings' }))
+    await waitFor(() =>
+      expect(saveHoldings).toHaveBeenCalledWith([
+        {
+          symbol: 'GOOGL',
+          quantity: '300000000000000000',
+          costBasis: '100000000000000000.01',
+        },
+      ]),
+    )
+  })
+
+  it('recalculates basis when quantity changes and clears it when the average is blank', async () => {
+    const saveHoldings = renderModal({
+      holdings: [{ ...holding, costBasis: '325.12' }],
+    })
+    fireEvent.change(screen.getByLabelText('GOOGL quantity'), {
+      target: { value: '3' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save holdings' }))
+    await waitFor(() =>
+      expect(saveHoldings).toHaveBeenLastCalledWith([
+        { symbol: 'GOOGL', quantity: '3', costBasis: '390.14' },
+      ]),
+    )
+    fireEvent.change(screen.getByLabelText('GOOGL average cost per share'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save holdings' }))
+    await waitFor(() =>
+      expect(saveHoldings).toHaveBeenLastCalledWith([
+        { symbol: 'GOOGL', quantity: '3', costBasis: null },
+      ]),
+    )
   })
 })

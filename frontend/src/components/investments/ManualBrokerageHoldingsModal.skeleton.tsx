@@ -1,6 +1,7 @@
 import { Button, Skeleton, Stack, Text, TextInput } from '@mantine/core'
 import { Search } from 'lucide-react'
 import { FormActions } from '../forms/FormActions'
+import { formatInvestmentValue } from '../../lib/investment-format'
 import styles from './ManualBrokeragePositionsEditor.module.css'
 import type { InvestmentHoldingSnapshot } from '../../api/models'
 
@@ -27,8 +28,8 @@ export function ManualBrokerageHoldingsModalSkeleton({
           </div>
           <Stack gap="xs">
             <Text data-typography="caption" c="dimmed">
-              Total cost basis is optional, in each security’s currency. Update
-              it when your holdings change.
+              Average cost per share is optional, in each security’s currency.
+              Update it when your holdings change.
             </Text>
             {holdings.map((holding) => (
               <div className={styles.positionRow} key={holding.id}>
@@ -54,9 +55,23 @@ export function ManualBrokerageHoldingsModalSkeleton({
                   disabled
                 />
                 <TextInput
-                  label={`Total cost basis (${holding.isoCurrencyCode ?? holding.security.isoCurrencyCode ?? 'USD'})`}
+                  label={`Avg. cost per share (${holding.isoCurrencyCode ?? holding.security.isoCurrencyCode ?? 'USD'})`}
                   className={styles.costBasisInput}
                   size="md"
+                  inputWrapperOrder={['label', 'input', 'description', 'error']}
+                  description={
+                    <Text component="span" data-typography="caption" c="dimmed">
+                      Total cost basis:{' '}
+                      {formatInvestmentValue({
+                        value: holding.costBasis,
+                        currency:
+                          holding.isoCurrencyCode ??
+                          holding.security.isoCurrencyCode ??
+                          'USD',
+                        showCurrencyCode: true,
+                      })}
+                    </Text>
+                  }
                   disabled
                 />
                 <Skeleton

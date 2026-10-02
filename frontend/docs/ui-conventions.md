@@ -169,7 +169,7 @@ For provider decimal strings in major units, use
 [investment formatters](../src/lib/investment-format.ts): `formatInvestmentQuote`
 preserves up to four decimals; `formatInvestmentValue` uses currency precision
 (explicit fractional-fee opt-in); `formatInvestmentQuantity` keeps share precision
-separate. Callers retain balance masking and currency selection. Cash continues
+separate. Manual brokerage entry accepts average cost per share with up to 12 decimals, previews shares × average rounded once to native currency precision, and stores the total. Unchanged loaded positions retain their exact saved basis when the displayed average repeats. Callers retain balance masking and currency selection. Cash continues
 through `formatMoneyWithSign`.
 
 ## Responsive rules

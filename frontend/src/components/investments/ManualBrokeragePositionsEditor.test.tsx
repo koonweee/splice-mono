@@ -256,27 +256,82 @@ describe('ManualBrokeragePositionsEditor', () => {
   })
 })
 
-describe('manual position basis input', () => {
+describe('manual position average cost input', () => {
   it('normalizes optional, zero and decimal native amounts while preserving draft text', () => {
     const position = { symbol: 'C6L.SI', quantity: '2', security: result }
     expect(parsePositionCostBasis(position)).toBeNull()
-    expect(parsePositionCostBasis({ ...position, costBasis: '' })).toBeNull()
-    expect(parsePositionCostBasis({ ...position, costBasis: '0.00' })).toBe('0')
-    expect(toManualPositionInput({ ...position, costBasis: '001.50' })).toEqual(
-      { symbol: 'C6L.SI', quantity: '2', costBasis: '1.5' },
-    )
     expect(
-      parsePositionCostBasis({ ...position, costBasis: '1.234' }),
+      parsePositionCostBasis({ ...position, averageCostPerShare: '' }),
+    ).toBeNull()
+    expect(
+      parsePositionCostBasis({ ...position, averageCostPerShare: '0.00' }),
+    ).toBe('0')
+    expect(
+      toManualPositionInput({ ...position, averageCostPerShare: '001.50' }),
+    ).toEqual({ symbol: 'C6L.SI', quantity: '2', costBasis: '3' })
+    expect(
+      parsePositionCostBasis({
+        ...position,
+        averageCostPerShare: '1.1234567890123',
+      }),
     ).toBeUndefined()
     expect(
-      parsePositionCostBasis({ ...position, costBasis: '-1' }),
+      parsePositionCostBasis({ ...position, averageCostPerShare: '-1' }),
     ).toBeUndefined()
     expect(
       parsePositionCostBasis({
         ...position,
         security: { ...result, currency: 'JPY' },
-        costBasis: '1.5',
+        averageCostPerShare: '1.25',
+      }),
+    ).toBe('3')
+    expect(
+      parsePositionCostBasis({
+        ...position,
+        quantity: '200.125',
+        averageCostPerShare: '1.2345',
+      }),
+    ).toBe('247.05')
+    expect(
+      parsePositionCostBasis({
+        ...position,
+        quantity: '0.05',
+        averageCostPerShare: '.1',
+      }),
+    ).toBe('0.01')
+    expect(
+      parsePositionCostBasis({
+        ...position,
+        averageCostPerShare: '999999999999999999',
       }),
     ).toBeUndefined()
+  })
+
+  it('updates the total preview when shares or the average changes, and clears it', () => {
+    render(
+      <TestEditor
+        initialPositions={[
+          {
+            symbol: 'C6L.SI',
+            quantity: '2',
+            security: result,
+            averageCostPerShare: '1.50',
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText(/Total cost basis:.*3.00/)).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('C6L.SI quantity'), {
+      target: { value: '3' },
+    })
+    expect(screen.getByText(/Total cost basis:.*4.50/)).toBeTruthy()
+    const average = screen.getByLabelText<HTMLInputElement>(
+      'C6L.SI average cost per share',
+    )
+    fireEvent.change(average, { target: { value: '1.2345' } })
+    expect(average.value).toBe('1.2345')
+    expect(screen.getByText(/Total cost basis:.*3.70/)).toBeTruthy()
+    fireEvent.change(average, { target: { value: '' } })
+    expect(screen.getByText('Total cost basis: --')).toBeTruthy()
   })
 })

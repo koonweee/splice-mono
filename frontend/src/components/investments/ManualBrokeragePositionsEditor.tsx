@@ -16,8 +16,9 @@ import { useQuery } from '@tanstack/react-query'
 import { Plus, Search, Trash2 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { DecimalInput } from '../forms/DecimalInput'
-import { moneyToMajorString, tryParseMoneyDraft } from '../../lib/money'
+import { ExactDecimal, decimalFromString } from '../../lib/money'
 import { getDecimalPlaces } from '../../lib/format'
+import { formatInvestmentValue } from '../../lib/investment-format'
 import { foundation } from '../../lib/design-system/foundation'
 import styles from './ManualBrokeragePositionsEditor.module.css'
 import type {
@@ -30,7 +31,13 @@ export type ManualBrokerageSecurityResult = MarketSecuritySearchResult
 export interface ManualBrokeragePositionDraft {
   symbol: string
   quantity: string
-  costBasis?: string
+  averageCostPerShare?: string
+  /** Preserve a saved total when its displayed, rounded average is unchanged. */
+  savedBasis?: {
+    costBasis: string
+    quantity: string
+    averageCostPerShare: string
+  }
   security?: ManualBrokerageSecurityResult
 }
 
@@ -51,14 +58,49 @@ export function isPositiveDecimal(value: string): boolean {
   return /[1-9]/.test(value)
 }
 
+function parseAverageCostDraft(value: string) {
+  const draft = value.trim()
+  if (!draft) return null
+  if (!/^(?:\d{1,30}(?:\.\d{0,12})?|\.\d{1,12})$/.test(draft)) return undefined
+  return new ExactDecimal(draft)
+}
+
+export function averageCostForInput(
+  costBasis: string | null,
+  quantity: string | null,
+): string {
+  if (costBasis === null || quantity === null || !isPositiveDecimal(quantity))
+    return ''
+  try {
+    return decimalFromString(costBasis)
+      .div(decimalFromString(quantity))
+      .toDecimalPlaces(12)
+      .toFixed()
+  } catch {
+    return ''
+  }
+}
+
 export function parsePositionCostBasis(
   position: ManualBrokeragePositionDraft,
 ): string | null | undefined {
-  const draft = position.costBasis?.trim() ?? ''
-  if (!draft) return null
-  const money = tryParseMoneyDraft(draft, position.security?.currency ?? 'USD')
-  if (!money || money.sign === 'negative') return undefined
-  const value = moneyToMajorString(money)
+  const averageCost = parseAverageCostDraft(position.averageCostPerShare ?? '')
+  if (averageCost === null) return null
+  if (averageCost === undefined || !isPositiveDecimal(position.quantity))
+    return undefined
+  const quantity = decimalFromString(position.quantity.trim())
+  const saved = position.savedBasis
+  const value =
+    saved &&
+    quantity.eq(saved.quantity) &&
+    averageCost.eq(saved.averageCostPerShare)
+      ? decimalFromString(saved.costBasis).toFixed()
+      : averageCost
+          .mul(quantity)
+          .toDecimalPlaces(
+            getDecimalPlaces(position.security?.currency ?? 'USD'),
+          )
+          .toFixed()
   return /^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$/.test(value) ? value : undefined
 }
 
@@ -127,7 +169,7 @@ export function ManualBrokeragePositionsEditor({
       {
         symbol: security.symbol,
         quantity: '1',
-        costBasis: '',
+        averageCostPerShare: '',
         security,
       },
     ])
@@ -145,10 +187,12 @@ export function ManualBrokeragePositionsEditor({
     )
   }
 
-  const updateCostBasis = (index: number, costBasis: string) => {
+  const updateAverageCost = (index: number, averageCostPerShare: string) => {
     onChange(
       positions.map((position, positionIndex) =>
-        positionIndex === index ? { ...position, costBasis } : position,
+        positionIndex === index
+          ? { ...position, averageCostPerShare }
+          : position,
       ),
     )
   }
@@ -317,11 +361,16 @@ export function ManualBrokeragePositionsEditor({
       ) : (
         <Stack gap="xs">
           <Text data-typography="caption" c="dimmed">
-            Total cost basis is optional, in each security’s currency. Update it
-            when your holdings change.
+            Average cost per share is optional, in each security’s currency.
+            Update it when your holdings change.
           </Text>
           {positions.map((position, index) => {
             const quantityIsValid = isPositiveDecimal(position.quantity)
+            const currency = position.security?.currency ?? 'USD'
+            const totalCostBasis = parsePositionCostBasis(position)
+            const averageCostIsValid =
+              parseAverageCostDraft(position.averageCostPerShare ?? '') !==
+              undefined
             return (
               <div className={styles.positionRow} key={position.symbol}>
                 <Box className={styles.positionDetails}>
@@ -359,19 +408,32 @@ export function ManualBrokeragePositionsEditor({
                   value={position.quantity}
                 />
                 <DecimalInput
-                  aria-label={`${position.symbol} total cost basis`}
-                  label={`Total cost basis (${position.security?.currency ?? 'USD'})`}
+                  aria-label={`${position.symbol} average cost per share`}
+                  label={`Avg. cost per share (${currency})`}
                   className={styles.costBasisInput}
                   placeholder="Optional"
                   disabled={disabled}
                   error={
-                    parsePositionCostBasis(position) === undefined
-                      ? `Enter a nonnegative amount with at most ${getDecimalPlaces(position.security?.currency ?? 'USD')} decimals`
-                      : undefined
+                    !averageCostIsValid
+                      ? 'Enter a nonnegative cost with at most 12 decimals'
+                      : quantityIsValid && totalCostBasis === undefined
+                        ? 'Total cost basis is too large'
+                        : undefined
                   }
+                  description={
+                    <Text component="span" data-typography="caption" c="dimmed">
+                      Total cost basis:{' '}
+                      {formatInvestmentValue({
+                        value: totalCostBasis ?? null,
+                        currency,
+                        showCurrencyCode: true,
+                      })}
+                    </Text>
+                  }
+                  inputWrapperOrder={['label', 'input', 'description', 'error']}
                   size="md"
-                  value={position.costBasis ?? ''}
-                  onChange={(value) => updateCostBasis(index, value)}
+                  value={position.averageCostPerShare ?? ''}
+                  onChange={(value) => updateAverageCost(index, value)}
                 />
                 <ActionIcon
                   className={styles.removePosition}

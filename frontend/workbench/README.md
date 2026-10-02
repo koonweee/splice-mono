@@ -734,9 +734,11 @@ The iPhone-specific browser defect itself was not reproduced in Chromium.
 
 `investments/ready` includes positive, negative, flat, missing-basis and zero-basis holdings. Gain uses native value and basis, while cross-currency account value remains a separate phone caption. Desktop adds Gain / loss; phone percentages reuse the existing tap/hover amount disclosure. Masking retains percentages and masks every monetary amount, including popups.
 
-`positions/ready` and `account-dialogs/holdings` expose optional total native cost basis in the shared editor. Select Holdings before Edit holdings. Blank basis clears it; editing quantity does not estimate a replacement basis. Price refresh preserves the saved basis. The companion module skeleton reserves the same labels, inputs, remove action and footer.
+`positions/ready` and `account-dialogs/holdings` expose optional average native cost per share and calculated total basis in the shared editor. Select Holdings before Edit holdings. Blank average clears the basis; changing shares recalculates the total from the average. An unchanged loaded position preserves its exact saved total, including when its average repeats. Price refresh preserves the saved basis. The companion module skeleton reserves the same labels, inputs, remove action and footer.
 
 Inspected Light/Dark/OLED with Warm clay accent at 390×1000 and 1440×1000: gain states, native currency labels, amount popup and fullscreen/desktop editor. No browser runtime errors. Behavioral coverage includes exact decimal arithmetic, basis validation/save/refresh and concurrent basis edits; no DB migration is required.
+
+Average-entry validation: Light at 390×1000, Dark at 1440×1000 and OLED at 320×1000 with Warm clay. Inspected per-share/quantity changes, total preview, inline errors and held/released editor module; footer shift was 0px on phones and 1px on desktop, with no runtime errors. A synthetic local AAPL save converted 2.5 shares at 125.125 to total basis 312.81, reopened at 125.124 and preserved the total on unchanged save.
 
 ## Touch focus
 

@@ -984,7 +984,7 @@
     "source": "components/investments/ManualBrokeragePositionsEditor.tsx",
     "example": "positions",
     "states": ["ready", "empty", "error", "disabled"],
-    "notes": "Optional total cost basis uses each security native currency; ready has a populated basis draft."
+    "notes": "Optional average cost per share uses each security native currency and previews total basis; ready has a populated per-share draft."
   },
   {
     "component": "LaunchScreen",

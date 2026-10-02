@@ -78,7 +78,8 @@ The migrated installation is owned by `koonweee/stack-v2`, Stack `splice-sf`
 on the external Core. The image builder follows `main` via signed push hooks;
 GitHub branch promotion alone does not update its pinned production images.
 Follow `apps/splice/README.md` and `apps/splice/builds/README.md` in that repository:
-verify both published image digests, update backend/migration and frontend pins,
+verify published image digests and update changed image pins (keep backend and
+migration together),
 validate and push the Stack revision, refresh its Git cache, then explicitly deploy.
 
 The frontend Dockerfile retains the previous deployed public assets while keeping
