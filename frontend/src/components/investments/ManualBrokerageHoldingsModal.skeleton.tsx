@@ -21,6 +21,8 @@ export function ManualBrokerageHoldingsModalSkeleton({
               aria-label="Search stocks and ETFs"
               leftSection={<Search size={14} />}
               disabled
+              size="md"
+              placeholder="Search AAPL or C6L.SI"
             />
           </div>
           <Stack gap="xs">
@@ -32,9 +34,18 @@ export function ManualBrokerageHoldingsModalSkeleton({
               <div className={styles.positionRow} key={holding.id}>
                 <div className={styles.positionDetails}>
                   <Text data-typography="rowTitleSmall">
-                    {holding.security.tickerSymbol}
+                    {holding.security.tickerSymbol ??
+                      holding.security.externalSecurityId}
+                    {holding.security.name ? ` · ${holding.security.name}` : ''}
                   </Text>
-                  <Skeleton height={14} width="75%" />
+                  <Text data-typography="caption" c="dimmed" truncate>
+                    {holding.security.marketIdentifierCode ??
+                      'Unknown exchange'}{' '}
+                    ·{' '}
+                    {holding.isoCurrencyCode ??
+                      holding.security.isoCurrencyCode ??
+                      'USD'}
+                  </Text>
                 </div>
                 <TextInput
                   label="Shares"
