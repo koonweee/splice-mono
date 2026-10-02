@@ -90,7 +90,7 @@ function Positions({ state }: ExampleProps) {
     {
       symbol: 'EXM',
       quantity: '10.125',
-      costBasis: '300.00',
+      averageCostPerShare: '29.62962962963',
       security: securities[0],
     },
   ])
