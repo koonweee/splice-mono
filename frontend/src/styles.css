@@ -149,9 +149,13 @@ body[data-scroll-locked][data-scroll-locked] {
   border-color: transparent;
 }
 
-.splice-input-input:focus,
-.splice-input-input:focus-within {
+.splice-input-input:not([data-error]):focus,
+.splice-input-input:not([data-error]):focus-within {
   border-color: var(--splice-focus, var(--mantine-primary-color-filled));
+}
+
+.splice-input-input[data-error]:is(:focus, :focus-within) {
+  border-color: var(--splice-error);
 }
 
 .splice-input-description {
@@ -461,4 +465,43 @@ body[data-scroll-locked][data-scroll-locked] {
     height: var(--splice-size-control-icon);
     flex-shrink: 0;
   }
+}
+
+/* Touch and autofocus on touch-first devices do not need a focus ring.
+   A hardware keyboard restores the existing keyboard indicators. */
+@media (--coarse-pointer) {
+  html:not([data-input-modality='keyboard']) :is(:focus, :focus-visible),
+  html:not([data-input-modality='keyboard']) :focus-visible > *,
+  html:not([data-input-modality='keyboard'])
+    :focus-visible
+    + :is(
+      label,
+      .mantine-Switch-track,
+      .mantine-SegmentedControl-label,
+      .mantine-Radio-radio,
+      .mantine-Checkbox-input
+    ) {
+    outline: none !important;
+  }
+  html:not([data-input-modality='keyboard'])
+    .splice-input-input:not([data-error]):is(:focus, :focus-within) {
+    border-color: transparent;
+  }
+}
+html[data-input-modality='touch'] :is(:focus, :focus-visible),
+html[data-input-modality='touch'] :focus-visible > *,
+html[data-input-modality='touch']
+  :focus-visible
+  + :is(
+    label,
+    .mantine-Switch-track,
+    .mantine-SegmentedControl-label,
+    .mantine-Radio-radio,
+    .mantine-Checkbox-input
+  ) {
+  outline: none !important;
+}
+html[data-input-modality='touch']
+  .splice-input-input:not([data-error]):is(:focus, :focus-within) {
+  border-color: transparent;
 }

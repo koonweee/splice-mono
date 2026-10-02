@@ -1,5 +1,10 @@
 # syntax=docker/dockerfile:1
 
+# Preserve the currently deployed asset graph for clients using its service worker.
+# Advance this digest to the deployed frontend before the next production release.
+ARG PREVIOUS_FRONTEND_IMAGE=ghcr.io/koonweee/splice-frontend:sf-pwa-default-compat-8cd84c8@sha256:5bb1ccca1757e30058422220088fc5122f3015ce3891b6d529abbec7c6f37198
+FROM ${PREVIOUS_FRONTEND_IMAGE} AS previous
+
 # Build stage
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -17,7 +22,14 @@ ENV VITE_CACHED_HOME=$VITE_CACHED_HOME
 
 # Copy source and build
 COPY . .
-RUN yarn build
+# Include the previous asset graph before Nitro creates its static asset index.
+COPY --from=previous /app/.output/public /previous-public
+RUN mkdir -p public/assets && \
+    cp -r /previous-public/assets/. public/assets/ && \
+    for asset in /previous-public/pwa-shell-*.html /previous-public/pwa-offline-*.js; do \
+      if [ -f "$asset" ]; then cp -n "$asset" public/; fi; \
+    done && \
+    rm -rf /previous-public && yarn build
 
 # Production stage
 FROM node:22-alpine AS runner
@@ -28,6 +40,7 @@ ENV SPLICE_INTERNAL_API_BASE_URL=http://splice-backend:3000
 
 # Copy built output from Nitro
 COPY --from=builder /app/.output ./.output
+
 
 EXPOSE 4000
 

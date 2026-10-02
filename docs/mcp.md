@@ -1229,3 +1229,38 @@ Repeating an already manual assignment performs no write. Reads lock only the
 necessary rows inside a database transaction; writes are grouped by category
 rather than issuing a save for each transaction. No migration or REST contract
 change is required.
+
+## Historical evidence rollout — 2026-09-14
+
+[PR #303](https://github.com/koonweee/splice-mono/pull/303) merged at
+`08533305e031461adddb475fdda330047493b2a8`. The documented
+[Deploy workflow](https://github.com/koonweee/splice-mono/actions/runs/34893177647)
+passed its exact main-to-deploy comparison and promoted protected deploy
+revision `01447f43c1aa72737689125549f067f8144a3df2`. Backend build `0.0.142`
+is deployed and healthy on SF. Komodo confirmed the service rollout completed
+successfully and the running backend image changed.
+Frontend build `0.0.139` succeeded, but its running image was retained because
+this change only regenerated frontend types. No migration or VPS/SG rollout.
+
+The server declares 36 tools, adding `get_balance_change_attribution`,
+`list_holdings_snapshot_dates` and `get_historical_valuation_evidence`. All
+relevant synthetic tests passed (31 suites, 377 tests), followed by 46 final
+contract/evidence tests and build after the currency-unit review fix. Final
+PR-head and protected deployment CI passed every job. A public Yahoo capability
+smoke returned four bounded daily prices with currency and exchange timezone.
+
+Authenticated production reads through existing names verify exact signed
+history endpoint reconciliation including liabilities, past-only snapshot
+provenance, reporting/identity-FX amounts, raw snapshot FX/update evidence,
+current-account date basis, and latest/exact holdings header and price metadata.
+API, frontend, MCP health and protected-resource discovery return 200;
+unauthenticated MCP returns a Bearer challenge with 401.
+
+The connected native catalog still has the old 33 names. Direct production
+calls to the three new names and the added bounded holdings mode remain
+unverified until catalog refresh; authenticated HTTP/schema/permission tests
+cover these locally. No private historical production price series is claimed.
+See [the implementation and release plan](../plans/mcp-historical-financial-evidence.md)
+for exact coverage, limits and rollback inputs. Recorded attribution proves
+arithmetic; clients must keep assumed holdings estimates and causal claims
+separate.

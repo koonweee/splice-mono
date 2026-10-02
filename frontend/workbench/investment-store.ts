@@ -61,7 +61,7 @@ export function createInvestmentStore(
         securityId,
         provider: 'manual',
         quantity: position.quantity,
-        costBasis: null,
+        costBasis: position.costBasis ?? null,
         institutionPrice: price,
         institutionValue: value.toFixed(),
         isoCurrencyCode: sourceCurrency,
@@ -139,6 +139,7 @@ export function createInvestmentStore(
         (snapshots.get(account.id)?.holdings ?? []).map((item) => ({
           symbol: item.security.tickerSymbol ?? '',
           quantity: item.quantity ?? '0',
+          costBasis: item.costBasis,
         })),
       )
   }
@@ -147,7 +148,7 @@ export function createInvestmentStore(
     register(account, investment && !manualHoldings)
     if (investment && manualHoldings) {
       account.valuationMode = 'holdings'
-      save(account, [{ symbol: 'EXM', quantity: '2' }])
+      save(account, [{ symbol: 'EXM', quantity: '2', costBasis: '65' }])
     }
   })
   writes['POST /investment/manual-account'] = (config) => {

@@ -71,3 +71,19 @@ After deployment:
 - verify a personal-access-token request against an ordinary REST endpoint
 - follow the separate deterministic OAuth MCP smoke in the [MCP runbook](mcp.md)
 - verify browser push notifications when VAPID is configured
+
+## Current SF installation
+
+The migrated installation is owned by `koonweee/stack-v2`, Stack `splice-sf`
+on the external Core. The image builder follows `main` via signed push hooks;
+GitHub branch promotion alone does not update its pinned production images.
+Follow `apps/splice/README.md` and `apps/splice/builds/README.md` in that repository:
+verify both published image digests, update backend/migration and frontend pins,
+validate and push the Stack revision, refresh its Git cache, then explicitly deploy.
+
+The frontend Dockerfile retains the previous deployed public assets while keeping
+new `sw.js`, `version.json` and other stable paths. Before a release, advance
+`PREVIOUS_FRONTEND_IMAGE` to the actual deployed frontend digest. Its default is
+the reviewed current SF image; an explicit build argument can select a different
+reviewed installation. Verify an asset URL from the previous release still loads
+after rollout. This allows installed clients to finish loading and upgrade.

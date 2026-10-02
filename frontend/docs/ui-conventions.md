@@ -317,7 +317,12 @@ React reads the values there and CSS consumes the adapter's `--splice-layer-*`,
 `--splice-motion-*`, and `--splice-size-*` variables. Keep local chart geometry,
 table column widths, circular swatches, structural zero radii and stacking within
 an existing local context local. Do not convert every number into a global token.
-Do not suppress keyboard focus to improve a pointer screenshot.
+Touch taps and autofocus on devices with a coarse primary pointer suppress focus
+outlines and focused input borders. `AppThemeProvider` installs document-level
+input-modality tracking, so keyboard navigation restores the existing indicators,
+including on touch devices. Error borders and selection feedback remain visible.
+Keep focus on controls for editing and keyboard operation; suppress only its
+visual pointer indicator. Do not suppress keyboard focus to improve a pointer screenshot.
 
 Run `yarn tokens:check` when changing styles. It rejects raw color literals in
 application consumers while allowing the documented palette owners in

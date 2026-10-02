@@ -14,3 +14,23 @@
 .mobileRow:last-child {
   border-bottom: 0;
 }
+
+.mobileGain {
+  position: relative;
+}
+@media (--touch-controls) {
+  .mobileGain :global(.splice-change-trigger) {
+    min-height: 0 !important;
+    position: static;
+  }
+  /* The value above is not an action, so it can share the disclosure hit area. */
+  .mobileGain :global(.splice-change-trigger)::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-width: var(--splice-size-touch-target);
+    height: var(--splice-size-touch-target);
+  }
+}

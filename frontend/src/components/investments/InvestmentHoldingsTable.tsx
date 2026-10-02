@@ -1,10 +1,12 @@
 import { Box, Group, Table, Text } from '@mantine/core'
+import { PercentAmountPopover } from '../PercentAmountPopover'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import { HIDDEN_BALANCE_PLACEHOLDER, formatDateTime } from '../../lib/format'
 import {
   formatInvestmentQuantity,
   formatInvestmentQuote,
   formatInvestmentValue,
+  getInvestmentGain,
 } from '../../lib/investment-format'
 import { useDataListLayout, useSupportsHover } from '../../lib/responsive'
 import { InvestmentTableFrame, holdingsColumns } from './InvestmentTableFrame'
@@ -60,6 +62,71 @@ function shouldShowNormalizedValue(
     holding.accountValue !== null &&
     !!accountCurrency &&
     accountCurrency !== nativeCurrency
+  )
+}
+
+function HoldingGain({
+  holding,
+  balancesHidden,
+  compact = false,
+  showCurrencyCode = false,
+}: {
+  holding: InvestmentHoldingSnapshot
+  balancesHidden: boolean
+  compact?: boolean
+  showCurrencyCode?: boolean
+}) {
+  const gain = getInvestmentGain(
+    holding.institutionValue,
+    holding.costBasis,
+    holding.quantity,
+  )
+  if (!gain)
+    return (
+      <Text
+        data-typography="numericCaption"
+        c="dimmed"
+        title="Gain unavailable: missing basis or unsupported position"
+      >
+        --
+      </Text>
+    )
+  const formattedAmount = formatInvestmentValue({
+    value: gain.amount,
+    currency: getHoldingCurrency(holding),
+    showCurrencyCode,
+  })
+  const amount = balancesHidden
+    ? HIDDEN_BALANCE_PLACEHOLDER
+    : `${gain.amount.startsWith('-') || gain.amount === '0' ? '' : '+'}${formattedAmount}`
+  if (compact)
+    return (
+      <Box className={styles.mobileGain}>
+        <PercentAmountPopover
+          percent={gain.percent ?? '--'}
+          amount={amount}
+          label={`Unrealized gain or loss for ${getTickerLabel(holding)}${gain.percent ? `: ${gain.percent}` : ': percentage unavailable for zero cost basis'}`}
+          color={gain.color}
+        />
+      </Box>
+    )
+  return (
+    <Box>
+      <Text data-typography="numericMetadata" c={gain.color}>
+        {amount}
+      </Text>
+      <Text
+        data-typography="numericCaption"
+        c={gain.color}
+        title={
+          gain.percent === null
+            ? 'Percentage unavailable for zero cost basis'
+            : undefined
+        }
+      >
+        {gain.percent ?? '--'}
+      </Text>
+    </Box>
   )
 }
 
@@ -139,6 +206,12 @@ export function InvestmentHoldingsTable({
                         })}
                   </Text>
                 )}
+                <HoldingGain
+                  holding={holding}
+                  balancesHidden={balancesHidden}
+                  compact
+                  showCurrencyCode={showNormalized}
+                />
               </Box>
             </Group>
           </Box>
@@ -207,6 +280,13 @@ export function InvestmentHoldingsTable({
                         currency,
                         showCurrencyCode: showNormalized,
                       })}
+                </Table.Td>
+                <Table.Td ta="right">
+                  <HoldingGain
+                    holding={holding}
+                    balancesHidden={balancesHidden}
+                    showCurrencyCode={showNormalized}
+                  />
                 </Table.Td>
               </Table.Tr>
             )

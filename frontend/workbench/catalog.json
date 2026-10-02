@@ -939,7 +939,8 @@
     "component": "InvestmentHoldingsTable",
     "source": "components/investments/InvestmentHoldingsTable.tsx",
     "example": "investments",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty"],
+    "notes": "Ready includes positive, negative, flat, missing and zero basis gains, with masked amounts and mobile percentage disclosures."
   },
   {
     "source": "components/investments/InvestmentTableFrame.tsx",
@@ -982,7 +983,8 @@
     "component": "ManualBrokeragePositionsEditor",
     "source": "components/investments/ManualBrokeragePositionsEditor.tsx",
     "example": "positions",
-    "states": ["ready", "empty", "error", "disabled"]
+    "states": ["ready", "empty", "error", "disabled"],
+    "notes": "Optional total cost basis uses each security native currency; ready has a populated basis draft."
   },
   {
     "component": "LaunchScreen",

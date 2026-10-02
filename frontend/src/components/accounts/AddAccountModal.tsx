@@ -28,7 +28,8 @@ import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import {
   ManualBrokeragePositionsEditor,
-  isPositiveDecimal,
+  isValidManualPosition,
+  toManualPositionInput,
 } from '../investments/ManualBrokeragePositionsEditor'
 import { AccountProviderCard } from './AccountProviderCard'
 import { ACCOUNT_PROVIDERS } from './account-providers'
@@ -209,9 +210,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       createBrokerage.isPending ||
       (isManualBrokerage &&
         (manualPositions.length === 0 ||
-          !manualPositions.every((position) =>
-            isPositiveDecimal(position.quantity),
-          )))
+          !manualPositions.every(isValidManualPosition)))
     ) {
       return
     }
@@ -226,10 +225,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
           data: {
             name: manualName.trim(),
             accountCurrency: manualCurrency,
-            positions: manualPositions.map(({ symbol, quantity }) => ({
-              symbol,
-              quantity: quantity.trim(),
-            })),
+            positions: manualPositions.map(toManualPositionInput),
           },
         },
         {
@@ -388,9 +384,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
             !manualName.trim() ||
             (isManualBrokerage &&
               (manualPositions.length === 0 ||
-                !manualPositions.every((position) =>
-                  isPositiveDecimal(position.quantity),
-                )))
+                !manualPositions.every(isValidManualPosition)))
           }
         >
           Create account

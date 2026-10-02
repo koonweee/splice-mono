@@ -23,6 +23,7 @@ function Investments({ state, masked }: ExampleProps) {
                   ...holding,
                   id: 'zero',
                   quantity: '0',
+                  costBasis: '40000',
                   institutionValue: '0',
                   accountValue: '0',
                   security: {
@@ -30,6 +31,27 @@ function Investments({ state, masked }: ExampleProps) {
                     name: null,
                     tickerSymbol: null,
                     closePrice: null,
+                  },
+                },
+                { ...holding, id: 'flat', costBasis: holding.institutionValue },
+                {
+                  ...holding,
+                  id: 'missing',
+                  costBasis: null,
+                  security: {
+                    ...holding.security,
+                    name: 'Basis unavailable',
+                    tickerSymbol: 'NOBASIS',
+                  },
+                },
+                {
+                  ...holding,
+                  id: 'zero-basis',
+                  costBasis: '0',
+                  security: {
+                    ...holding.security,
+                    name: 'Zero cost basis',
+                    tickerSymbol: 'ZEROBASIS',
                   },
                 },
               ]
@@ -64,7 +86,14 @@ function Investments({ state, masked }: ExampleProps) {
 function Positions({ state }: ExampleProps) {
   const [positions, setPositions] = useState<
     Array<ManualBrokeragePositionDraft>
-  >([{ symbol: 'EXM', quantity: '10.125', security: securities[0] }])
+  >([
+    {
+      symbol: 'EXM',
+      quantity: '10.125',
+      costBasis: '300.00',
+      security: securities[0],
+    },
+  ])
   return (
     <ManualBrokeragePositionsEditor
       positions={positions}

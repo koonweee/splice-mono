@@ -1,5 +1,6 @@
 import { MantineProvider } from '@mantine/core'
 import { useEffect, useLayoutEffect, useState } from 'react'
+import { installInputModality } from '../lib/input-modality'
 import { designVariables } from '../lib/design-system/variables'
 import {
   DEFAULT_APPEARANCE,
@@ -33,6 +34,7 @@ export function AppThemeProvider({
   authenticated?: boolean
   restoreStoredAppearance?: boolean
 }) {
+  useIsomorphicLayoutEffect(() => installInputModality(document), [])
   const [appearance, setAppearance] = useState(initialAppearance)
   const initialKey = encodeAppearance(initialAppearance)
   const [sourceKey, setSourceKey] = useState(initialKey)
