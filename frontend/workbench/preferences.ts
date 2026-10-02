@@ -8,6 +8,28 @@ export function appearanceFromSearch(search: string) {
   return resolveAppearance({
     monospaceAmounts: params.get('monospace') === 'true',
     mode: params.get('mode') ?? DEFAULT_APPEARANCE.mode,
+    ...(params.has('lightAccent') || params.has('darkAccent')
+      ? {
+          accents: {
+            ...(params.has('lightAccent')
+              ? {
+                  light:
+                    params.get('lightAccent') === 'neutral'
+                      ? null
+                      : params.get('lightAccent'),
+                }
+              : {}),
+            ...(params.has('darkAccent')
+              ? {
+                  dark:
+                    params.get('darkAccent') === 'neutral'
+                      ? null
+                      : params.get('darkAccent'),
+                }
+              : {}),
+          },
+        }
+      : {}),
     accent:
       params.get('accent') === 'neutral'
         ? null

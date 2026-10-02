@@ -1427,7 +1427,8 @@
     "component": "AppearanceControl",
     "source": "components/settings/AppearanceControl.tsx",
     "example": "appearance",
-    "states": ["ready"]
+    "states": ["ready"],
+    "composition": "Auto follows emulated device color scheme. Use mode=auto&lightAccent=%23ce9a7e&darkAccent=%23b399cf; page-settings with the same parameters and holdRoute=true covers the paired disabled/ready form."
   },
   {
     "source": "components/settings/CategorizationRulesSection.skeleton.tsx",

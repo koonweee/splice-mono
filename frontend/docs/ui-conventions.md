@@ -296,7 +296,7 @@ No private data belongs in the code registry or persistent browser storage.
 
 ## Styling tokens and appearance
 
-Use `lib/design-system/appearance.ts` for the pure Light/Dark/OLED + accent
+Use `lib/design-system/appearance.ts` for the pure Light/Dark/OLED + Auto + accent
 resolver, `foundation.ts` for shared numeric roles, `components.ts` for Mantine
 component defaults, and `variables.ts` for the CSS adapter. Persistence and
 preview events belong in `lib/appearance-preferences.ts`, outside styling.
@@ -475,3 +475,5 @@ motion uses a static edge. A reserved title-adjacent slot holds offline/failure
 feedback, with a focus/hover tooltip and tap/keyboard detail offering Retry.
 Status changes preserve header and content geometry; networking stays with the
 caller. Preview and authenticated callers share this component.
+
+Auto appearance follows `prefers-color-scheme` and switches between Light and Dark while the app is open. Each explicit mode remembers its accent (including neutral); Auto uses the active mode's accent. Old shared-accent preferences initialize every mode with their existing color. Device changes only affect rendering and browser chrome, and do not dirty or save Settings. The settings form previews and saves the complete preference; Cancel restores the confirmed mode and all remembered accents. OLED remains an explicit choice. Reset appearance restores the existing Dark/Sage default.

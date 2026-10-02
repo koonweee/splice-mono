@@ -8,9 +8,78 @@ import {
   contrastRatio,
   parseAppearance,
   resolveAppearance,
+  selectAppearanceAccent,
+  selectAppearanceMode,
 } from './appearance'
 
 describe('appearance resolver', () => {
+  it('resolves Auto from device settings using the remembered accent without changing the preference', () => {
+    const value = {
+      mode: 'auto' as const,
+      accent: '#83b59b',
+      accents: { light: null, dark: '#b399cf' },
+      monospaceAmounts: true,
+    }
+    for (const mode of ['light', 'dark'] as const) {
+      const result = resolveAppearance(value, mode)
+      expect(result.preference).toEqual(value)
+      expect(result.colors).toEqual(
+        resolveAppearance({ mode, accent: value.accents[mode] }).colors,
+      )
+      expect(result.variables['--splice-font-amount']).toBe(
+        typographyFonts.mono,
+      )
+    }
+  })
+  it('inherits the legacy accent and remembers independent choices through mode changes', () => {
+    const original = { mode: 'dark' as const, accent: '#83b59b' }
+    let value = selectAppearanceMode(original, 'light', 'light')
+    expect(resolveAppearance(value).colors).toEqual(
+      resolveAppearance({ mode: 'light', accent: '#83b59b' }).colors,
+    )
+    value = selectAppearanceAccent(value, null, 'light')
+    value = selectAppearanceMode(value, 'oled', 'dark')
+    value = selectAppearanceAccent(value, '#ce9a7e', 'dark')
+    value = selectAppearanceMode(value, 'auto', 'dark')
+    expect(value.accents).toEqual({
+      light: null,
+      dark: '#83b59b',
+      oled: '#ce9a7e',
+    })
+    value = selectAppearanceAccent(value, '#b399cf', 'dark')
+    expect(value.accents).toEqual({
+      light: null,
+      dark: '#b399cf',
+      oled: '#ce9a7e',
+    })
+    expect(selectAppearanceMode(value, 'light', 'dark').accent).toBeNull()
+    expect(original).toEqual({ mode: 'dark', accent: '#83b59b' })
+  })
+  it('normalizes saved mode accents and rejects malformed accent maps', () => {
+    expect(
+      parseAppearance({
+        mode: 'auto',
+        accent: '#AABBCC',
+        accents: { light: null, dark: '#ABCDEF' },
+      }),
+    ).toEqual({
+      mode: 'auto',
+      accent: '#aabbcc',
+      accents: { light: null, dark: '#abcdef' },
+    })
+    for (const accents of [
+      null,
+      [],
+      'sage',
+      { dark: '#fff' },
+      { light: 1 },
+      { auto: '#123456' },
+    ]) {
+      expect(
+        parseAppearance({ mode: 'auto', accent: null, accents }),
+      ).toBeNull()
+    }
+  })
   it('resolves the saved amount font independently of body text and theme colors', () => {
     const plain = resolveAppearance({ mode: 'dark', accent: null })
     const mono = resolveAppearance({

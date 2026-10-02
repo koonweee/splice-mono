@@ -10,7 +10,6 @@ import {
   ColorInput,
   FileInput,
   Group,
-  MantineProvider,
   Menu,
   MultiSelect,
   NavLink,
@@ -37,8 +36,7 @@ import { CategorySelect } from '../src/components/categories/CategorySelect'
 import { DataState } from '../src/components/DataState'
 import { moneyToChartNumber } from '../src/lib/money'
 import { formatMoneyNumber, formatMoneyWithSign } from '../src/lib/format'
-import { designVariables } from '../src/lib/design-system/variables'
-import { resolveAppearance } from '../src/lib/design-system/appearance'
+import { AppThemeProvider } from '../src/components/AppThemeProvider'
 import { AppearanceControl } from '../src/components/settings/AppearanceControl'
 import { PageHeader } from '../src/components/PageHeader'
 import { LifecycleBadge } from '../src/components/LifecycleBadge'
@@ -802,16 +800,11 @@ function AppearanceExample() {
   const [value, setValue] = useState(
     () => appearanceFromSearch(location.search).preference,
   )
-  const resolved = resolveAppearance(value)
   return (
-    <MantineProvider
-      theme={resolved.theme}
-      forceColorScheme={resolved.colorScheme}
-      cssVariablesResolver={designVariables}
-    >
+    <AppThemeProvider initialAppearance={value} restoreStoredAppearance={false}>
       <PageHeader title="Appearance settings" />
       <AppearanceControl value={value} onChange={setValue} />
-    </MantineProvider>
+    </AppThemeProvider>
   )
 }
 

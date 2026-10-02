@@ -851,12 +851,55 @@ describe('SettingsPage', () => {
     expect(updateSettingsState.mutate).toHaveBeenCalledTimes(1)
     expect(updateSettingsState.mutate.mock.calls[0][0]).toEqual({
       data: {
-        appearance: { mode: 'dark', accent: '#b399cf' },
+        appearance: {
+          mode: 'dark',
+          accent: '#b399cf',
+          accents: { light: '#83b59b', dark: '#b399cf', oled: '#83b59b' },
+        },
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
       },
     })
+  })
+
+  it('saves Auto with independent Light and Dark accents and cancels back to confirmed choices', () => {
+    renderSettingsPage()
+    const click = (name: string) =>
+      fireEvent.click(screen.getByRole('radio', { name }))
+    click('Dusty plum')
+    click('Light')
+    click('Warm clay')
+    click('Dark')
+    expect(
+      screen.getByRole<HTMLInputElement>('radio', { name: 'Dusty plum' })
+        .checked,
+    ).toBe(true)
+    click('Auto')
+    expect(
+      screen.getByRole<HTMLInputElement>('radio', { name: 'Warm clay' })
+        .checked,
+    ).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+    expect(updateSettingsState.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          appearance: {
+            mode: 'auto',
+            accent: '#ce9a7e',
+            accents: { light: '#ce9a7e', dark: '#b399cf', oled: '#83b59b' },
+          },
+        }),
+      }),
+      expect.any(Object),
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }))
+    expect(
+      screen.getByRole<HTMLInputElement>('radio', { name: 'Dark' }).checked,
+    ).toBe(true)
+    expect(
+      screen.getByRole<HTMLInputElement>('radio', { name: 'Sage' }).checked,
+    ).toBe(true)
   })
 
   it('saves the analysis Sankey setting immediately and invalidates user data', async () => {
@@ -1061,7 +1104,11 @@ describe('SettingsPage', () => {
 
     expect(localStorageState.setItem).toHaveBeenCalledWith(
       'splice:appearance',
-      encodeAppearance({ mode: 'oled', accent: '#83b59b' }),
+      encodeAppearance({
+        mode: 'oled',
+        accent: '#83b59b',
+        accents: { light: '#83b59b', dark: '#83b59b', oled: '#83b59b' },
+      }),
     )
   })
 
@@ -1091,7 +1138,11 @@ describe('SettingsPage', () => {
         )
         .map((event) => event.detail),
     ).toEqual([
-      { mode: 'dark', accent: '#b399cf' },
+      {
+        mode: 'dark',
+        accent: '#b399cf',
+        accents: { light: '#83b59b', dark: '#b399cf', oled: '#83b59b' },
+      },
       { mode: 'dark', accent: '#83b59b' },
     ])
   })

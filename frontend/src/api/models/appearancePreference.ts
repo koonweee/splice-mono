@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { AppearancePreferenceMode } from './appearancePreferenceMode'
+import type { AppearancePreferenceAccents } from './appearancePreferenceAccents'
 
 export interface AppearancePreference {
   mode: AppearancePreferenceMode
@@ -15,4 +16,5 @@ export interface AppearancePreference {
    * @pattern ^#[0-9a-fA-F]{6}$
    */
   accent: string | null
+  accents?: AppearancePreferenceAccents
 }

@@ -1,18 +1,29 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 
+const AccentSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/)
+  .transform((value) => value.toLowerCase())
+  .nullable();
+
 export const AppearancePreferenceSchema = registerSchema(
   'AppearancePreference',
   z
     .object({
-      mode: z.enum(['light', 'dark', 'oled']),
+      mode: z.enum(['light', 'dark', 'oled', 'auto']),
       /** Use monospace for monetary figures; omitted means the normal body font. */
       monospaceAmounts: z.boolean().optional(),
-      accent: z
-        .string()
-        .regex(/^#[0-9a-fA-F]{6}$/)
-        .transform((value) => value.toLowerCase())
-        .nullable(),
+      accent: AccentSchema,
+      /** Per-mode accents; omitted entries inherit the legacy shared accent. */
+      accents: z
+        .object({
+          light: AccentSchema.optional(),
+          dark: AccentSchema.optional(),
+          oled: AccentSchema.optional(),
+        })
+        .strict()
+        .optional(),
     })
     .strict(),
 );

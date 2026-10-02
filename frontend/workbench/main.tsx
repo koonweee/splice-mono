@@ -32,7 +32,7 @@ window.addEventListener('workbench:request-blocked', reportBlockedRequest)
 
 const params = new URLSearchParams(location.search)
 const initialAppearance = appearanceFromSearch(location.search)
-const modes = ['light', 'dark', 'oled']
+const modes = ['auto', 'light', 'dark', 'oled']
 const pageIds = [
   'cached-home',
   'page-home',
