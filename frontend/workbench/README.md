@@ -737,3 +737,9 @@ The iPhone-specific browser defect itself was not reproduced in Chromium.
 `positions/ready` and `account-dialogs/holdings` expose optional total native cost basis in the shared editor. Select Holdings before Edit holdings. Blank basis clears it; editing quantity does not estimate a replacement basis. Price refresh preserves the saved basis. The companion module skeleton reserves the same labels, inputs, remove action and footer.
 
 Inspected Light/Dark/OLED with Warm clay accent at 390×1000 and 1440×1000: gain states, native currency labels, amount popup and fullscreen/desktop editor. No browser runtime errors. Behavioral coverage includes exact decimal arithmetic, basis validation/save/refresh and concurrent basis edits; no DB migration is required.
+
+## Touch focus
+
+Focus outlines and input focus borders are suppressed for touch/pen interaction and autofocus on coarse-pointer devices. Keyboard navigation restores the indicators on the same device; focus and editing remain functional. Selection boundaries and validation errors remain visible. `src/lib/input-modality.test.ts` covers modality changes, navigation/typing distinction and listener cleanup.
+
+Inspected positions and the portaled holdings editor at 320/390px touch and 1440px desktop in Light/Dark/OLED with Warm clay. Checked tap, keyboard Tab, masked amount popup, failed-save draft retention and the held module skeleton. The real local app created a synthetic AAPL portfolio through the API, retained basis on refresh, and saved a basis edit through the Home account modal.

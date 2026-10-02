@@ -50,3 +50,27 @@
 .customError {
   grid-column: 2;
 }
+
+/* The selected swatch boundary is selection feedback, independent of focus. */
+:global(html[data-input-modality='touch']) .swatch input:focus-visible + span {
+  outline: none;
+}
+:global(html[data-input-modality='touch']) .swatch input:checked + span {
+  outline: 2px solid var(--mantine-color-text);
+  outline-offset: 3px;
+}
+@media (--coarse-pointer) {
+  :global(html:not([data-input-modality='keyboard']))
+    .swatch
+    input:focus-visible
+    + span {
+    outline: none;
+  }
+  :global(html:not([data-input-modality='keyboard']))
+    .swatch
+    input:checked
+    + span {
+    outline: 2px solid var(--mantine-color-text);
+    outline-offset: 3px;
+  }
+}
