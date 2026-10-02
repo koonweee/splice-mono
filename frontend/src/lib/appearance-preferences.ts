@@ -1,4 +1,8 @@
-import { DEFAULT_APPEARANCE, parseAppearance } from './design-system/appearance'
+import {
+  DEFAULT_APPEARANCE,
+  appearanceAccent,
+  parseAppearance,
+} from './design-system/appearance'
 import type { AppearancePreference } from './design-system/appearance'
 
 export const APPEARANCE_COOKIE = 'splice_appearance'
@@ -14,14 +18,16 @@ export function appearanceEqual(
 ) {
   return (
     a.mode === b.mode &&
-    a.accent === b.accent &&
+    (['light', 'dark', 'oled'] as const).every(
+      (mode) => appearanceAccent(a, mode) === appearanceAccent(b, mode),
+    ) &&
     Boolean(a.monospaceAmounts) === Boolean(b.monospaceAmounts)
   )
 }
 export function decodeAppearance(
   value: string | null | undefined,
 ): AppearancePreference | null {
-  if (!value || value.length > 256) return null
+  if (!value || value.length > 1024) return null
   try {
     return parseAppearance(JSON.parse(decodeURIComponent(value)))
   } catch {

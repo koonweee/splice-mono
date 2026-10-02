@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { typographyFonts } from '../lib/design-system/typography'
+import { resolveAppearance } from '../lib/design-system/appearance'
 import {
   APPEARANCE_STORAGE_KEY,
   encodeAppearance,
@@ -30,6 +31,72 @@ afterEach(() => {
 })
 
 describe('server-first appearance provider', () => {
+  it('follows live device changes in Auto, updates browser chrome, and cleans up without persisting a different preference', () => {
+    const listeners = new Set<() => void>()
+    let dark = false
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn((query: string) => ({
+        get matches() {
+          return query === '(prefers-color-scheme: dark)' && dark
+        },
+        addEventListener: (_event: string, listener: () => void) => {
+          if (query === '(prefers-color-scheme: dark)') listeners.add(listener)
+        },
+        removeEventListener: (_event: string, listener: () => void) => {
+          listeners.delete(listener)
+        },
+      })),
+    })
+    const meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    document.head.appendChild(meta)
+    const preference = {
+      mode: 'auto' as const,
+      accent: '#83b59b',
+      accents: { light: '#ce9a7e', dark: '#b399cf' },
+    }
+    function Probe() {
+      const theme = useMantineTheme()
+      return (
+        <output data-testid="canvas">
+          {theme.other.splice['--splice-canvas']}
+        </output>
+      )
+    }
+    const view = render(
+      <AppThemeProvider
+        initialAppearance={preference}
+        restoreStoredAppearance={false}
+      >
+        <Probe />
+      </AppThemeProvider>,
+    )
+    expect(document.documentElement.dataset.mantineColorScheme).toBe('light')
+    expect(screen.getByTestId('canvas').textContent).toBe(
+      resolveAppearance(preference, 'light').colors.canvas,
+    )
+    act(() => {
+      dark = true
+      listeners.forEach((listener) => listener())
+    })
+    expect(document.documentElement.dataset.mantineColorScheme).toBe('dark')
+    expect(meta.content).toBe(
+      resolveAppearance(preference, 'dark').colors.canvas,
+    )
+    expect(localStorage.setItem).not.toHaveBeenCalled()
+    act(() => previewAppearance({ ...preference, mode: 'oled' }))
+    act(() => {
+      dark = false
+      listeners.forEach((listener) => listener())
+    })
+    expect(screen.getByTestId('canvas').textContent).toBe('#000000')
+    act(() => previewAppearance(preference))
+    expect(document.documentElement.dataset.mantineColorScheme).toBe('light')
+    view.unmount()
+    expect(listeners.size).toBe(0)
+    meta.remove()
+  })
   it('renders the saved amount font on the server and updates it on preview and cross-tab saves', () => {
     const preference = {
       mode: 'dark' as const,

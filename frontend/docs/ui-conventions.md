@@ -8,9 +8,9 @@ mutations in their feature.
 
 Use [EditorModal](../src/components/forms/EditorModal.tsx) with
 [FormActions](../src/components/forms/FormActions.tsx) for create/edit forms.
-The modal is full screen at widths up to `36em` and centered above that. The
-footer supplies Cancel, sticky positioning, safe-area spacing, and equal-width
-phone buttons. Callers supply the primary action, validation, and pending state.
+The editor uses the shared bottom-sheet frame on compact and phone-landscape
+viewports and a bounded dialog on larger screens. The footer supplies Cancel,
+sticky positioning, safe-area spacing, and equal-width sheet buttons. Callers supply the primary action, validation, and pending state.
 
 ```tsx
 <EditorModal opened={opened} onClose={onClose} title="Edit item">
@@ -32,11 +32,32 @@ Keep the semantic `form` → `Stack` structure and put `FormActions` last: the
 Use short action labels such as Save or Create. Guard duplicate/invalid submits
 in the handler and decide whether dismissal is safe while saving; the shell
 does not enforce these policies. Preserve its content/body classes when
-customizing styles. A details viewer or confirmation need not be an editor.
+customizing styles. Use [ResponsiveModal](../src/components/ResponsiveModal.tsx) for other dialogs,
+including confirmations and previews. A details viewer or confirmation need not
+be an editor.
 
 Current adopters include account editors, manual transactions, categories,
 analysis rules, categorization rules, recurring transactions, holdings, and CSV
 backfill.
+
+## Mobile overlay presentation
+
+Use `ResponsiveModal` rather than a direct Mantine Modal. The shared
+`--sheet-layout` condition covers widths up to `48em`, plus landscape viewports
+up to `64em` wide and `36em` high. CSS places the surface at the bottom from
+first paint, full width with rounded top corners and a maximum height of
+`90dvh`. Editors and drilldowns use that height; short confirmations keep their
+content height. The header stays outside the scrollable body. React selects the
+slide-up transition; focus trapping, return focus, dismissal and pending guards
+remain owned by Mantine and the caller.
+
+Existing Mantine Drawers share the same compact frame. Use `useSheetLayout`
+for bottom/right placement when a drawer switches presentation. Insets respect
+the device safe area. Content with a nested scroller (drilldown lists and the
+notification inbox) declares the shared sheet body variables in its owning CSS
+module so there is one scroll owner. Loading/error shells use the same frame
+and owner skeleton as the loaded feature. Desktop sizing and presentation remain
+with the feature. See the [overlay audit](ui-standardization-audit.md#mobile-overlay-audit).
 
 ## Saving and confirmation
 
@@ -72,7 +93,7 @@ compatibility wrapper. Domain-specific transaction/provider statuses stay separa
 ## Dates and dropdowns
 
 - Use [DateRangeControl](../src/components/DateRangeControl.tsx) for a standalone
-  reporting range: desktop popover, bottom sheet at widths up to `48em`.
+  reporting range: desktop popover, bottom sheet at the shared sheet breakpoint.
 - Reuse its exported `DateRangeFields` inside an existing filter sheet. It shares
   Start/End fields, range-order correction, and month/MTD/YTD presets. The parent
   owns applying, clearing, and closing the surrounding filters.
@@ -180,11 +201,15 @@ through `formatMoneyWithSign`.
 
 | Hook / CSS condition                       | Purpose                                                                  |
 | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `usePhoneLayout` / `--phone-layout`        | Up to `36em`: fullscreen editors and phone toolbars.                     |
+| `usePhoneLayout` / `--phone-layout`        | Up to `36em`: phone toolbars.                                            |
 | `useCompactLayout` / `--compact-layout`    | Up to `48em`: page controls, Settings, transaction lists and drilldowns. |
 | `useDataListLayout` / `--data-list-layout` | Up to `50em`: denser investment data and charts.                         |
 | `useSupportsHover` / `--supports-hover`    | Fine pointer with hover; safe initial render during hydration.           |
 | `useCoarsePointer` / `--coarse-pointer`    | Touch-oriented controls, independent of screen width.                    |
+
+`useSheetLayout` / `--sheet-layout` owns overlay presentation, including
+short phone-landscape viewports; page/table layout still uses its existing
+width-only condition.
 
 Keep one-off content constraints local. Use the named hooks for new callers;
 `useIsMobile` remains a compatibility alias for `useDataListLayout`.
@@ -296,7 +321,7 @@ No private data belongs in the code registry or persistent browser storage.
 
 ## Styling tokens and appearance
 
-Use `lib/design-system/appearance.ts` for the pure Light/Dark/OLED + accent
+Use `lib/design-system/appearance.ts` for the pure Light/Dark/OLED + Auto + accent
 resolver, `foundation.ts` for shared numeric roles, `components.ts` for Mantine
 component defaults, and `variables.ts` for the CSS adapter. Persistence and
 preview events belong in `lib/appearance-preferences.ts`, outside styling.
@@ -317,7 +342,7 @@ React reads the values there and CSS consumes the adapter's `--splice-layer-*`,
 `--splice-motion-*`, and `--splice-size-*` variables. Keep local chart geometry,
 table column widths, circular swatches, structural zero radii and stacking within
 an existing local context local. Do not convert every number into a global token.
-Touch taps and autofocus on devices with a coarse primary pointer suppress focus
+Touch taps and autofocus on devices with any coarse pointer suppress focus
 outlines and focused input borders. `AppThemeProvider` installs document-level
 input-modality tracking, so keyboard navigation restores the existing indicators,
 including on touch devices. Error borders and selection feedback remain visible.
@@ -475,3 +500,5 @@ motion uses a static edge. A reserved title-adjacent slot holds offline/failure
 feedback, with a focus/hover tooltip and tap/keyboard detail offering Retry.
 Status changes preserve header and content geometry; networking stays with the
 caller. Preview and authenticated callers share this component.
+
+Auto appearance follows `prefers-color-scheme` and switches between Light and Dark while the app is open. Each explicit mode remembers its accent (including neutral); Auto uses the active mode's accent. Old shared-accent preferences initialize every mode with their existing color. Device changes only affect rendering and browser chrome, and do not dirty or save Settings. The settings form previews and saves the complete preference; Cancel restores the confirmed mode and all remembered accents. OLED remains an explicit choice. Reset appearance restores the existing Dark/Sage default.

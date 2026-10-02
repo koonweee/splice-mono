@@ -137,6 +137,70 @@ body[data-scroll-locked][data-scroll-locked] {
   @splice-type dialogTitle;
 }
 
+/* One compact overlay frame for dialogs, editors and existing bottom drawers.
+   CSS owns placement from the first paint; React only selects the transition. */
+@media (--sheet-layout) {
+  .splice-modal-inner {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .splice-overlay-content:is(.splice-modal-content, .splice-drawer-content) {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    max-height: min(
+      90dvh,
+      calc(
+        100dvh - var(--splice-safe-area-top, 0px) - var(--mantine-spacing-sm)
+      )
+    );
+    margin: 0;
+    overflow: hidden;
+    border-bottom: 0;
+    border-radius: var(--mantine-radius-lg) var(--mantine-radius-lg) 0 0;
+  }
+
+  .splice-overlay-content .splice-overlay-header {
+    position: relative;
+    flex: 0 0 auto;
+    gap: var(--mantine-spacing-sm);
+    padding: var(--mantine-spacing-md)
+      max(var(--mantine-spacing-md), var(--splice-safe-area-right, 0px))
+      var(--mantine-spacing-sm)
+      max(var(--mantine-spacing-md), var(--splice-safe-area-left, 0px));
+    border-radius: inherit;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .splice-overlay-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .splice-overlay-content .splice-overlay-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: var(--splice-sheet-body-overflow, auto);
+    overscroll-behavior-y: contain;
+    padding-left: max(
+      var(--splice-sheet-body-inset, var(--mantine-spacing-md)),
+      var(--splice-safe-area-left, 0px)
+    );
+    padding-right: max(
+      var(--splice-sheet-body-inset, var(--mantine-spacing-md)),
+      var(--splice-safe-area-right, 0px)
+    );
+    padding-bottom: max(
+      var(--splice-sheet-body-bottom, var(--mantine-spacing-md)),
+      var(--splice-sheet-body-safe-bottom, var(--splice-safe-area-bottom, 0px))
+    );
+  }
+}
+
 .splice-button-root[data-variant='default'],
 .splice-button-root[data-variant='outline'],
 .splice-action-icon-root[data-variant='default'],
@@ -467,9 +531,9 @@ body[data-scroll-locked][data-scroll-locked] {
   }
 }
 
-/* Touch and autofocus on touch-first devices do not need a focus ring.
+/* Touch and autofocus on devices with a touch pointer do not need a focus ring.
    A hardware keyboard restores the existing keyboard indicators. */
-@media (--coarse-pointer) {
+@media (--touch-pointer) {
   html:not([data-input-modality='keyboard']) :is(:focus, :focus-visible),
   html:not([data-input-modality='keyboard']) :focus-visible > *,
   html:not([data-input-modality='keyboard'])

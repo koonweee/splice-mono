@@ -1,7 +1,7 @@
 import { Badge, Box, Divider, Drawer, Group, Stack, Text } from '@mantine/core'
 import { useMemo } from 'react'
 import { DataState } from '../DataState'
-import { useCompactLayout } from '../../lib/responsive'
+import { useSheetLayout } from '../../lib/responsive'
 import {
   formatCategoryName,
   formatDateTime,
@@ -158,7 +158,7 @@ export function AnalysisAuditDrawer({
   endDate,
   auditQuery,
 }: AnalysisAuditDrawerProps) {
-  const isMobile = useCompactLayout()
+  const isMobile = useSheetLayout()
   const isLoading = Boolean(auditQuery?.isPending ?? auditQuery?.isLoading)
   const isError = Boolean(auditQuery?.isError)
   const rows = auditQuery?.data?.rows ?? []

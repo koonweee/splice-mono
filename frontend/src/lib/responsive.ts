@@ -1,7 +1,7 @@
 import { useMediaQuery } from '@mantine/hooks'
 import { mediaQueries } from './media-queries'
 
-/** Fullscreen editors and phone-only toolbar wrapping. */
+/** Phone-only toolbar wrapping. */
 export function usePhoneLayout() {
   return useMediaQuery(mediaQueries['--phone-layout'])
 }
@@ -9,6 +9,11 @@ export function usePhoneLayout() {
 /** Page controls, transaction lists, filter sheets, and Settings lists. */
 export function useCompactLayout() {
   return useMediaQuery(mediaQueries['--compact-layout'])
+}
+
+/** Compact overlays, including short phone landscape viewports. */
+export function useSheetLayout() {
+  return useMediaQuery(mediaQueries['--sheet-layout'])
 }
 
 /** Denser investment data and charts need slightly more horizontal room. */

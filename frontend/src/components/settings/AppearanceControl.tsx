@@ -12,7 +12,12 @@ import { useEffect, useId, useState } from 'react'
 import {
   ACCENT_SWATCHES,
   DEFAULT_APPEARANCE,
+  appearanceAccent,
+  appearanceBaseMode,
+  selectAppearanceAccent,
+  selectAppearanceMode,
 } from '../../lib/design-system/appearance'
+import { useDeviceColorScheme } from '../../hooks/useDeviceColorScheme'
 import styles from './AppearanceControl.module.css'
 import type { AppearancePreference } from '../../lib/design-system/appearance'
 
@@ -32,13 +37,16 @@ export function AppearanceControl({
   onValidityChange?: (valid: boolean) => void
 }) {
   const radioName = useId()
+  const deviceMode = useDeviceColorScheme()
+  const baseMode = appearanceBaseMode(value, deviceMode)
+  const accent = appearanceAccent(value, baseMode)
   const [custom, setCustom] = useState(
-    value.accent ?? DEFAULT_APPEARANCE.accent ?? '',
+    accent ?? DEFAULT_APPEARANCE.accent ?? '',
   )
   useEffect(() => {
-    setCustom(value.accent ?? DEFAULT_APPEARANCE.accent ?? '')
+    setCustom(accent ?? DEFAULT_APPEARANCE.accent ?? '')
     onValidityChange?.(true)
-  }, [value.accent, onValidityChange, resetVersion])
+  }, [accent, baseMode, onValidityChange, resetVersion])
   const valid = /^#[0-9a-f]{6}$/i.test(custom)
   const resetButton = (
     <Button
@@ -69,15 +77,28 @@ export function AppearanceControl({
         disabled={disabled}
         value={value.mode}
         data={[
+          { label: 'Auto', value: 'auto' },
           { label: 'Light', value: 'light' },
           { label: 'Dark', value: 'dark' },
           { label: 'OLED', value: 'oled' },
         ]}
         onChange={(mode) => {
-          if (mode === 'light' || mode === 'dark' || mode === 'oled')
-            onChange({ ...value, mode })
+          if (
+            mode === 'auto' ||
+            mode === 'light' ||
+            mode === 'dark' ||
+            mode === 'oled'
+          )
+            onChange(selectAppearanceMode(value, mode, deviceMode))
         }}
       />
+      {value.mode === 'auto' && (
+        <Text data-typography="metadata" c="dimmed">
+          Follows device settings. Accent below applies to{' '}
+          {baseMode === 'light' ? 'Light' : 'Dark'}; each mode remembers its
+          accent.
+        </Text>
+      )}
       <div role="radiogroup" aria-label="Accent" className={styles.accentRow}>
         <Text data-typography="label">Accent</Text>
         <Group gap={6}>
@@ -89,9 +110,13 @@ export function AppearanceControl({
                   name={radioName}
                   aria-label={swatch.label}
                   value={swatch.value ?? 'neutral'}
-                  checked={value.accent === swatch.value}
+                  checked={accent === swatch.value}
                   disabled={disabled}
-                  onChange={() => onChange({ ...value, accent: swatch.value })}
+                  onChange={() =>
+                    onChange(
+                      selectAppearanceAccent(value, swatch.value, deviceMode),
+                    )
+                  }
                 />
                 <span
                   aria-hidden
@@ -123,7 +148,10 @@ export function AppearanceControl({
             setCustom(next)
             const isValid = /^#[0-9a-f]{6}$/i.test(next)
             onValidityChange?.(isValid)
-            if (isValid) onChange({ ...value, accent: next.toLowerCase() })
+            if (isValid)
+              onChange(
+                selectAppearanceAccent(value, next.toLowerCase(), deviceMode),
+              )
           }}
         />
         {!withHeading && resetButton}

@@ -8,7 +8,6 @@ import {
   Drawer,
   Group,
   Loader,
-  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -33,6 +32,7 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { ResponsiveModal } from '../ResponsiveModal'
 import { TransactionsSkeleton } from '../TransactionsTable.skeleton'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -51,7 +51,7 @@ import {
   useCategoryControllerFindManagement,
 } from '../../api/clients/spliceAPI'
 import { formatDateTime } from '../../lib/format'
-import { useCompactLayout } from '../../lib/responsive'
+import { useCompactLayout, useSheetLayout } from '../../lib/responsive'
 import { DataState } from '../DataState'
 import { CategorySelect } from '../categories/CategorySelect'
 import { EditorModal } from '../forms/EditorModal'
@@ -276,6 +276,7 @@ function formatRecommendationRunDate(
 export function CategorizationRulesSection() {
   const queryClient = useQueryClient()
   const isMobile = useCompactLayout()
+  const isSheet = useSheetLayout()
   const [archivedMode, setArchivedMode] = useState(false)
   const [search, setSearch] = useState('')
   const [panel, setPanel] = useState<PanelState>(null)
@@ -1063,7 +1064,7 @@ export function CategorizationRulesSection() {
         </form>
       </EditorModal>
 
-      <Modal
+      <ResponsiveModal
         opened={applyRule !== null}
         onClose={() => setApplyRule(null)}
         title="Apply rule to existing transactions"
@@ -1196,7 +1197,7 @@ export function CategorizationRulesSection() {
             </Group>
           </Stack>
         )}
-      </Modal>
+      </ResponsiveModal>
 
       <Drawer
         opened={recommendationsOpen}
@@ -1209,8 +1210,8 @@ export function CategorizationRulesSection() {
             <Text data-typography="sectionHeading">Rule recommendations</Text>
           </Group>
         }
-        position={isMobile ? 'bottom' : 'right'}
-        size={isMobile ? 'min(92dvh, 760px)' : 560}
+        position={isSheet ? 'bottom' : 'right'}
+        size={isSheet ? 'min(90dvh, 760px)' : 560}
         padding="md"
       >
         <Stack gap="md">
@@ -1339,7 +1340,7 @@ export function CategorizationRulesSection() {
         </Stack>
       </Drawer>
 
-      <Modal
+      <ResponsiveModal
         opened={previewSuggestion !== null}
         onClose={() => setPreviewSuggestion(null)}
         title={
@@ -1440,7 +1441,7 @@ export function CategorizationRulesSection() {
             </Group>
           </Stack>
         )}
-      </Modal>
+      </ResponsiveModal>
     </Stack>
   )
 }

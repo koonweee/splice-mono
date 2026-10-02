@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core'
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { installInputModality } from '../lib/input-modality'
+import { useDeviceColorScheme } from '../hooks/useDeviceColorScheme'
 import { designVariables } from '../lib/design-system/variables'
 import {
   DEFAULT_APPEARANCE,
@@ -42,7 +43,8 @@ export function AppThemeProvider({
     setSourceKey(initialKey)
     setAppearance(initialAppearance)
   }
-  const resolved = resolveAppearance(appearance)
+  const deviceMode = useDeviceColorScheme(appearance.mode === 'auto')
+  const resolved = resolveAppearance(appearance, deviceMode)
   useIsomorphicLayoutEffect(() => {
     const handlePreview = (event: Event) => {
       if (!(event instanceof CustomEvent)) return

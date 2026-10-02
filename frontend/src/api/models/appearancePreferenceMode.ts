@@ -14,4 +14,5 @@ export const AppearancePreferenceMode = {
   light: 'light',
   dark: 'dark',
   oled: 'oled',
+  auto: 'auto',
 } as const
