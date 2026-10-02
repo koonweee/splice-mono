@@ -352,4 +352,23 @@ describe('ManualBrokerageHoldingsModal', () => {
       ]),
     )
   })
+
+  it('uses an explicit average edit instead of preserving a rounded saved average', async () => {
+    const saveHoldings = renderModal({
+      holdings: [
+        { ...holding, quantity: '100000000000000000', costBasis: '0.01' },
+      ],
+    })
+    const average = screen.getByLabelText<HTMLInputElement>(
+      'GOOGL average cost per share',
+    )
+    expect(average.value).toBe('0')
+    fireEvent.change(average, { target: { value: '0.00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save holdings' }))
+    await waitFor(() =>
+      expect(saveHoldings).toHaveBeenCalledWith([
+        { symbol: 'GOOGL', quantity: '100000000000000000', costBasis: '0' },
+      ]),
+    )
+  })
 })

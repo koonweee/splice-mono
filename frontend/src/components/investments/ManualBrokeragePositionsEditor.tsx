@@ -191,7 +191,7 @@ export function ManualBrokeragePositionsEditor({
     onChange(
       positions.map((position, positionIndex) =>
         positionIndex === index
-          ? { ...position, averageCostPerShare }
+          ? { ...position, averageCostPerShare, savedBasis: undefined }
           : position,
       ),
     )
