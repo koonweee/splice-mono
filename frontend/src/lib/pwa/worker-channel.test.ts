@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { diagnosticSnapshot } from './diagnostics'
 import {
   WORKER_CONTROL_STALE_EVENT,
   bindWorkerSession,
@@ -304,10 +305,105 @@ it('allows disabled-state lookup to finish bounded native cleanup before replyin
   authenticatedProtocol()
   const normal = mocks.protocol.getMockImplementation()!
   mocks.protocol.mockImplementation((data, ports) => {
-    if (data.type === 'PWA_CONTROL_GET') setTimeout(() => normal(data, ports), 4_000)
+    if (data.type === 'PWA_CONTROL_GET')
+      setTimeout(() => normal(data, ports), 4_000)
     else normal(data, ports)
   })
   const binding = bindWorkerSession(null)
   await vi.advanceTimersByTimeAsync(4_000)
   expect((await binding).controlScope).toBe('a'.repeat(64))
+})
+
+it('recovers a transient resume verification failure using a fresh handshake', async () => {
+  vi.useFakeTimers()
+  authenticatedProtocol()
+  const normal = mocks.protocol.getMockImplementation()!
+  let unavailable = true
+  mocks.protocol.mockImplementation((data, ports) => {
+    if (data.type === 'PWA_SESSION_READY' && unavailable) {
+      unavailable = false
+      ports[0].postMessage({ ok: false, code: 'session_unavailable' })
+    } else normal(data, ports)
+  })
+  const binding = bindWorkerSession(null)
+  await vi.advanceTimersByTimeAsync(500)
+  expect((await binding).controlScope).toBe('a'.repeat(64))
+  expect(mocks.protocol.mock.calls.map(([data]) => data.type)).toEqual([
+    'PWA_CONTROL_GET',
+    'PWA_SESSION_READY',
+    'PWA_CONTROL_GET',
+    'PWA_SESSION_READY',
+  ])
+})
+
+it('bounds unavailable-session retries and reports a verification error', async () => {
+  vi.useFakeTimers()
+  authenticatedProtocol()
+  const normal = mocks.protocol.getMockImplementation()!
+  mocks.protocol.mockImplementation((data, ports) => {
+    if (data.type === 'PWA_SESSION_READY')
+      ports[0].postMessage({ ok: false, code: 'session_unavailable' })
+    else normal(data, ports)
+  })
+  const rejected = expect(bindWorkerSession(null)).rejects.toThrow(
+    'could not reach Splice',
+  )
+  await vi.advanceTimersByTimeAsync(1000)
+  await rejected
+  expect(mocks.protocol).toHaveBeenCalledTimes(6)
+})
+
+it('does not retry an unverified session', async () => {
+  authenticatedProtocol()
+  const normal = mocks.protocol.getMockImplementation()!
+  mocks.protocol.mockImplementation((data, ports) => {
+    if (data.type === 'PWA_SESSION_READY')
+      ports[0].postMessage({ ok: false, code: 'session_unverified' })
+    else normal(data, ports)
+  })
+  await expect(bindWorkerSession(null)).rejects.toThrow(
+    'could not verify your session',
+  )
+  expect(mocks.protocol).toHaveBeenCalledTimes(2)
+})
+
+it('abandons a resume retry when logout starts during the delay', async () => {
+  vi.useFakeTimers()
+  authenticatedProtocol()
+  const normal = mocks.protocol.getMockImplementation()!
+  mocks.protocol.mockImplementation((data, ports) => {
+    if (data.type === 'PWA_SESSION_READY') {
+      ports[0].postMessage({ ok: false, code: 'session_unavailable' })
+      setTimeout(() => {
+        mocks.pending = { id: 'logout-new' }
+      }, 250)
+    } else normal(data, ports)
+  })
+  const rejected = expect(bindWorkerSession(null)).rejects.toThrow('superseded')
+  await vi.advanceTimersByTimeAsync(500)
+  await rejected
+  expect(mocks.protocol).toHaveBeenCalledTimes(2)
+})
+
+it('records the failing message and safe category without session metadata', async () => {
+  authenticatedProtocol()
+  const normal = mocks.protocol.getMockImplementation()!
+  mocks.protocol.mockImplementation((data, ports) => {
+    if (data.type === 'PWA_SESSION_READY')
+      ports[0].postMessage({ ok: false, code: 'private-server-detail' })
+    else normal(data, ports)
+  })
+  await expect(bindWorkerSession('private-enrollment')).rejects.toThrow(
+    'could not save',
+  )
+  const snapshot = diagnosticSnapshot()
+  expect(snapshot.pending).toEqual([])
+  expect(snapshot.events).toContainEqual(
+    expect.objectContaining({
+      event: 'worker:message:rejected',
+      detail: { type: 'PWA_SESSION_READY', code: 'worker_operation_failed' },
+    }),
+  )
+  expect(JSON.stringify(snapshot)).not.toContain('private-enrollment')
+  expect(JSON.stringify(snapshot)).not.toContain('private-server-detail')
 })
