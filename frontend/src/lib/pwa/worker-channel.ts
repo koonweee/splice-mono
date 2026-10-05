@@ -6,6 +6,7 @@ import {
 import { getServiceWorkerRegistration } from './service-worker'
 import { getPendingLogout } from './logout-state'
 import { withDeadline } from './deadline'
+import { recordPwaDiagnostic, tracePwa } from './diagnostics'
 import { validWorkerControlScope } from './worker-state'
 
 export type WorkerControl = {
@@ -17,6 +18,7 @@ export type WorkerControl = {
 let control: { generation: number; value: WorkerControl } | undefined
 let bindRevision = 0
 class StaleWorkerEpochError extends Error {}
+class SessionUnavailableError extends Error {}
 export const WORKER_CONTROL_STALE_EVENT = 'splice:pwa-control-stale'
 
 export async function sendWorkerMessage<T>(
@@ -30,32 +32,60 @@ export async function sendWorkerMessage<T>(
     throw new DOMException('Device state superseded', 'AbortError')
   const worker = registration.active
   if (!worker) throw new Error('App worker is not ready. Try again.')
-  return new Promise<T>((resolve, reject) => {
-    const channel = new MessageChannel()
-    const timer = setTimeout(
-      () => {
-        channel.port1.close()
-        reject(new Error('App worker did not respond. Try again.'))
-      },
-      message.type === 'PWA_SESSION_READY'
-        ? 15_000
-        : message.type === 'PWA_CONTROL_GET'
-          ? 7_000
-          : 3_000,
-    )
-    channel.port1.onmessage = (
-      event: MessageEvent<{ ok: boolean; value: T; code?: string }>,
-    ) => {
-      clearTimeout(timer)
-      channel.port1.close()
-      if (event.data.ok) resolve(event.data.value)
-      else if (event.data.code === 'stale_epoch')
-        reject(new StaleWorkerEpochError('Device state changed.'))
-      else
-        reject(new Error('App worker could not save device state. Try again.'))
-    }
-    worker.postMessage(message, [channel.port2])
-  })
+  return tracePwa(
+    'worker:message',
+    () =>
+      new Promise<T>((resolve, reject) => {
+        const channel = new MessageChannel()
+        const timer = setTimeout(
+          () => {
+            channel.port1.close()
+            reject(new Error('App worker did not respond. Try again.'))
+          },
+          message.type === 'PWA_SESSION_READY'
+            ? 15_000
+            : message.type === 'PWA_CONTROL_GET'
+              ? 7_000
+              : 3_000,
+        )
+        channel.port1.onmessage = (
+          event: MessageEvent<{ ok: boolean; value: T; code?: string }>,
+        ) => {
+          clearTimeout(timer)
+          channel.port1.close()
+          if (!event.data.ok)
+            recordPwaDiagnostic('worker:message:rejected', {
+              type: String(message.type),
+              code: [
+                'stale_epoch',
+                'session_unavailable',
+                'session_unverified',
+              ].includes(event.data.code ?? '')
+                ? event.data.code!
+                : 'worker_operation_failed',
+            })
+          if (event.data.ok) resolve(event.data.value)
+          else if (event.data.code === 'stale_epoch')
+            reject(new StaleWorkerEpochError('Device state changed.'))
+          else if (event.data.code === 'session_unavailable')
+            reject(
+              new SessionUnavailableError(
+                'App worker could not reach Splice to verify your session. Try again.',
+              ),
+            )
+          else if (event.data.code === 'session_unverified')
+            reject(
+              new Error('App worker could not verify your session. Try again.'),
+            )
+          else
+            reject(
+              new Error('App worker could not save device state. Try again.'),
+            )
+        }
+        worker.postMessage(message, [channel.port2])
+      }),
+    { type: String(message.type) },
+  )
 }
 export async function bindWorkerSession(
   enrollmentId: string | null,
@@ -105,11 +135,20 @@ export async function bindWorkerSession(
       return value
     } catch (error) {
       if (
-        !(error instanceof StaleWorkerEpochError) ||
+        !(
+          error instanceof StaleWorkerEpochError ||
+          error instanceof SessionUnavailableError
+        ) ||
         !stillCurrent() ||
         attempt === 2
       )
         throw error
+      if (error instanceof SessionUnavailableError) {
+        recordPwaDiagnostic('worker:session:retry', { attempt: attempt + 1 })
+        // Let connectivity recover on resume. The next iteration checks logout
+        // and identity fences before obtaining and verifying fresh control.
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
       // Another tab may bind between GET and READY. Retry only the handshake;
       // a financial badge snapshot must never be replayed under the new epoch.
     }

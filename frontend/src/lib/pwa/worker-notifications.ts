@@ -14,15 +14,30 @@ let volatileDisabled = false
 let disableRevision = 0
 let badgeRevision = 0
 class StaleWorkerEpochError extends Error {}
+class SessionVerificationError extends Error {
+  constructor(readonly retryable: boolean) {
+    super('Session verification unavailable')
+  }
+}
 
 async function verifyCurrentControlScope(): Promise<string> {
-  const response = await fetch('/_pwa/recovery', {
-    credentials: 'same-origin',
-    cache: 'no-store',
-    signal: AbortSignal.timeout(5_000),
-  })
-  if (!response.ok) throw new Error('Session verification unavailable')
-  const result: unknown = await response.json()
+  let response: Response
+  try {
+    response = await fetch('/_pwa/recovery', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5_000),
+    })
+  } catch {
+    throw new SessionVerificationError(true)
+  }
+  if (!response.ok) throw new SessionVerificationError(response.status >= 500)
+  let result: unknown
+  try {
+    result = await response.json()
+  } catch (error) {
+    throw new SessionVerificationError(!(error instanceof SyntaxError))
+  }
   if (
     !result ||
     typeof result !== 'object' ||
@@ -33,7 +48,7 @@ async function verifyCurrentControlScope(): Promise<string> {
     !('controlScope' in result) ||
     !validWorkerControlScope(result.controlScope)
   )
-    throw new Error('Session verification unavailable')
+    throw new SessionVerificationError(false)
   return result.controlScope
 }
 
@@ -161,7 +176,7 @@ export async function handleWorkerControlMessage(
         if (data.enrollmentId !== null && typeof data.enrollmentId !== 'string')
           throw new Error('Invalid enrollment')
         if (!validWorkerControlScope(controlScope))
-          throw new Error('Session verification unavailable')
+          throw new SessionVerificationError(false)
         const enrollmentId = data.enrollmentId
         const unchanged =
           !volatileDisabled &&
@@ -206,7 +221,13 @@ export async function handleWorkerControlMessage(
       ok: false,
       ...(error instanceof StaleWorkerEpochError
         ? { code: 'stale_epoch' }
-        : {}),
+        : error instanceof SessionVerificationError
+          ? {
+              code: error.retryable
+                ? 'session_unavailable'
+                : 'session_unverified',
+            }
+          : {}),
     })
   }
 }

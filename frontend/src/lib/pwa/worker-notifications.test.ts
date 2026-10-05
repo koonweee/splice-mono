@@ -216,7 +216,7 @@ describe('private push enrollment and logout fences', () => {
         epoch: initial.epoch,
         enrollmentId: null,
       }),
-    ).toHaveBeenCalledWith({ ok: false })
+    ).toHaveBeenCalledWith({ ok: false, code: 'session_unverified' })
     expect(mocks.state).toEqual(initial)
   })
   it('clears legacy native UI before an unavailable verified rebind', async () => {
@@ -225,31 +225,57 @@ describe('private push enrollment and logout fences', () => {
     mocks.state.disabled = true
     await message({ type: 'PWA_CONTROL_GET' })
     mocks.fetch.mockRejectedValueOnce(new Error('offline'))
-    expect(await message({ type: 'PWA_SESSION_READY', epoch: mocks.state.epoch, enrollmentId: null })).toHaveBeenCalledWith({ ok: false })
+    expect(
+      await message({
+        type: 'PWA_SESSION_READY',
+        epoch: mocks.state.epoch,
+        enrollmentId: null,
+      }),
+    ).toHaveBeenCalledWith({ ok: false, code: 'session_unavailable' })
     expect(mocks.clearBadge).toHaveBeenCalled()
     expect(mocks.close).toHaveBeenCalled()
     expect(mocks.state.disabled).toBe(true)
   })
   it('rejects a scope response whose body is aborted after headers', async () => {
     const controller = new AbortController()
-    const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal)
+    const timeout = vi
+      .spyOn(AbortSignal, 'timeout')
+      .mockReturnValue(controller.signal)
     let started!: () => void
-    const entered = new Promise<void>((resolve) => { started = resolve })
-    mocks.fetch.mockImplementationOnce((_url: string, options: RequestInit) => Promise.resolve({
-      ok: true,
-      json: () => new Promise((_resolve, reject) => {
-        options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
-        started()
+    const entered = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    mocks.fetch.mockImplementationOnce((_url: string, options: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          new Promise((_resolve, reject) => {
+            options.signal?.addEventListener(
+              'abort',
+              () => reject(new DOMException('Aborted', 'AbortError')),
+              { once: true },
+            )
+            started()
+          }),
       }),
-    }))
+    )
     const initial = { ...mocks.state }
     try {
-      const ready = message({ type: 'PWA_SESSION_READY', epoch: initial.epoch, enrollmentId: null })
+      const ready = message({
+        type: 'PWA_SESSION_READY',
+        epoch: initial.epoch,
+        enrollmentId: null,
+      })
       await entered
       controller.abort()
-      expect(await ready).toHaveBeenCalledWith({ ok: false })
+      expect(await ready).toHaveBeenCalledWith({
+        ok: false,
+        code: 'session_unavailable',
+      })
       expect(mocks.state).toEqual(initial)
-    } finally { timeout.mockRestore() }
+    } finally {
+      timeout.mockRestore()
+    }
   })
   it('allows logout to complete while a scope probe is pending and rejects the late ready result', async () => {
     let release!: (response: Response) => void
@@ -547,3 +573,23 @@ it('releases the state queue after a hung native badge and clears again if it se
     expect.objectContaining({ ok: true }),
   )
 })
+
+it.each([503, 401])(
+  'classifies session verification HTTP %s without changing control',
+  async (status) => {
+    const initial = { ...mocks.state }
+    mocks.fetch.mockResolvedValueOnce(new Response(null, { status }))
+    expect(
+      await message({
+        type: 'PWA_SESSION_READY',
+        epoch: initial.epoch,
+        enrollmentId: initial.enrollmentId,
+      }),
+    ).toHaveBeenCalledWith({
+      ok: false,
+      code: status === 503 ? 'session_unavailable' : 'session_unverified',
+    })
+    expect(mocks.state).toEqual(initial)
+    expect(mocks.change).not.toHaveBeenCalled()
+  },
+)
