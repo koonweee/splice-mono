@@ -167,9 +167,10 @@ postgresSuite('Dashboard PostgreSQL projections', () => {
             result.effectiveBalance.balance;
           return (
             total +
-            (result.account.type === 'credit' || money.sign === 'negative'
+            (result.account.type === 'credit' || result.account.type === 'loan'
               ? -1n
               : 1n) *
+              (money.sign === 'negative' ? -1n : 1n) *
               BigInt(money.money.amount)
           );
         },

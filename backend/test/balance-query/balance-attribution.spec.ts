@@ -138,7 +138,7 @@ describe('Recorded balance attribution (synthetic explanatory counterexample)', 
     expect(cash.opening.reportingBalance).toEqual(cash.opening.nativeBalance);
   });
 
-  it('distinguishes missing snapshots from zero and preserves exact large amounts and signed debt', () => {
+  it('distinguishes missing snapshots from zero and preserves exact large lender credits', () => {
     const first = result(1, '0', '2026-09-01', 'credit', 'USD', '1', null);
     const last = result(1, '900719925474099312345', '2026-09-05', 'credit');
     last.effectiveBalance.balance.sign = MoneySign.NEGATIVE;
@@ -149,9 +149,26 @@ describe('Recorded balance attribution (synthetic explanatory counterexample)', 
       'USD',
     );
     expect(output.coverage).toBe('missing_snapshots');
-    expect(signedMinorUnits(output.change)).toBe(-900719925474099312345n);
+    expect(signedMinorUnits(output.change)).toBe(900719925474099312345n);
     expect(output.reconciliation.exact).toBe(true);
     expect(output.accounts[0].opening.provenance?.snapshotId).toBeNull();
+  });
+
+  it('reconciles a card changing from debt to an overpayment credit', () => {
+    const first = result(1, '10000', '2026-09-01', 'credit');
+    const last = result(1, '5109', '2026-09-05', 'credit');
+    last.effectiveBalance.balance.sign = MoneySign.NEGATIVE;
+    last.effectiveBalance.reportingBalance!.sign = MoneySign.NEGATIVE;
+    const output = buildBalanceAttribution(
+      { date: '2026-09-01', balances: { [id(1)]: first } },
+      { date: '2026-09-05', balances: { [id(1)]: last } },
+      'USD',
+    );
+    expect(signedMinorUnits(output.openingNetWorth)).toBe(-10000n);
+    expect(signedMinorUnits(output.closingNetWorth)).toBe(5109n);
+    expect(signedMinorUnits(output.accounts[0].contribution)).toBe(15109n);
+    expect(signedMinorUnits(output.change)).toBe(15109n);
+    expect(output.reconciliation.exact).toBe(true);
   });
 
   it('attributes reporting FX movement while native balances stay unchanged', () => {
