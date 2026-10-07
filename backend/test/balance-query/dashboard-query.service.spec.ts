@@ -101,17 +101,17 @@ describe('DashboardQueryService', () => {
       period: 'month',
       endDate: query.endDate,
     });
-    // Prior: JPY 10,000 -> USD 70; plus USD 300 less USD 50 = USD 320.
+    // Prior: JPY 10,000 -> USD 70; plus USD 300 plus USD 50 credit = USD 420.
     // Latest: USD -200 plus USD 400 less USD 60 = USD 140.
     expect(summary.netWorth).toEqual({
       money: { amount: '14000', currency: 'USD' },
       sign: MoneySign.POSITIVE,
     });
     expect(summary.changeAmount).toEqual({
-      money: { amount: '18000', currency: 'USD' },
+      money: { amount: '28000', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     });
-    expect(summary.changePercent).toBe(-56.25);
+    expect(summary.changePercent).toBeCloseTo(-66.66666666666667);
     expect(summary.assets.map((account) => account.id)).toEqual([
       other.id,
       empty.id,
@@ -136,7 +136,7 @@ describe('DashboardQueryService', () => {
       period: 'month',
       endDate: query.endDate,
     });
-    expect(series.points[0].netWorth.money.amount).toBe('32000');
+    expect(series.points[0].netWorth.money.amount).toBe('42000');
     expect(series.points.at(-1)?.netWorth).toEqual(summary.netWorth);
     expect(series.points).toHaveLength(31);
   });
@@ -305,9 +305,9 @@ describe('DashboardQueryService', () => {
             item.account.type === 'credit' || item.account.type === 'loan';
           return (
             sum +
-            (liability || money.sign === 'negative'
-              ? -BigInt(money.money.amount)
-              : BigInt(money.money.amount))
+            (liability ? -1n : 1n) *
+              (money.sign === 'negative' ? -1n : 1n) *
+              BigInt(money.money.amount)
           );
         }, 0n),
       }));

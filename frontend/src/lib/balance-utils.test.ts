@@ -7,6 +7,7 @@ import {
   getSignedAmount,
   isZeroBalanceAccount,
 } from './balance-utils'
+import type { AccountBalanceResult } from '../api/models'
 
 describe('balance-utils', () => {
   describe('getSignedAmount', () => {
@@ -119,18 +120,84 @@ describe('balance-utils', () => {
   })
 
   describe('calculateNetWorthForDate', () => {
-    const createAccountBalance = (amount: number, currency: string) => ({
-      account: {
-        id: currency,
-        name: `${currency} account`,
-        type: AccountType.depository,
-      },
-      effectiveBalance: {
-        balance: {
-          money: { amount: String(amount), currency },
-          sign: MoneyWithSignSign.positive,
+    const createAccountBalance = (
+      amount: number,
+      currency: string,
+      type: AccountBalanceResult['account']['type'] = AccountType.depository,
+    ): AccountBalanceResult => {
+      const balance = {
+        money: { amount: String(Math.abs(amount)), currency },
+        sign:
+          amount < 0 ? MoneyWithSignSign.negative : MoneyWithSignSign.positive,
+      }
+      return {
+        account: {
+          id: currency,
+          name: `${currency} account`,
+          type,
+          subType: null,
+          valuationMode: 'balance',
+          availableBalance: balance,
+          currentBalance: balance,
+          createdAt: '2026-10-07T00:00:00Z',
+          updatedAt: '2026-10-07T00:00:00Z',
+          userId: 'user',
         },
+        availableBalance: { balance },
+        currentBalance: { balance },
+        effectiveBalance: { balance },
+      }
+    }
+
+    it.each([AccountType.credit, AccountType.loan])(
+      'subtracts %s debt and adds lender credits',
+      (type) => {
+        expect(
+          calculateNetWorthForDate({
+            debt: createAccountBalance(5109, 'SGD', type),
+          }),
+        ).toBe(-5109n)
+        expect(
+          calculateNetWorthForDate({
+            credit: createAccountBalance(-5109, 'SGD', type),
+          }),
+        ).toBe(5109n)
+        expect(
+          calculateNetWorthForDate({
+            zero: createAccountBalance(0, 'SGD', type),
+          }),
+        ).toBe(0n)
       },
+    )
+
+    it('preserves negative asset balances', () => {
+      expect(
+        calculateNetWorthForDate({
+          overdraft: createAccountBalance(-5109, 'SGD'),
+        }),
+      ).toBe(-5109n)
+    })
+
+    it('adds a card credit in the reporting currency after conversion', () => {
+      const credit = createAccountBalance(-3406, 'USD', AccountType.credit)
+      credit.effectiveBalance.convertedBalance = {
+        money: { amount: '5109', currency: 'SGD' },
+        sign: MoneyWithSignSign.negative,
+      }
+      expect(calculateNetWorthForDate({ credit }, 'SGD')).toBe(5109n)
+    })
+
+    it('includes the S$51.09 card credit in the reported S$524,359.68 net worth', () => {
+      expect(
+        calculateNetWorthForDate(
+          {
+            assets: createAccountBalance(52898704, 'SGD'),
+            debt: createAccountBalance(467845, 'SGD', AccountType.credit),
+            credit: createAccountBalance(-5109, 'SGD', AccountType.credit),
+          },
+          'SGD',
+        ),
+      ).toBe(52435968n)
     })
 
     it('rejects adding balances with different non-zero currencies', () => {
@@ -139,7 +206,7 @@ describe('balance-utils', () => {
           {
             usd: createAccountBalance(10000, 'USD'),
             eur: createAccountBalance(5000, 'EUR'),
-          } as any,
+          },
           'USD',
         ),
       ).toThrowError(BalanceCurrencyMismatchError)
@@ -152,7 +219,7 @@ describe('balance-utils', () => {
             usd: createAccountBalance(10000, 'USD'),
             usdTwo: createAccountBalance(2500, 'USD'),
             eurZero: createAccountBalance(0, 'EUR'),
-          } as any,
+          },
           'USD',
         ),
       ).toBe(12500n)
