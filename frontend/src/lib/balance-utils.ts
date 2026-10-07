@@ -164,9 +164,8 @@ export function calculateNetWorthForDate(
     const amount = signedMinorUnits(effectiveBalance)
 
     if (isLiabilityType(result.account.type)) {
-      // Liabilities subtract from net worth
-      // Note: liability balances are typically positive amounts owed
-      netWorth -= amount < 0n ? -amount : amount
+      // Positive liability balances are debt; negative balances are lender credits.
+      netWorth -= amount
     } else {
       // Assets add to net worth
       netWorth += amount

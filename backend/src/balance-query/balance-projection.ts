@@ -157,7 +157,8 @@ export function netWorthContribution(result: AccountBalanceResult): bigint {
     result.effectiveBalance.convertedBalance ??
     result.effectiveBalance.balance;
   const amount = getSignedAmount(effective);
-  return isLiabilityType(result.account.type) && amount > 0n ? -amount : amount;
+  // Positive liability balances are debt; negative balances are lender credits.
+  return isLiabilityType(result.account.type) ? -amount : amount;
 }
 
 /** Signed minor units; all balance projection arithmetic shares the reporting currency. */

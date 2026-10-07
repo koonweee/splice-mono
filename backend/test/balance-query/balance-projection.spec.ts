@@ -1,7 +1,12 @@
 import {
   buildBalanceWithConversion,
   createBalanceConverter,
+  calculateNetWorthForDate,
+  netWorthContribution,
 } from '../../src/balance-query/balance-projection';
+import { AccountType } from 'plaid';
+import { fixtureAccount } from './fixtures/dashboard.fixture';
+import type { AccountBalanceResult } from '../../src/types/BalanceQuery';
 import { decimalRateRatio } from '../../src/common/exact-money';
 import type { RateWithSource } from '../../src/types/BalanceQuery';
 import {
@@ -83,5 +88,79 @@ describe('Request-local balance conversion reuse', () => {
       money: { amount: '0', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     });
+  });
+});
+
+function accountBalance(
+  type: AccountType,
+  amount: string,
+  sign = MoneySign.POSITIVE,
+): AccountBalanceResult {
+  const effectiveBalance = {
+    balance: { money: { amount, currency: 'SGD' }, sign },
+  };
+  return {
+    account: fixtureAccount(1, type).toObject(),
+    availableBalance: effectiveBalance,
+    currentBalance: effectiveBalance,
+    effectiveBalance,
+  };
+}
+
+describe('Signed net-worth contributions', () => {
+  it.each([AccountType.Credit, AccountType.Loan])(
+    'subtracts %s debt and adds lender credits',
+    (type) => {
+      expect(netWorthContribution(accountBalance(type, '5109'))).toBe(-5109n);
+      expect(
+        netWorthContribution(accountBalance(type, '5109', MoneySign.NEGATIVE)),
+      ).toBe(5109n);
+      expect(netWorthContribution(accountBalance(type, '0'))).toBe(0n);
+    },
+  );
+
+  it('preserves asset balance signs', () => {
+    expect(
+      netWorthContribution(accountBalance(AccountType.Depository, '5109')),
+    ).toBe(5109n);
+    expect(
+      netWorthContribution(
+        accountBalance(AccountType.Depository, '5109', MoneySign.NEGATIVE),
+      ),
+    ).toBe(-5109n);
+  });
+
+  it('adds a credit in the reporting currency after conversion', () => {
+    const result = accountBalance(
+      AccountType.Credit,
+      '3406',
+      MoneySign.NEGATIVE,
+    );
+    result.effectiveBalance = buildBalanceWithConversion(
+      { money: { amount: '3406', currency: 'USD' }, sign: MoneySign.NEGATIVE },
+      'SGD',
+      new Map([
+        [
+          'USD:SGD',
+          {
+            ...quote('2026-09-02', '1.5'),
+            baseCurrency: 'USD',
+            targetCurrency: 'SGD',
+          },
+        ],
+      ]),
+      '2026-09-02',
+    );
+    expect(netWorthContribution(result)).toBe(5109n);
+  });
+
+  it('includes the S$51.09 card credit in the reported S$524,359.68 net worth', () => {
+    expect(
+      calculateNetWorthForDate({
+        assets: accountBalance(AccountType.Depository, '52898704'),
+        debt: accountBalance(AccountType.Credit, '467845'),
+        credit: accountBalance(AccountType.Credit, '5109', MoneySign.NEGATIVE),
+      }),
+    ).toBe(52435968n);
   });
 });
