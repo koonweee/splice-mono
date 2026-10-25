@@ -144,18 +144,13 @@ const config = defineConfig({
         name: 'Splice',
         icons: [
           {
-            src: 'favicon.ico',
-            sizes: '256x256 128x128 64x64 48x48 32x32 24x24 16x16',
-            type: 'image/x-icon',
-          },
-          {
-            src: 'favicon192.png',
+            src: 'pwa-icon-192-cb5226f6.png',
             type: 'image/png',
             sizes: '192x192',
             purpose: 'any',
           },
           {
-            src: 'favicon512.png',
+            src: 'pwa-icon-512-641db165.png',
             type: 'image/png',
             sizes: '512x512',
             purpose: 'any',
@@ -174,22 +169,30 @@ const config = defineConfig({
             short_name: 'Uncategorized',
             url: '/transactions?categoryId=UNCATEGORIZED',
             icons: [
-              { src: '/favicon192.png', sizes: '192x192', type: 'image/png' },
+              {
+                src: '/pwa-icon-192-cb5226f6.png',
+                sizes: '192x192',
+                type: 'image/png',
+              },
             ],
           },
           {
             name: 'Accounts',
             url: '/accounts',
             icons: [
-              { src: '/favicon192.png', sizes: '192x192', type: 'image/png' },
+              {
+                src: '/pwa-icon-192-cb5226f6.png',
+                sizes: '192x192',
+                type: 'image/png',
+              },
             ],
           },
         ],
       },
       injectManifest: {
         globPatterns: [
-          'favicon192.png',
-          'apple-touch-icon.png',
+          'pwa-icon-192-cb5226f6.png',
+          'apple-touch-icon-bd1de315.png',
           'assets/**/*.{js,css,woff,woff2,png,svg,webp,avif,jpg,jpeg}',
           'pwa-offline-*.js',
           'pwa-shell-*.html',
@@ -200,7 +203,10 @@ const config = defineConfig({
             const entries = manifest.filter(
               (entry) =>
                 essentialAssets.has(entry.url) ||
-                ['favicon192.png', 'apple-touch-icon.png'].includes(entry.url),
+                [
+                  'pwa-icon-192-cb5226f6.png',
+                  'apple-touch-icon-bd1de315.png',
+                ].includes(entry.url),
             )
             const measured = entries.map((entry) => {
               const bytes = readFileSync(resolve('.output/public', entry.url))

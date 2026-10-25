@@ -13,6 +13,10 @@ const MAX_BYTES = 20 * 1024 * 1024
 const MAX_ASSET_BYTES = 5 * 1024 * 1024
 const UNUSED_MAX_AGE = 7 * 24 * 60 * 60 * 1000
 const branding = new Set([
+  '/pwa-icon-192-cb5226f6.png',
+  '/pwa-icon-512-641db165.png',
+  '/apple-touch-icon-bd1de315.png',
+  '/favicon-cb720331.ico',
   '/favicon.ico',
   '/favicon192.png',
   '/favicon512.png',
