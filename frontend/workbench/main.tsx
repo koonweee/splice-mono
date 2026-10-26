@@ -16,6 +16,7 @@ import {
 } from '../src/lib/design-system/appearance'
 import { AppThemeProvider } from '../src/components/AppThemeProvider'
 import { validateSettingsSearch } from '../src/lib/route-search'
+import { standaloneSafeAreaCss } from '../src/lib/pwa/launch-canvas'
 import { FixturePresentation } from './runtime-boundaries'
 import { appearanceFromSearch, settingsSections } from './preferences'
 import { examples } from './examples'
@@ -64,27 +65,31 @@ function Preview() {
     examples.find((entry) => entry.id === params.get('example')) ?? examples[0]
   const Component = example.component
   return (
-    <AppThemeProvider initialAppearance={preset.preference} authenticated>
-      <QueryClientProvider client={queryClient}>
-        <Notifications />
-        <FixturePresentation masked={params.get('masked') === 'true'}>
-          <div
-            className={
-              example.id.startsWith('page-') ||
-              example.id === 'launch-screen' ||
-              example.id === 'cached-home'
-                ? 'wb-page-preview'
-                : 'wb-preview'
-            }
-          >
-            <Component
-              state={params.get('state') ?? example.states[0]}
-              masked={params.get('masked') === 'true'}
-            />
-          </div>
-        </FixturePresentation>
-      </QueryClientProvider>
-    </AppThemeProvider>
+    <>
+      <style>{standaloneSafeAreaCss}</style>
+      <div className="splice-pwa-safe-area" aria-hidden="true" />
+      <AppThemeProvider initialAppearance={preset.preference} authenticated>
+        <QueryClientProvider client={queryClient}>
+          <Notifications />
+          <FixturePresentation masked={params.get('masked') === 'true'}>
+            <div
+              className={
+                example.id.startsWith('page-') ||
+                example.id === 'launch-screen' ||
+                example.id === 'cached-home'
+                  ? 'wb-page-preview'
+                  : 'wb-preview'
+              }
+            >
+              <Component
+                state={params.get('state') ?? example.states[0]}
+                masked={params.get('masked') === 'true'}
+              />
+            </div>
+          </FixturePresentation>
+        </QueryClientProvider>
+      </AppThemeProvider>
+    </>
   )
 }
 

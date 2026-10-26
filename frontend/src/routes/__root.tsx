@@ -45,7 +45,10 @@ import {
   subscribeHomeLaunch,
 } from '../lib/pwa/home-launch'
 import { HomeContinuityHost } from '../components/pages/HomeContinuityHost'
-import { readLaunchAppearance } from '../lib/pwa/launch-canvas'
+import {
+  readLaunchAppearance,
+  standaloneSafeAreaCss,
+} from '../lib/pwa/launch-canvas'
 import { TimePeriod } from '../lib/types'
 import { isValidTimePeriod } from '../lib/route-search'
 import { appleStartupImages } from '../lib/pwa/startup-images'
@@ -342,6 +345,7 @@ function DocumentShell({ children }: { children: ReactNode }) {
     >
       <head>
         <ColorSchemeScript forceColorScheme={preset.colorScheme} />
+        <style>{standaloneSafeAreaCss}</style>
         <HeadContent />
         {developmentStyles && <style>{developmentStyles}</style>}
       </head>
@@ -350,6 +354,7 @@ function DocumentShell({ children }: { children: ReactNode }) {
           background: 'var(--mantine-color-body, var(--splice-launch-canvas))',
         }}
       >
+        <div className="splice-pwa-safe-area" aria-hidden="true" />
         <AppThemeProvider
           initialAppearance={initialPresentation.appearance}
           restoreStoredAppearance={!isLocalLaunch}
