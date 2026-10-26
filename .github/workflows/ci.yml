@@ -196,6 +196,10 @@ jobs:
         working-directory: frontend
       - run: yarn test src/lib/pwa src/lib/notifications src/lib/queries/notification.test.tsx src/components/notifications src/components/PwaLifecycle.test.tsx --maxWorkers=2
         working-directory: frontend
+      - run: yarn build
+        working-directory: frontend
+      - run: yarn pwa:launch-test
+        working-directory: frontend
       - run: yarn pwa:test --channel=chromium --artifacts=${{ runner.temp }}/pwa-lifecycle
         env:
           DEBUG: pw:browser

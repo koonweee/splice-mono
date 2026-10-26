@@ -45,7 +45,10 @@ import {
   subscribeHomeLaunch,
 } from '../lib/pwa/home-launch'
 import { HomeContinuityHost } from '../components/pages/HomeContinuityHost'
-import { readLaunchAppearance } from '../lib/pwa/launch-canvas'
+import {
+  readLaunchAppearance,
+  standaloneSafeAreaCss,
+} from '../lib/pwa/launch-canvas'
 import { TimePeriod } from '../lib/types'
 import { isValidTimePeriod } from '../lib/route-search'
 import { appleStartupImages } from '../lib/pwa/startup-images'
@@ -252,12 +255,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     links: [
       {
         rel: 'icon',
-        href: '/favicon.ico',
+        href: '/favicon-cb720331.ico',
         sizes: '16x16 24x24 32x32 64x64',
       },
       {
         rel: 'apple-touch-icon',
-        href: '/apple-touch-icon.png',
+        href: '/apple-touch-icon-bd1de315.png',
         sizes: '180x180',
       },
       {
@@ -342,6 +345,7 @@ function DocumentShell({ children }: { children: ReactNode }) {
     >
       <head>
         <ColorSchemeScript forceColorScheme={preset.colorScheme} />
+        <style>{standaloneSafeAreaCss}</style>
         <HeadContent />
         {developmentStyles && <style>{developmentStyles}</style>}
       </head>
@@ -350,6 +354,7 @@ function DocumentShell({ children }: { children: ReactNode }) {
           background: 'var(--mantine-color-body, var(--splice-launch-canvas))',
         }}
       >
+        <div className="splice-pwa-safe-area" aria-hidden="true" />
         <AppThemeProvider
           initialAppearance={initialPresentation.appearance}
           restoreStoredAppearance={!isLocalLaunch}

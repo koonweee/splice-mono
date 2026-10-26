@@ -9,7 +9,10 @@ import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
-import { launchCanvasBootstrap } from './src/lib/pwa/launch-canvas'
+import {
+  launchCanvasBootstrap,
+  standaloneSafeAreaHtml,
+} from './src/lib/pwa/launch-canvas'
 import { OFFLINE_COLORS } from './src/lib/design-system/offline'
 import { spliceCss } from './vite-css'
 import {
@@ -70,7 +73,7 @@ const config = defineConfig({
           this.emitFile({
             type: 'asset',
             fileName: shell,
-            source: `<!doctype html><html lang="en" data-splice-launch="local"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#000000"><title>Splice</title>${launchCanvasBootstrap}${styles.map((output) => `<link rel="stylesheet" href="/${output.fileName}">`).join('')}</head><body><script type="module" src="/${entry.fileName}"></script></body></html>`,
+            source: `<!doctype html><html lang="en" data-splice-launch="local"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#000000"><title>Splice</title>${launchCanvasBootstrap}${styles.map((output) => `<link rel="stylesheet" href="/${output.fileName}">`).join('')}</head><body>${standaloneSafeAreaHtml}<script type="module" src="/${entry.fileName}"></script></body></html>`,
           })
           essentialAssets.add(shell)
         }
@@ -144,18 +147,13 @@ const config = defineConfig({
         name: 'Splice',
         icons: [
           {
-            src: 'favicon.ico',
-            sizes: '256x256 128x128 64x64 48x48 32x32 24x24 16x16',
-            type: 'image/x-icon',
-          },
-          {
-            src: 'favicon192.png',
+            src: 'pwa-icon-192-cb5226f6.png',
             type: 'image/png',
             sizes: '192x192',
             purpose: 'any',
           },
           {
-            src: 'favicon512.png',
+            src: 'pwa-icon-512-641db165.png',
             type: 'image/png',
             sizes: '512x512',
             purpose: 'any',
@@ -174,22 +172,30 @@ const config = defineConfig({
             short_name: 'Uncategorized',
             url: '/transactions?categoryId=UNCATEGORIZED',
             icons: [
-              { src: '/favicon192.png', sizes: '192x192', type: 'image/png' },
+              {
+                src: '/pwa-icon-192-cb5226f6.png',
+                sizes: '192x192',
+                type: 'image/png',
+              },
             ],
           },
           {
             name: 'Accounts',
             url: '/accounts',
             icons: [
-              { src: '/favicon192.png', sizes: '192x192', type: 'image/png' },
+              {
+                src: '/pwa-icon-192-cb5226f6.png',
+                sizes: '192x192',
+                type: 'image/png',
+              },
             ],
           },
         ],
       },
       injectManifest: {
         globPatterns: [
-          'favicon192.png',
-          'apple-touch-icon.png',
+          'pwa-icon-192-cb5226f6.png',
+          'apple-touch-icon-bd1de315.png',
           'assets/**/*.{js,css,woff,woff2,png,svg,webp,avif,jpg,jpeg}',
           'pwa-offline-*.js',
           'pwa-shell-*.html',
@@ -200,7 +206,10 @@ const config = defineConfig({
             const entries = manifest.filter(
               (entry) =>
                 essentialAssets.has(entry.url) ||
-                ['favicon192.png', 'apple-touch-icon.png'].includes(entry.url),
+                [
+                  'pwa-icon-192-cb5226f6.png',
+                  'apple-touch-icon-bd1de315.png',
+                ].includes(entry.url),
             )
             const measured = entries.map((entry) => {
               const bytes = readFileSync(resolve('.output/public', entry.url))

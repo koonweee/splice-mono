@@ -300,3 +300,33 @@ focus-before-visible ordering, offline reconnect and cleanup. The production
 harness injects these missing-visibility sequences and asserts exactly one fresh
 summary/series pair with the same chart element. This verifies the event handlers;
 it does not establish which events a particular physical iOS release emits.
+
+## Standalone startup top surface
+
+Cached launch HTML and the server-rendered document paint the same fixed opaque
+top surface before application modules execute. Inline CSS uses the public launch
+canvas until the theme provider supplies the header color. Standalone coarse
+pointers receive at least 12px or the larger hardware top inset, independently of
+viewport width. Ordinary browser tabs hide the surface. The existing AppShell
+header paints above it and retains its 60px plus hardware-inset geometry; the
+startup surface adds no content padding and cannot intercept input.
+
+`yarn pwa:launch-test` now includes 18 built-document safe-area cases: cached and
+SSR launch, Light/Dark/OLED, 744×1133 and 1133×744 tablets, and a 430×932 phone
+with a synthetic 59px top inset. External application scripts are blocked for the
+initial-paint assertions. Cached cases then mount React, check exactly one surface
+and the current header color, and preserve navigation focus through tablet
+rotation. Stacking and header geometry are measured; ordinary-tab launch remains
+unmodified. The suite failed against the prior build because no initial top
+surface existed. CI runs this harness after a production build.
+
+Agent-browser inspected the production Home workbench with a sage accent in
+Light 744×1133, Dark 1133×744 and OLED 430×932. Standalone, coarse-pointer and
+hardware-inset facts were explicitly substituted in the shared CSS because desktop
+Chromium cannot emulate the iOS compositor. Captures were reviewed: the surface
+measured 12/12/59px, header height stayed 60/60/119px, controls remained visible,
+and there was no horizontal overflow or browser runtime error. Existing transient
+Recharts size warnings occur during workbench startup. Typecheck, focused and
+workbench tests, token audits, lint and both builds passed; lint retains 25
+pre-existing warnings. Physical Home Screen cold launch, rotation, keyboard and
+blur/compositing behavior still require iOS-device verification.

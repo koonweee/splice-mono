@@ -282,3 +282,9 @@ Holdings `investments/ready` includes positive, negative, flat, missing-basis an
 Nonvisual `input-modality.ts` is installed by the production `AppThemeProvider`; behavior is covered by `src/lib/input-modality.test.ts` and focus can be inspected in `positions` and `account-dialogs/holdings` with touch or keyboard navigation.
 
 Auto appearance: [AppearanceControl](http://localhost:4001/?frame=true&example=appearance&mode=auto&lightAccent=%23ce9a7e&darkAccent=%23b399cf) follows emulated device Light/Dark changes with separate accents. The same parameters on `example=page-settings&tab=general&holdRoute=true` pair disabled and loaded form states. `hooks/useDeviceColorScheme.ts` is nonvisual; `AppThemeProvider.test.tsx` covers live switching, fixed-mode behavior, browser chrome and subscription cleanup.
+
+Standalone viewport chrome is composed into every direct Preview and both
+production document paths from `lib/pwa/launch-canvas.ts`. It has no independent
+component tile. `scripts/verify-safe-area.mjs`, run by `pwa:launch-test`, verifies
+initial-document paint, theme colors, React mounting, header stacking and tablet
+rotation; `page-home` supplies the mounted visual inspection.
