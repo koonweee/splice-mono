@@ -37,6 +37,21 @@ and swipe scrolling remain enabled; fine-pointer desktop scrollbars are unchange
 Use `account-overview` and `account-dialogs&state=account` with touch emulation
 and `page-home&hold=reads` for the loading/ready pair.
 
+## Standalone startup surface
+
+Every direct preview includes the production standalone top-surface CSS and box.
+Use `page-home` in Light/Dark/OLED to inspect its color and header interaction;
+`launch-screen` and `cached-home` retain their existing loading owners. This is
+viewport chrome rather than a new component tile. Desktop browser inspection
+must substitute standalone, coarse-pointer and hardware-inset facts in that CSS.
+The production-document assertions belong to `yarn pwa:launch-test`, which blocks
+application modules before checking cached and SSR markup.
+
+Reviewed Home with sage accent at Light 744×1133, Dark 1133×744 and OLED 430×932.
+Synthetic top surfaces measured 12/12/59px while existing header heights stayed
+60/60/119px. Controls and content remained visible without horizontal overflow or
+runtime errors. Real iOS compositor behavior remains device-only validation.
+
 ## PWA launch screen
 
 `/?frame=true&example=launch-screen&state=checking&mode=oled&width=430`

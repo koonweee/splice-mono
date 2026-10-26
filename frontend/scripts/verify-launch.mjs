@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { setTimeout as pause } from 'node:timers/promises'
 import { chromium } from 'playwright'
+import { verifyStandaloneSafeArea } from './verify-safe-area.mjs'
 
 const calls = []
 const money = (amount) => ({
@@ -124,6 +125,11 @@ try {
   }
   const browser = await chromium.launch()
   try {
+    await verifyStandaloneSafeArea(
+      browser,
+      origin.replace('127.0.0.1', 'localhost'),
+      apiPort,
+    )
     const errors = []
     // Each launch scenario owns a fixed identity. Changing a shared token while
     // Alice's background reads are still running can trigger an auth redirect
@@ -163,6 +169,11 @@ try {
       .filter({ hasText: 'Checking session' })
       .waitFor()
     assert.equal(await page.getByText('ACCOUNT_ALICE').count(), 0)
+    assert.equal(
+      await page.locator('.splice-pwa-safe-area').isVisible(),
+      false,
+      'Browser tabs must not paint the standalone surface',
+    )
     releaseSession()
     await page.waitForURL('**/home')
     await page.getByText('ACCOUNT_ALICE', { exact: true }).first().waitFor()
