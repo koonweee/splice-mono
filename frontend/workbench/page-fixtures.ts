@@ -1,5 +1,6 @@
 import { calculateChangePercent } from '../src/lib/balance-utils'
-import { signedMinorUnits } from '../src/lib/money'
+import { adjustedAccountBalance } from '../src/lib/account-value-adjustments'
+import { ExactDecimal, signedMinorUnits } from '../src/lib/money'
 import { FIXTURE_NOW, fixtureAccounts, fixtureUser, money } from './fixtures'
 import type {
   AnalysisRuleView,
@@ -215,6 +216,8 @@ export const fixtureTokens: Array<PersonalAccessToken> = [
 export function fixtureDashboard(
   period: DashboardPeriod,
   empty: boolean,
+  hideDiscountedAccounts = false,
+  sourceAccounts = fixtureAccounts,
 ): { summary: DashboardSummaryResponse; series: DashboardSeriesResponse } {
   const days: Record<DashboardPeriod, number> = {
     day: 1,
@@ -231,31 +234,40 @@ export function fixtureDashboard(
     .toISOString()
     .slice(0, 10)
   const common = {
+    ...(hideDiscountedAccounts ? { hideDiscountedAccounts: true } : {}),
     period,
     startDate,
     endDate,
     reportingCurrency: 'USD',
     generatedAt: FIXTURE_NOW,
   }
-  const accounts = (empty ? [] : fixtureAccounts).map((account) => ({
-    id: account.id,
-    name: account.name ?? 'Unnamed',
-    customName: account.customName ?? null,
-    type: account.type,
-    subType: account.subType,
-    valuationMode: account.valuationMode,
-    institutionName: 'Example institution',
-    archivedAt: account.archivedAt ?? null,
-    syncedAt: null,
-    effectiveBalance: account.currentBalance,
-    changePercent: account.archivedAt
-      ? undefined
-      : calculateChangePercent(
-          signedMinorUnits(account.currentBalance),
-          signedMinorUnits(account.currentBalance) - 10000n,
-        ),
-    changeAmount: money(account.archivedAt ? '0' : '10000'),
-  }))
+  const accounts = (empty ? [] : sourceAccounts)
+    .filter(
+      (account) =>
+        !hideDiscountedAccounts ||
+        new ExactDecimal(account.expectedValuePercent ?? '100').gte(100),
+    )
+    .map((account) => ({
+      id: account.id,
+      name: account.name ?? 'Unnamed',
+      customName: account.customName ?? null,
+      type: account.type,
+      subType: account.subType,
+      valuationMode: account.valuationMode,
+      expectedValuePercent: account.expectedValuePercent ?? '100',
+      expectedTaxPercent: account.expectedTaxPercent ?? '0',
+      institutionName: 'Example institution',
+      archivedAt: account.archivedAt ?? null,
+      syncedAt: null,
+      effectiveBalance: adjustedAccountBalance(account.currentBalance, account),
+      changePercent: account.archivedAt
+        ? undefined
+        : calculateChangePercent(
+            signedMinorUnits(account.currentBalance),
+            signedMinorUnits(account.currentBalance) - 10000n,
+          ),
+      changeAmount: money(account.archivedAt ? '0' : '10000'),
+    }))
   const current = accounts.reduce(
     (total, account) => total + signedMinorUnits(account.effectiveBalance),
     0n,

@@ -32,10 +32,22 @@ export const DASHBOARD_PERIOD_DAYS: Record<
 const calendarDate = z.string().date();
 export const DashboardQuerySchema = registerSchema(
   'DashboardQuery',
-  z.object({ period: DashboardPeriodSchema, endDate: calendarDate }).strict(),
+  z
+    .object({
+      period: DashboardPeriodSchema,
+      endDate: calendarDate,
+      hideDiscountedAccounts: z
+        .union([
+          z.boolean(),
+          z.enum(['true', 'false']).transform((value) => value === 'true'),
+        ])
+        .optional(),
+    })
+    .strict(),
 );
 export type DashboardQuery = z.infer<typeof DashboardQuerySchema>;
 const range = z.object({
+  hideDiscountedAccounts: z.boolean().optional(),
   period: DashboardPeriodSchema,
   startDate: calendarDate,
   endDate: calendarDate,

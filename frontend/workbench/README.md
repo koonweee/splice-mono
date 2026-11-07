@@ -823,3 +823,9 @@ Validation: 90 targeted frontend tests, 83 backend preference/service/controller
 Home rows and standalone account cards use their standard presentation for configured accounts too. The first account in account-overview/ready carries 50% value / 30% tax and has no adjustment label; effective balances are unchanged. Adjustment controls and the base/adjusted breakdown remain in account Details.
 
 Verified account-overview/ready in Light 390px, Dark 1440px and OLED 390px; a real local saved 50%/30% account retained its standard Home row and 35k effective balance after reload, with Details settings intact. The 66 focused component/workbench tests, lint/typecheck, token checks and workbench build pass.
+
+## Discounted accounts on Home
+
+Use page-home/discounted for an RSU account with 100k base and 35k effective value. The stock-chart ActionIcon beside the eye uses the same subtle/dimmed treatment, swaps to a slashed chart while hiding, and changes its tooltip/action label. Toggle it to remove only accounts below 100% expected value from rows, totals, comparison and the complete series. Add latency=2000 or failure=reads to review paired scope transitions. Saved-launch views show the saved scope and disable this data-changing control until live data is available; masking remains usable. Home rows keep their default appearance.
+
+At 384px and below, the Home header uses two compact rows to preserve all 44px touch targets and the reserved refresh slot; larger phone and desktop header layouts stay unchanged. Check the full bounds of every control, including logout, in addition to document overflow.

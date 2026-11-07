@@ -3,7 +3,10 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { BalanceCurrencyMismatchError } from '../lib/balance-utils'
 import { TimePeriod } from '../lib/types'
-import { PresentationProvider } from '../lib/presentation-preferences'
+import {
+  PresentationProvider,
+  usePresentationPreferences,
+} from '../lib/presentation-preferences'
 import {
   dashboardSeriesOptions,
   dashboardSummaryOptions,
@@ -46,7 +49,11 @@ function setup(withSeries = true) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <PresentationProvider
-        initial={{ today: date, appearance: { mode: 'dark', accent: '#83b59b' }, maskBalances: true }}
+        initial={{
+          today: date,
+          appearance: { mode: 'dark', accent: '#83b59b' },
+          maskBalances: true,
+        }}
       >
         {children}
       </PresentationProvider>
@@ -283,4 +290,112 @@ describe('all-history account drilldown', () => {
     unmount()
     client.clear()
   })
+})
+
+it.each(['summary', 'series'])(
+  'publishes the filtered scope together when %s arrives first',
+  async (first) => {
+    let releaseSummary = () => {}
+    let releaseSeries = () => {}
+    const summaryReady = new Promise<void>((resolve) => {
+      releaseSummary = resolve
+    })
+    const seriesReady = new Promise<void>((resolve) => {
+      releaseSeries = resolve
+    })
+    const filteredMoney = {
+      ...money,
+      money: { ...money.money, amount: '5432' },
+    }
+    const filtered = {
+      ...summary,
+      hideDiscountedAccounts: true,
+      netWorth: filteredMoney,
+    }
+    transport.mockImplementation(
+      async ({
+        url,
+        params,
+      }: {
+        url: string
+        params: { hideDiscountedAccounts?: boolean }
+      }) => {
+        expect(params.hideDiscountedAccounts).toBe(true)
+        if (url.endsWith('dashboard-summary')) {
+          await summaryReady
+          return filtered
+        }
+        await seriesReady
+        return { ...filtered, points: [{ date, netWorth: filteredMoney }] }
+      },
+    )
+    const { wrapper, client } = setup()
+    const { result, unmount } = renderHook(
+      () => {
+        const preferences = usePresentationPreferences()
+        return {
+          ...useBalanceData(TimePeriod.month, 'USD'),
+          toggle: () =>
+            preferences.setHideDiscountedAccounts((current) => !current),
+        }
+      },
+      { wrapper },
+    )
+    act(() => result.current.toggle())
+    expect(result.current.data?.netWorth).toEqual(money)
+    await act(async () => {
+      await Promise.resolve()
+      ;(first === 'summary' ? releaseSummary : releaseSeries)()
+    })
+    await waitFor(() =>
+      expect(
+        client.getQueryData(
+          (first === 'summary'
+            ? dashboardSummaryOptions
+            : dashboardSeriesOptions)(TimePeriod.month, date, true).queryKey,
+        ),
+      ).toBeDefined(),
+    )
+    expect(result.current.data?.netWorth).toEqual(money)
+    expect(result.current.chartDisplayData?.[0].money).toEqual(money)
+    await act(async () => {
+      releaseSummary()
+      releaseSeries()
+      await Promise.resolve()
+    })
+    await waitFor(() =>
+      expect(result.current.data?.netWorth).toEqual(filteredMoney),
+    )
+    expect(result.current.chartDisplayData?.[0].money).toEqual(filteredMoney)
+    act(() => result.current.toggle())
+    expect(result.current.data?.netWorth).toEqual(money)
+    expect(result.current.chartDisplayData?.[0].money).toEqual(money)
+    unmount()
+    client.clear()
+  },
+)
+
+it('drops a retained scope after private query caches are cleared', () => {
+  transport.mockImplementation(() => new Promise(() => {}))
+  const { wrapper, client } = setup()
+  const { result, unmount } = renderHook(
+    () => {
+      const preferences = usePresentationPreferences()
+      return {
+        ...useBalanceData(TimePeriod.month, 'USD'),
+        toggle: () =>
+          preferences.setHideDiscountedAccounts((current) => !current),
+      }
+    },
+    { wrapper },
+  )
+  expect(result.current.data?.netWorth).toEqual(money)
+  act(() => result.current.toggle())
+  expect(result.current.data?.netWorth).toEqual(money)
+  act(() => client.clear())
+  act(() => result.current.toggle())
+  expect(result.current.data).toBeUndefined()
+  expect(result.current.chartDisplayData).toBeUndefined()
+  unmount()
+  client.clear()
 })

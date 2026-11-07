@@ -41,6 +41,10 @@ export function useSession() {
     : query
 }
 const PresentationContext = createContext({
+  hideDiscountedAccounts: false,
+  setHideDiscountedAccounts: (
+    _value: boolean | ((value: boolean) => boolean),
+  ) => {},
   maskBalances: false,
   setMaskBalances: (_value: boolean | ((value: boolean) => boolean)) => {},
   today: FIXTURE_NOW.slice(0, 10),
@@ -48,15 +52,24 @@ const PresentationContext = createContext({
 export const usePresentationPreferences = () => useContext(PresentationContext)
 export function FixturePresentation({
   masked,
+  hidden = false,
   children,
 }: {
   masked: boolean
+  hidden?: boolean
   children: ReactNode
 }) {
   const [maskBalances, setMaskBalances] = useState(masked)
+  const [hideDiscountedAccounts, setHideDiscountedAccounts] = useState(hidden)
   return (
     <PresentationContext.Provider
-      value={{ maskBalances, setMaskBalances, today: FIXTURE_NOW.slice(0, 10) }}
+      value={{
+        maskBalances,
+        setMaskBalances,
+        hideDiscountedAccounts,
+        setHideDiscountedAccounts,
+        today: FIXTURE_NOW.slice(0, 10),
+      }}
     >
       {children}
     </PresentationContext.Provider>
@@ -64,6 +77,7 @@ export function FixturePresentation({
 }
 export const fixturePresentation = {
   appearance: DEFAULT_APPEARANCE,
+  hideDiscountedAccounts: false,
   maskBalances: false,
   today: FIXTURE_NOW.slice(0, 10),
 }
@@ -74,11 +88,19 @@ export function PresentationProvider({
   initial,
   children,
 }: {
-  initial?: { maskBalances?: boolean; today?: string; appearance?: unknown }
+  initial?: {
+    maskBalances?: boolean
+    hideDiscountedAccounts?: boolean
+    today?: string
+    appearance?: unknown
+  }
   children: ReactNode
 }) {
   return (
-    <FixturePresentation masked={initial?.maskBalances ?? false}>
+    <FixturePresentation
+      masked={initial?.maskBalances ?? false}
+      hidden={initial?.hideDiscountedAccounts ?? false}
+    >
       {children}
     </FixturePresentation>
   )

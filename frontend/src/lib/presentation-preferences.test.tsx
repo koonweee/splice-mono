@@ -45,6 +45,7 @@ describe('presentation preferences before hydration', () => {
       ).toEqual({
         appearance: { mode, accent: '#b399cf' },
         maskBalances: null,
+        hideDiscountedAccounts: false,
         today: '2026-09-05',
       })
     },
@@ -155,4 +156,33 @@ it('adopts resolved launch preferences and date before rendering children withou
     </PresentationProvider>,
   )
   expect(screen.getByText('2026-09-07:true')).toBeTruthy()
+})
+
+it('restores and persists discounted account visibility without changing masking', () => {
+  function Filter() {
+    const { hideDiscountedAccounts, setHideDiscountedAccounts, maskBalances } =
+      usePresentationPreferences()
+    return (
+      <button onClick={() => setHideDiscountedAccounts((current) => !current)}>
+        {String(hideDiscountedAccounts)}:{String(maskBalances)}
+      </button>
+    )
+  }
+  const initial = readPresentationCookies(
+    'splice_hide_discounted_accounts=1; splice_mask_balances=0',
+    null,
+    now,
+  )
+  expect(initial.hideDiscountedAccounts).toBe(true)
+  render(
+    <PresentationProvider initial={initial}>
+      <Filter />
+    </PresentationProvider>,
+  )
+  act(() => screen.getByRole('button').click())
+  expect(screen.getByText('false:false')).toBeTruthy()
+  expect(document.cookie).toContain('splice_hide_discounted_accounts=0')
+  expect(
+    readPresentationCookies(document.cookie, null, now).hideDiscountedAccounts,
+  ).toBe(false)
 })

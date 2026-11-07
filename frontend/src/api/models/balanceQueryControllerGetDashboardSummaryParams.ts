@@ -8,6 +8,7 @@
 import type { BalanceQueryControllerGetDashboardSummaryPeriod } from './balanceQueryControllerGetDashboardSummaryPeriod'
 
 export type BalanceQueryControllerGetDashboardSummaryParams = {
+  hideDiscountedAccounts?: boolean
   /**
    * Valid calendar date (YYYY-MM-DD, inclusive)
    */

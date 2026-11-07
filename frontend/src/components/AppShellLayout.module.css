@@ -71,3 +71,27 @@
     gap: 4px;
   }
 }
+
+/* Keep every header action and the reserved refresh slot reachable on small phones. */
+@media (max-width: 24em) {
+  .homeShell {
+    --app-shell-header-height: calc(
+      max(104px, 6.5rem) + var(--splice-safe-area-top, 0px)
+    );
+    --app-shell-header-offset: var(--app-shell-header-height);
+  }
+
+  .homeShell .headerContent {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 4px;
+  }
+
+  .homeShell .headerBrand {
+    flex-basis: 100%;
+  }
+
+  .homeShell .headerActions {
+    margin-inline-start: auto;
+  }
+}

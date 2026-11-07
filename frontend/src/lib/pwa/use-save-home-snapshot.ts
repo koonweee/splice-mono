@@ -14,7 +14,8 @@ import type { TimePeriod } from '../types'
 export function useSaveHomeSnapshot(period: TimePeriod) {
   const client = useQueryClient()
   const { data: user } = useCurrentUser()
-  const { today, maskBalances } = usePresentationPreferences()
+  const { today, maskBalances, hideDiscountedAccounts } =
+    usePresentationPreferences()
   useEffect(() => {
     if (!cachedHomeEnabled || !user) return
     const authEpoch = getHomeSnapshotEpoch()
@@ -22,10 +23,10 @@ export function useSaveHomeSnapshot(period: TimePeriod) {
     let timer: ReturnType<typeof setTimeout> | undefined
     const save = () => {
       const summary = client.getQueryState(
-        dashboardSummaryOptions(period, today).queryKey,
+        dashboardSummaryOptions(period, today, hideDiscountedAccounts).queryKey,
       )
       const series = client.getQueryState(
-        dashboardSeriesOptions(period, today).queryKey,
+        dashboardSeriesOptions(period, today, hideDiscountedAccounts).queryKey,
       )
       if (summary?.status !== 'success' || !summary.data) return
       void saveHomeSnapshot({
@@ -39,6 +40,7 @@ export function useSaveHomeSnapshot(period: TimePeriod) {
           timezone: user.settings.timezone ?? 'UTC',
           appearance: normalizeAppearance(user.settings.appearance),
           maskBalances,
+          hideDiscountedAccounts,
           hideZeroBalanceAccounts:
             user.settings.hideZeroBalanceAccounts ?? false,
         },
@@ -61,8 +63,10 @@ export function useSaveHomeSnapshot(period: TimePeriod) {
         event.type === 'updated' &&
         event.action.type === 'success' &&
         [
-          dashboardSummaryOptions(period, today).queryKey[0],
-          dashboardSeriesOptions(period, today).queryKey[0],
+          dashboardSummaryOptions(period, today, hideDiscountedAccounts)
+            .queryKey[0],
+          dashboardSeriesOptions(period, today, hideDiscountedAccounts)
+            .queryKey[0],
         ].includes(event.query.queryKey[0] as string)
       )
         schedule()
@@ -71,5 +75,5 @@ export function useSaveHomeSnapshot(period: TimePeriod) {
       clearTimeout(timer)
       unsubscribe()
     }
-  }, [client, user, period, today, maskBalances])
+  }, [client, user, period, today, maskBalances, hideDiscountedAccounts])
 }
