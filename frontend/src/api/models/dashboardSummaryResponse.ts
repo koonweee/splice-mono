@@ -10,6 +10,7 @@ import type { MoneyWithSign } from './moneyWithSign'
 import type { DashboardAccountSummary } from './dashboardAccountSummary'
 
 export interface DashboardSummaryResponse {
+  hideDiscountedAccounts?: boolean
   period: DashboardPeriod
   startDate: string
   endDate: string

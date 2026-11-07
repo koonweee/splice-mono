@@ -95,3 +95,32 @@ it('honors saved preview masking without reading or writing device preferences',
   expect(storage).not.toHaveBeenCalled()
   expect(document.cookie).toBe(cookie)
 })
+
+it('isolates discounted-account visibility between frames without persistence', () => {
+  const cookie = document.cookie
+  const storage = vi.spyOn(Storage.prototype, 'setItem')
+  function Control({ name }: { name: string }) {
+    const { hideDiscountedAccounts, setHideDiscountedAccounts } =
+      usePresentationPreferences()
+    return (
+      <button onClick={() => setHideDiscountedAccounts((value) => !value)}>
+        {name}: {String(hideDiscountedAccounts)}
+      </button>
+    )
+  }
+  render(
+    <>
+      <PresentationProvider initial={{ hideDiscountedAccounts: true }}>
+        <Control name="Saved" />
+      </PresentationProvider>
+      <FixturePresentation masked={false}>
+        <Control name="Other" />
+      </FixturePresentation>
+    </>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Saved: true' }))
+  expect(screen.getByRole('button', { name: 'Saved: false' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Other: false' })).toBeTruthy()
+  expect(document.cookie).toBe(cookie)
+  expect(storage).not.toHaveBeenCalled()
+})

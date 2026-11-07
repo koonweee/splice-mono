@@ -289,6 +289,7 @@ export const pageExamples = [
     component: (_props: ExampleProps) => <Page path="/home?period=month" />,
     states: [
       'ready',
+      'discounted',
       'empty',
       'fresh',
       'hourly-refreshing',

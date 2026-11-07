@@ -1,6 +1,7 @@
 import { decimalRateRatio } from '../../src/common/exact-money';
 import { gzipSync } from 'node:zlib';
 import {
+  DashboardQuerySchema,
   DashboardSeriesResponseSchema,
   DashboardSummaryResponseSchema,
   DASHBOARD_PERIOD_DAYS,
@@ -350,5 +351,26 @@ describe('DashboardQueryService', () => {
       }),
     );
     expect(fixture.reads.snapshots).toBe(0);
+  });
+});
+
+describe('Home account filter parsing', () => {
+  it.each([true, 'true', false, 'false'])('parses %s explicitly', (value) => {
+    expect(
+      DashboardQuerySchema.parse({
+        period: 'month',
+        endDate: '2026-09-01',
+        hideDiscountedAccounts: value,
+      }).hideDiscountedAccounts,
+    ).toBe(value === true || value === 'true');
+  });
+  it.each(['0', '1', 'yes', 1, null])('rejects ambiguous %s', (value) => {
+    expect(
+      DashboardQuerySchema.safeParse({
+        period: 'month',
+        endDate: '2026-09-01',
+        hideDiscountedAccounts: value,
+      }).success,
+    ).toBe(false);
   });
 });

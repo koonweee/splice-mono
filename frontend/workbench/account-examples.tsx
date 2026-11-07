@@ -18,6 +18,12 @@ import type { ExampleProps } from './examples'
 
 function AccountOverview({ state, masked }: ExampleProps) {
   const [selected, setSelected] = useState('No account selected')
+  const summaries = fixtureSummaries.map((account, index) => ({
+    ...account,
+    ...(index === 0
+      ? { expectedValuePercent: '50', expectedTaxPercent: '30' }
+      : {}),
+  }))
   return (
     <Stack>
       <Text role="status">{selected}</Text>
@@ -28,9 +34,7 @@ function AccountOverview({ state, masked }: ExampleProps) {
       <AccountSection
         title="Assets"
         accounts={
-          state === 'empty'
-            ? []
-            : fixtureSummaries.filter((a) => a.type !== 'credit')
+          state === 'empty' ? [] : summaries.filter((a) => a.type !== 'credit')
         }
         balancesHidden={masked}
         comparisonLoading={state === 'loading'}
@@ -40,9 +44,7 @@ function AccountOverview({ state, masked }: ExampleProps) {
       <AccountSection
         title="Liabilities"
         accounts={
-          state === 'empty'
-            ? []
-            : fixtureSummaries.filter((a) => a.type === 'credit')
+          state === 'empty' ? [] : summaries.filter((a) => a.type === 'credit')
         }
         balancesHidden={masked}
         comparisonLoading={state === 'loading'}
@@ -52,7 +54,7 @@ function AccountOverview({ state, masked }: ExampleProps) {
       <Text size="sm" c="dimmed">
         Standalone account card (its production API has no masking option):
       </Text>
-      <AccountCard account={fixtureSummaries[0]} isLiability={false} />
+      <AccountCard account={summaries[0]} isLiability={false} />
     </Stack>
   )
 }

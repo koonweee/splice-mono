@@ -62,7 +62,7 @@
     "source": "components/AccountSection.skeleton.tsx",
     "component": "AccountSectionSkeleton",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "loadingPairs": [
       {
         "owner": "AccountSection",
@@ -92,21 +92,21 @@
     "source": "components/AccountSectionFrame.tsx",
     "component": "AccountGroupHeader",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
     "source": "components/AccountSectionFrame.tsx",
     "component": "AccountSectionHeading",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
     "source": "components/AccountSectionFrame.tsx",
     "component": "AccountSectionPanel",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
@@ -127,14 +127,15 @@
       "hourly-refreshing",
       "offline",
       "refresh-failure",
-      "retrying"
+      "retrying",
+      "discounted"
     ]
   },
   {
     "component": "AppThemeProvider",
     "source": "components/AppThemeProvider.tsx",
     "example": "page-home",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "discounted"]
   },
   {
     "component": "CategoryTransactionsModal",
@@ -152,7 +153,7 @@
     "source": "components/Chart.skeleton.tsx",
     "component": "HomeChartSkeleton",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "loadingPairs": [
       {
         "owner": "Chart",
@@ -197,7 +198,7 @@
     "source": "components/CompactAccountRow.skeleton.tsx",
     "component": "CompactAccountRowSkeleton",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "loadingPairs": [
       {
         "owner": "CompactAccountRow",
@@ -227,7 +228,7 @@
     "source": "components/CompactAccountRowFrame.tsx",
     "component": "CompactAccountRowFrame",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
@@ -288,7 +289,7 @@
     "component": "LazyChart",
     "source": "components/LazyChart.tsx",
     "example": "page-home",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "discounted"]
   },
   {
     "component": "LifecycleBadge",
@@ -312,13 +313,13 @@
     "component": "NetWorthCard",
     "source": "components/NetWorthCard.tsx",
     "example": "page-home",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "discounted"]
   },
   {
     "source": "components/NetWorthCardFrame.tsx",
     "component": "NetWorthCardFrame",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
@@ -1074,7 +1075,7 @@
     "component": "NotificationMenu",
     "source": "components/notifications/NotificationMenu.tsx",
     "example": "page-home",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "discounted"]
   },
   {
     "source": "components/pages/AccountsPageFrame.tsx",
@@ -1094,7 +1095,7 @@
     "source": "components/pages/HomePage.skeleton.tsx",
     "component": "HomeSkeleton",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "loadingPairs": [
       {
         "owner": "HomePage",
@@ -1118,13 +1119,13 @@
     "component": "HomePage",
     "source": "components/pages/HomePage.tsx",
     "example": "page-home",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "discounted"]
   },
   {
     "source": "components/pages/HomePageFrame.tsx",
     "component": "HomePageFrame",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
@@ -1137,7 +1138,7 @@
     "source": "components/pages/RoutePendingSkeleton.tsx",
     "component": "RoutePendingSkeleton",
     "example": "page-home",
-    "states": ["ready"],
+    "states": ["ready", "discounted"],
     "loadingPairs": [
       {
         "owner": "HomePage",
@@ -1983,7 +1984,8 @@
       "hourly-refreshing",
       "offline",
       "refresh-failure",
-      "retrying"
+      "retrying",
+      "discounted"
     ],
     "composition": "Presentational header status in the real app shell; Retry simulates a 2.5-second refresh before returning to the fixture failure."
   },

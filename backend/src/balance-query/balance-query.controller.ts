@@ -70,6 +70,7 @@ export class BalanceQueryController {
     status: 503,
     description: 'Required exchange rate unavailable',
   })
+  @ApiQuery({ name: 'hideDiscountedAccounts', required: false, type: Boolean })
   getDashboardSummary(
     @CurrentUser() user: JwtUser,
     @Query(new ZodValidationPipe(DashboardQuerySchema)) query: DashboardQuery,
@@ -105,6 +106,7 @@ export class BalanceQueryController {
     status: 503,
     description: 'Required exchange rate unavailable',
   })
+  @ApiQuery({ name: 'hideDiscountedAccounts', required: false, type: Boolean })
   getDashboardSeries(
     @CurrentUser() user: JwtUser,
     @Query(new ZodValidationPipe(DashboardQuerySchema)) query: DashboardQuery,

@@ -16,10 +16,12 @@ import type { AppearancePreference } from './design-system/appearance'
 import type { ReactNode } from 'react'
 import type { User } from '../api/models/user'
 
+export const DISCOUNTED_ACCOUNTS_COOKIE = 'splice_hide_discounted_accounts'
 export const MASK_COOKIE = 'splice_mask_balances'
 export const HOME_BALANCES_HIDDEN_STORAGE_KEY = 'splice:home-balances-hidden'
 export interface PresentationPreferences {
   appearance: AppearancePreference
+  hideDiscountedAccounts?: boolean
   maskBalances: boolean | null
   today: string
 }
@@ -50,6 +52,7 @@ export function readPresentationCookies(
     appearance: user
       ? normalizeAppearance(user.settings.appearance)
       : normalizeAppearance(decodeAppearance(entries.get(APPEARANCE_COOKIE))),
+    hideDiscountedAccounts: entries.get(DISCOUNTED_ACCOUNTS_COOKIE) === '1',
     maskBalances:
       entries.get(MASK_COOKIE) === '1'
         ? true
@@ -69,12 +72,19 @@ export const getPresentationPreferences = createIsomorphicFn()
     readPresentationCookies(document.cookie, user),
   )
 
-export function writePreferenceCookie(name: typeof MASK_COOKIE, value: string) {
+export function writePreferenceCookie(
+  name: typeof MASK_COOKIE | typeof DISCOUNTED_ACCOUNTS_COOKIE,
+  value: string,
+) {
   if (typeof document === 'undefined') return
   document.cookie = `${name}=${value}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
 }
 
 const PresentationContext = createContext({
+  hideDiscountedAccounts: false,
+  setHideDiscountedAccounts: (
+    _value: boolean | ((value: boolean) => boolean),
+  ) => {},
   maskBalances: true,
   setMaskBalances: (_value: boolean | ((value: boolean) => boolean)) => {},
   today: '',
@@ -88,6 +98,24 @@ export function PresentationProvider({
   initial: PresentationPreferences
   children: ReactNode
 }) {
+  const [hideDiscountedAccounts, setHiddenDiscounted] = useState(
+    initial.hideDiscountedAccounts ?? false,
+  )
+  const [initialDiscounted, setInitialDiscounted] = useState(
+    initial.hideDiscountedAccounts,
+  )
+  if (initialDiscounted !== initial.hideDiscountedAccounts) {
+    setInitialDiscounted(initial.hideDiscountedAccounts)
+    setHiddenDiscounted(initial.hideDiscountedAccounts ?? false)
+  }
+  const setHideDiscountedAccounts = (
+    value: boolean | ((value: boolean) => boolean),
+  ) => {
+    const next =
+      typeof value === 'function' ? value(hideDiscountedAccounts) : value
+    setHiddenDiscounted(next)
+    writePreferenceCookie(DISCOUNTED_ACCOUNTS_COOKIE, next ? '1' : '0')
+  }
   const [today, setToday] = useState(initial.today)
   const currentDay = useRef(today)
   const [initialDay, setInitialDay] = useState(initial.today)
@@ -158,7 +186,14 @@ export function PresentationProvider({
   }
   return (
     <PresentationContext.Provider
-      value={{ maskBalances, setMaskBalances, today, reconcileDate }}
+      value={{
+        hideDiscountedAccounts,
+        setHideDiscountedAccounts,
+        maskBalances,
+        setMaskBalances,
+        today,
+        reconcileDate,
+      }}
     >
       {children}
     </PresentationContext.Provider>

@@ -9,6 +9,7 @@ import type { DashboardPeriod } from './dashboardPeriod'
 import type { DashboardSeriesResponsePointsItem } from './dashboardSeriesResponsePointsItem'
 
 export interface DashboardSeriesResponse {
+  hideDiscountedAccounts?: boolean
   period: DashboardPeriod
   startDate: string
   endDate: string
