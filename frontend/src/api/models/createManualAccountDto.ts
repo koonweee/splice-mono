@@ -19,6 +19,16 @@ export interface CreateManualAccountDto {
   type: (typeof CreateManualAccountDtoType)[keyof typeof CreateManualAccountDtoType]
   /** @nullable */
   subType: CreateManualAccountDtoSubType
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedValuePercent?: string
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedTaxPercent?: string
   availableBalance: MoneyWithSign
   currentBalance: MoneyWithSign
 }

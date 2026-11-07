@@ -71,6 +71,8 @@ export class DashboardQueryService {
         type: account.type,
         subType: account.subType,
         valuationMode: account.valuationMode,
+        expectedValuePercent: account.expectedValuePercent,
+        expectedTaxPercent: account.expectedTaxPercent,
         institutionName: account.bankLink?.institutionName ?? null,
         archivedAt: account.archivedAt?.toISOString() ?? null,
         syncedAt: result.latestSyncedAt?.toISOString() ?? null,

@@ -18,6 +18,8 @@ export interface DashboardAccountSummary {
   /** @nullable */
   subType: string | null
   valuationMode: DashboardAccountSummaryValuationMode
+  expectedValuePercent?: string
+  expectedTaxPercent?: string
   /** @nullable */
   institutionName: string | null
   /** @nullable */

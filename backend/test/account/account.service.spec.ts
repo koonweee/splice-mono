@@ -907,4 +907,44 @@ describe('AccountService', () => {
       });
     });
   });
+
+  it.each([null, 'linked-provider'])(
+    'saves user-owned assumptions for account link %s without snapshot events',
+    async (bankLinkId) => {
+      const entity = AccountEntity.fromDto(
+        { ...mockCreateAccountDto, bankLinkId },
+        mockUserId,
+      );
+      entity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(entity);
+      mockRepository.save.mockImplementation(async (saved) => saved);
+      const result = await service.update(
+        entity.id,
+        { expectedValuePercent: '50', expectedTaxPercent: '30' },
+        mockUserId,
+      );
+      expect(mockRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: entity.id, userId: mockUserId }),
+        }),
+      );
+      expect(result?.currentBalance.money.amount).toBe('50000');
+      expect(result?.effectiveBalance?.money.amount).toBe('17500');
+      expect(result?.expectedValuePercent).toBe('50');
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects an unrepresentable adjusted value before persisting settings', async () => {
+    const entity = AccountEntity.fromDto(mockCreateAccountDto, mockUserId);
+    entity.id = 'bounded';
+    mockRepository.findOne.mockResolvedValue(entity);
+    await expect(
+      service.update(
+        entity.id,
+        { expectedValuePercent: '9'.repeat(100) },
+        mockUserId,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockRepository.save).not.toHaveBeenCalled();
+  });
 });

@@ -16,9 +16,18 @@ import {
   type AccountValuationMode,
   CreateAccountDto,
 } from '../types/Account';
+import { calculateEffectiveBalance } from '../common/effective-balance';
 import type { APIAccount } from '../types/BankLink';
 
 @Entity()
+@Check(
+  'CHK_account_expected_value',
+  `"expectedValuePercent" > 0 AND "expectedValuePercent" NOT IN ('NaN'::numeric, 'Infinity'::numeric)`,
+)
+@Check(
+  'CHK_account_expected_tax',
+  `"expectedTaxPercent" >= 0 AND "expectedTaxPercent" <= 100`,
+)
 @Check(
   'CHK_account_valuation_mode',
   `"valuationMode" IN ('balance', 'holdings')`,
@@ -45,6 +54,13 @@ export class AccountEntity extends OwnedEntity {
   /** User-authored notes for this account. */
   @Column({ type: 'text', nullable: true })
   notes: string | null;
+
+  /** User-owned valuation assumptions; provider sync must preserve these. */
+  @Column({ type: 'numeric', default: '100' })
+  expectedValuePercent: string;
+
+  @Column({ type: 'numeric', default: '0' })
+  expectedTaxPercent: string;
 
   /** Mask of account number (e.g., last 4 digits) */
   @Column({ type: 'varchar', nullable: true })
@@ -97,6 +113,8 @@ export class AccountEntity extends OwnedEntity {
     entity.name = dto.name;
     entity.customName = dto.customName ?? null;
     entity.notes = dto.notes ?? null;
+    entity.expectedValuePercent = dto.expectedValuePercent ?? '100';
+    entity.expectedTaxPercent = dto.expectedTaxPercent ?? '0';
     entity.mask = dto.mask ?? null;
     entity.availableBalance = BalanceColumns.fromMoneyWithSign(
       dto.availableBalance,
@@ -124,6 +142,12 @@ export class AccountEntity extends OwnedEntity {
       name: this.name,
       customName: this.customName,
       notes: this.notes,
+      expectedValuePercent: this.expectedValuePercent ?? '100',
+      expectedTaxPercent: this.expectedTaxPercent ?? '0',
+      effectiveBalance: calculateEffectiveBalance(
+        this.currentBalance.toMoneyWithSign(),
+        this,
+      ),
       mask: this.mask,
       availableBalance: this.availableBalance.toMoneyWithSign(),
       currentBalance: this.currentBalance.toMoneyWithSign(),

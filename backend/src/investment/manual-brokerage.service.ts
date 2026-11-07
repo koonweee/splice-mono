@@ -1,3 +1,4 @@
+import { calculateEffectiveBalance } from '../common/effective-balance';
 import {
   BadRequestException,
   ConflictException,
@@ -109,6 +110,8 @@ export class ManualBrokerageService {
       entity.name = dto.name;
       entity.customName = dto.customName ?? null;
       entity.notes = dto.notes ?? null;
+      entity.expectedValuePercent = dto.expectedValuePercent ?? '100';
+      entity.expectedTaxPercent = dto.expectedTaxPercent ?? '0';
       entity.mask = null;
       entity.type = String(AccountType.Investment);
       entity.subType = String(AccountSubtype.Brokerage);
@@ -123,6 +126,16 @@ export class ManualBrokerageService {
         accountCurrency,
         valuation.totalMinorUnits,
       );
+      try {
+        calculateEffectiveBalance(
+          entity.currentBalance.toMoneyWithSign(),
+          entity,
+        );
+      } catch {
+        throw new BadRequestException(
+          'Adjusted account value exceeds the supported amount',
+        );
+      }
       const saved = await accountRepository.save(entity);
       await this.persistValuation(
         manager,

@@ -2395,6 +2395,8 @@ describe('BankLinkService', () => {
         bankLinkId,
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
+        expectedValuePercent: '50',
+        expectedTaxPercent: '30',
         currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
         toObject: jest.fn().mockReturnValue({
           id: 'existing-account-id',
@@ -2412,6 +2414,14 @@ describe('BankLinkService', () => {
         accountIdToBankLinkId,
         mockUserId,
       );
+
+      const saved = mockAccountRepository.save.mock.calls[0][0];
+      expect(saved).not.toHaveProperty('expectedValuePercent');
+      expect(saved).not.toHaveProperty('expectedTaxPercent');
+      expect(existingAccountEntity).toMatchObject({
+        expectedValuePercent: '50',
+        expectedTaxPercent: '30',
+      });
 
       // Should have updated the existing entity's name
       expect(existingAccountEntity.name).toBe(mockApiAccount.name);

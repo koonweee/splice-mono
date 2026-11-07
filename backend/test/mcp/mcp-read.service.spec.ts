@@ -460,6 +460,104 @@ describe('McpReadService', () => {
     });
   });
 
+  it('returns effective MCP snapshots alongside untouched base balances', async () => {
+    const recorded = {
+      money: { amount: '10000000', currency: 'USD' },
+      sign: MoneySign.POSITIVE,
+    };
+    const zero = {
+      money: { amount: '0', currency: 'USD' },
+      sign: MoneySign.POSITIVE,
+    };
+    balanceSnapshotRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    queryBuilder.getMany.mockResolvedValue([
+      {
+        id: 'snapshot-1',
+        accountId: 'account-1',
+        snapshotDate: '2026-05-20',
+        snapshotType: 'daily',
+        account: {
+          name: 'RSUs',
+          type: 'investment',
+          expectedValuePercent: '50',
+          expectedTaxPercent: '30',
+        },
+        currentBalance: {
+          amount: '10000000',
+          currency: 'USD',
+          toMoneyWithSign: () => recorded,
+        },
+        availableBalance: {
+          amount: '0',
+          currency: 'USD',
+          toMoneyWithSign: () => zero,
+        },
+      },
+    ]);
+    const result = await service.listBalanceSnapshots('user-1', {});
+    expect(result.data[0]).toMatchObject({
+      currentBalance: {
+        amount: '100000',
+        currency: 'USD',
+        sign: MoneySign.POSITIVE,
+      },
+      effectiveBalance: {
+        amount: '35000',
+        currency: 'USD',
+        sign: MoneySign.POSITIVE,
+      },
+      reportingEffectiveBalance: {
+        amount: '35000',
+        currency: 'USD',
+        sign: MoneySign.POSITIVE,
+      },
+      expectedValuePercent: '50',
+      expectedTaxPercent: '30',
+    });
+    expect(recorded.money.amount).toBe('10000000');
+  });
+
+  it('adjusts MCP holdings while preserving recorded value, quantity and price', async () => {
+    const account = {
+      id: 'investment-account',
+      name: 'RSUs',
+      type: 'investment',
+      expectedValuePercent: '50',
+      expectedTaxPercent: '30',
+    };
+    holdingsQueries.read.mockResolvedValue([
+      {
+        account: { ...account, toObject: () => account },
+        snapshot: {
+          snapshotDate: '2026-05-20',
+          holdings: [
+            buildInvestmentHolding({
+              id: 'holding-1',
+              accountId: account.id,
+              snapshotDate: '2026-05-20',
+              institutionValue: '123.45',
+            }),
+          ],
+        },
+      },
+    ]);
+    const result = await service.listInvestmentHoldings('user-1', {});
+    expect(result.data[0]).toMatchObject({
+      institutionValue: {
+        amount: '123.45',
+        currency: 'USD',
+        sign: MoneySign.POSITIVE,
+      },
+      effectiveInstitutionValue: {
+        amount: '43.21',
+        currency: 'USD',
+        sign: MoneySign.POSITIVE,
+      },
+      expectedValuePercent: '50',
+      expectedTaxPercent: '30',
+    });
+  });
+
   it('rejects unowned investment account IDs before reading holdings', async () => {
     const ownedAccountId = '11111111-1111-4111-8111-111111111111';
     const foreignAccountId = '99999999-9999-4999-8999-999999999999';

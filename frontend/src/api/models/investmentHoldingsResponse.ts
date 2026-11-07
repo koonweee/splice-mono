@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { InvestmentHoldingsResponseAccountValue } from './investmentHoldingsResponseAccountValue'
+import type { InvestmentHoldingsResponseEffectiveAccountValue } from './investmentHoldingsResponseEffectiveAccountValue'
 import type { InvestmentHoldingSnapshot } from './investmentHoldingSnapshot'
 
 export interface InvestmentHoldingsResponse {
@@ -15,5 +16,6 @@ export interface InvestmentHoldingsResponse {
   /** @nullable */
   accountCurrency: string | null
   accountValue: InvestmentHoldingsResponseAccountValue
+  effectiveAccountValue?: InvestmentHoldingsResponseEffectiveAccountValue
   holdings: InvestmentHoldingSnapshot[]
 }
