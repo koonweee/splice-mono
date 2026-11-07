@@ -819,3 +819,7 @@ Validation: 90 targeted frontend tests, 83 backend preference/service/controller
 ## Account value adjustments
 
 `account-dialogs/account` covers the common unset Details row. `account-dialogs/adjusted` opens Details with 50% value / 30% tax. Edit percentages, save/remove, mask amounts, and use `failure=writes` or `latency=2000` for failed/pending drafts. Both use the real AccountModal, ValueAdjustmentsSection and owner loading fallback. Use the same adjusted fixture with `hold=reads` to inspect the known extra base-balance row.
+
+Home rows and standalone account cards use their standard presentation for configured accounts too. The first account in account-overview/ready carries 50% value / 30% tax and has no adjustment label; effective balances are unchanged. Adjustment controls and the base/adjusted breakdown remain in account Details.
+
+Verified account-overview/ready in Light 390px, Dark 1440px and OLED 390px; a real local saved 50%/30% account retained its standard Home row and 35k effective balance after reload, with Details settings intact. The 66 focused component/workbench tests, lint/typecheck, token checks and workbench build pass.
