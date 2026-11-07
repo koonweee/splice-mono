@@ -64,7 +64,7 @@ const balanceChanges: Array<QueryFamily> = [
 export const mutationDependencies: Partial<
   Record<string, ReadonlyArray<QueryFamily>>
 > = {
-  accountControllerUpdate: ['accounts', 'dashboardSummary', 'accountHistory'],
+  accountControllerUpdate: ['accounts', 'balances', 'investments'],
   accountControllerCreate: balanceChanges,
   accountControllerRemove: [...balanceChanges, ...transactionChanges],
   accountControllerArchive: [...balanceChanges, 'notificationSummary'],

@@ -223,6 +223,8 @@ export interface AccountSummaryData {
   id: string
   name: string
   customName?: string | null
+  expectedValuePercent?: string
+  expectedTaxPercent?: string
   type: AccountTypeValue
   subType?: string
   effectiveBalance: MoneyWithSign
@@ -368,6 +370,8 @@ export function transformToDashboardData(
           customName: accountResult.account.customName,
           type: accountResult.account.type,
           subType: accountResult.account.subType ?? undefined,
+          expectedValuePercent: accountResult.account.expectedValuePercent,
+          expectedTaxPercent: accountResult.account.expectedTaxPercent,
           effectiveBalance: accountResult.effectiveBalance.balance,
           convertedEffectiveBalance:
             accountResult.effectiveBalance.convertedBalance,

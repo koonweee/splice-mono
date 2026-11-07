@@ -268,7 +268,12 @@ export class McpPortfolioVisualizationService {
               : rateByCurrencyDate.get(`${holding.snapshotDate}:${currency}`);
           if (!rate) throw unavailable();
           const valueUsdDecimal = roundUsd(
-            moneyDecimal(holding.institutionValue, currency)
+            moneyDecimal(
+              holding.effectiveInstitutionValue === undefined
+                ? holding.institutionValue
+                : holding.effectiveInstitutionValue,
+              currency,
+            )
               .mul(rate.numerator)
               .div(rate.denominator),
           );
@@ -282,6 +287,8 @@ export class McpPortfolioVisualizationService {
 
           return {
             accountId: holding.accountId,
+            expectedValuePercent: holding.expectedValuePercent,
+            expectedTaxPercent: holding.expectedTaxPercent,
             accountName: holding.accountName,
             snapshotDate: holding.snapshotDate,
             quantity: quantity?.toString() ?? null,
@@ -349,6 +356,8 @@ export class McpPortfolioVisualizationService {
         allocationBps: allocations.get(position.securityId) ?? 0,
         contributions: position.contributions.map((contribution) => ({
           accountId: contribution.accountId,
+          expectedValuePercent: contribution.expectedValuePercent,
+          expectedTaxPercent: contribution.expectedTaxPercent,
           accountName: contribution.accountName,
           snapshotDate: contribution.snapshotDate,
           quantity: contribution.quantity,

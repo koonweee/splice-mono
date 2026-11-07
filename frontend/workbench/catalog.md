@@ -288,3 +288,6 @@ production document paths from `lib/pwa/launch-canvas.ts`. It has no independent
 component tile. `scripts/verify-safe-area.mjs`, run by `pwa:launch-test`, verifies
 initial-document paint, theme colors, React mounting, header stacking and tablet
 rotation; `page-home` supplies the mounted visual inspection.
+
+| ValueAdjustmentsSection | `components/accounts/ValueAdjustmentsSection.tsx` | [Open](http://localhost:4001/?example=account-dialogs&state=adjusted) | account, adjusted; Details → Add/Edit; failure=writes retains draft |
+| ValueAdjustmentsFrame | `components/accounts/ValueAdjustmentsFrame.tsx` | [Open](http://localhost:4001/?example=account-dialogs&state=adjusted) | Shared loaded/loading section boundary and heading |

@@ -2,6 +2,7 @@ import { CurrencyConversionService } from '../currency-exchange/currency-convers
 import { fxRequestKey } from '../currency-exchange/currency-exchange.service';
 import { buildBalanceWithConversion } from '../balance-query/balance-projection';
 import type { RateWithSource } from '../types/ExchangeRate';
+import { calculateEffectiveBalance } from '../common/effective-balance';
 import { Injectable } from '@nestjs/common';
 import {
   formatAccountLabel,
@@ -25,6 +26,9 @@ export interface AccountsSurfaceAccount {
   groupingLabel: string;
   institutionName: string | null;
   balance: SerializedMoneyWithSign;
+  currentBalance: SerializedMoneyWithSign;
+  expectedValuePercent: string;
+  expectedTaxPercent: string;
   reportingBalance: SerializedMoneyWithSign | null;
   exchangeRate: RateWithSource | null;
   reportingCoverage: 'available' | 'missing_fx';
@@ -97,7 +101,7 @@ export class AccountsSurfaceService {
         const converted = missing
           ? null
           : buildBalanceWithConversion(
-              account.currentBalance,
+              calculateEffectiveBalance(account.currentBalance, account),
               reportingCurrency,
               rate
                 ? new Map([
@@ -125,7 +129,7 @@ export class AccountsSurfaceService {
     'reportingBalance' | 'exchangeRate' | 'reportingCoverage'
   > {
     const grouping = getAccountGrouping(String(account.type));
-    const balance = account.currentBalance;
+    const balance = calculateEffectiveBalance(account.currentBalance, account);
 
     return {
       id: account.id,
@@ -141,6 +145,9 @@ export class AccountsSurfaceService {
       groupingLabel: getAccountGroupingLabel(grouping),
       institutionName: account.bankLink?.institutionName ?? null,
       balance,
+      currentBalance: account.currentBalance,
+      expectedValuePercent: account.expectedValuePercent ?? '100',
+      expectedTaxPercent: account.expectedTaxPercent ?? '0',
     };
   }
 }

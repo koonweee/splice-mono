@@ -6,6 +6,7 @@ import {
   type SerializedMoneyWithSign,
 } from './MoneyWithSign';
 import { AccountSchema } from './Account';
+import { AccountValueAdjustmentsSchema } from '../common/account-value-adjustments';
 import { OwnedSchema } from './Timestamps';
 
 export const InvestmentSecurityProviderSchema = z.enum(['plaid', 'yahoo']);
@@ -159,6 +160,7 @@ export const InvestmentHoldingsResponseSchema = registerSchema(
     snapshotDate: DateStringSchema.nullable(),
     accountCurrency: z.string().nullable(),
     accountValue: MoneyWithSignSchema.nullable(),
+    effectiveAccountValue: MoneyWithSignSchema.nullable().optional(),
     holdings: z.array(InvestmentHoldingSnapshotSchema),
   }),
 );
@@ -220,6 +222,7 @@ export const CreateManualBrokerageAccountDtoSchema = registerSchema(
       accountCurrency: CurrencyCodeSchema,
       positions: z.array(ManualBrokeragePositionInputSchema).min(1),
     })
+    .merge(AccountValueAdjustmentsSchema)
     .strict(),
 );
 export type CreateManualBrokerageAccountDto = z.infer<

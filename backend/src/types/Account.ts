@@ -5,6 +5,8 @@ import { CryptoAccountType } from './AccountType';
 import { APIAccountSchema, SanitizedBankLinkSchema } from './BankLink';
 import { CurrentAndAvailableBalanceSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
+import { AccountValueAdjustmentsSchema } from '../common/account-value-adjustments';
+import { MoneyWithSignSchema } from './MoneyWithSign';
 
 /**
  * Account type schema that accepts both Plaid banking types and crypto types
@@ -32,6 +34,7 @@ export const AccountSchema = registerSchema(
       type: AccountTypeSchema,
       subType: AccountSubTypeSchema.nullable(),
       valuationMode: AccountValuationModeSchema,
+      effectiveBalance: MoneyWithSignSchema.optional(),
       /** External account ID from bank provider (e.g., Plaid account_id) */
       externalAccountId: z.string().nullable().optional(),
       /** ID of linked BankLink (optional 1-to-1 relationship) */
@@ -43,6 +46,7 @@ export const AccountSchema = registerSchema(
       /** Latest non-forward-filled snapshot sync time */
       syncedAt: z.date().optional(),
     })
+    .merge(AccountValueAdjustmentsSchema)
     .merge(CurrentAndAvailableBalanceSchema)
     .merge(OwnedSchema),
 );
@@ -69,6 +73,7 @@ export const CreateAccountDtoSchema = z
     rawApiAccount: APIAccountSchema.nullable().optional(),
     valuationMode: AccountValuationModeSchema.optional(),
   })
+  .merge(AccountValueAdjustmentsSchema)
   .merge(CurrentAndAvailableBalanceSchema);
 
 export type CreateAccountDto = z.infer<typeof CreateAccountDtoSchema>;
@@ -84,6 +89,7 @@ export const CreateManualAccountDtoSchema = registerSchema(
       type: AccountTypeSchema,
       subType: AccountSubTypeSchema.nullable(),
     })
+    .merge(AccountValueAdjustmentsSchema)
     .merge(CurrentAndAvailableBalanceSchema)
     .strict(),
 );
@@ -100,6 +106,7 @@ export const UpdateAccountMetadataDtoSchema = registerSchema(
       customName: z.string().nullable().optional(),
       notes: z.string().nullable().optional(),
     })
+    .merge(AccountValueAdjustmentsSchema)
     .strict(),
 );
 

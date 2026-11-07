@@ -436,7 +436,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Get Accounts Snapshot',
         description:
-          'Get current Splice account records, institutions, groupings, native balances and explicit reporting balances with FX coverage. fxReferenceDate uses the current UTC date; these account records are not historical snapshots. Missing FX leaves reportingBalance null while preserving native evidence. Use balance history or attribution for historical values.',
+          'Get current Splice account records, institutions, groupings, effective native balances (current expected-value/tax assumptions), base currentBalance and percentage settings, and explicit reporting balances with FX coverage. fxReferenceDate uses the current UTC date; these account records are not historical snapshots. Missing FX leaves reportingBalance null while preserving native evidence. Use balance history or attribution for historical values.',
         inputSchema: {},
         outputSchema: AccountsSnapshotOutputSchema,
         requiredScopes: ['splice:read'],
@@ -455,7 +455,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Get Balance History',
         description:
-          'Get observed net-worth chart points using current balances from the latest recorded snapshot on or before each requested date, including assets and liabilities. Missing snapshots contribute zero, with explicit coverage. Endpoints expose opening/closing native and reporting balances, selected snapshot ID/date/type, recording timestamp and FX date/source. Legacy account syncedAt is latest account sync, not historical valuation. Values are recorded changes, not market P&L or spending causes.',
+          'Get net-worth chart points using effective balances under current account expected-value/tax assumptions, derived from base current balances from the latest recorded snapshot on or before each requested date, including assets and liabilities. Missing snapshots contribute zero, with explicit coverage. Endpoints expose opening/closing native and reporting balances, selected snapshot ID/date/type, recording timestamp and FX date/source. Legacy account syncedAt is latest account sync, not historical valuation. Values are recorded changes, not market P&L or spending causes.',
         inputSchema: {
           startDate: DateStringSchema,
           endDate: DateStringSchema,
@@ -1518,7 +1518,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Visualize Portfolio',
         description:
-          'Visualize current portfolio value, ownership, allocation, exposure, and concentration when a visual answer materially helps. Do not call for capability discovery, metadata questions, hypothetical discussion, investment activity, or simple holding facts that prose answers clearly.',
+          'Visualize current portfolio value, ownership, allocation, exposure, and concentration when a visual answer materially helps. Values use current account expected-value and expected-tax assumptions; share quantities and quoted prices remain base evidence. Do not call for capability discovery, metadata questions, hypothetical discussion, investment activity, or simple holding facts that prose answers clearly.',
         inputSchema: {
           accountIds: z
             .array(UuidSchema)

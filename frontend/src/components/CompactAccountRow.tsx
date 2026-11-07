@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import { Group, Skeleton, Text, Tooltip } from '@mantine/core'
 import { AlertTriangle } from 'lucide-react'
+import { hasAccountValueAdjustments } from '../lib/account-value-adjustments'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatAccountType,
@@ -69,6 +70,7 @@ export function CompactAccountRow({
             {account.institutionName
               ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`
               : formatAccountType(account.subType || account.type)}
+            {hasAccountValueAdjustments(account) ? ' · Adjusted' : ''}
           </Text>
         </>
       }

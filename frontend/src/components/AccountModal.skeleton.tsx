@@ -1,6 +1,8 @@
 import { Box, Button, Group, Skeleton, Stack, Tabs, Text } from '@mantine/core'
 import { foundation } from '../lib/design-system/foundation'
+import { hasAccountValueAdjustments } from '../lib/account-value-adjustments'
 import { TimePeriod } from '../lib/types'
+import { ValueAdjustmentsFrame } from './accounts/ValueAdjustmentsFrame'
 import { AccountComparisonFrame } from './AccountComparisonFrame'
 import { HomeChartSkeleton } from './Chart.skeleton'
 import { AccountSections } from './AccountSections'
@@ -35,7 +37,9 @@ export function AccountDetailsSkeleton({
         data-converted={Boolean(convertedBalance)}
       >
         <Text data-typography="body" c="dimmed">
-          Current balance
+          {hasAccountValueAdjustments(account ?? {})
+            ? 'Adjusted value'
+            : 'Current balance'}
         </Text>
         <Group justify="flex-end" className={accountStyles.balanceValue}>
           <Stack gap={4} align="flex-end">
@@ -44,6 +48,20 @@ export function AccountDetailsSkeleton({
           </Stack>
         </Group>
       </Group>
+      {hasAccountValueAdjustments(account ?? {}) && (
+        <Group
+          justify="space-between"
+          wrap="nowrap"
+          className={accountStyles.balanceRow}
+        >
+          <Text data-typography="metadata" c="dimmed">
+            Account balance
+          </Text>
+          <Group className={accountStyles.nativeBalanceRow}>
+            <Skeleton h={16} w={100} />
+          </Group>
+        </Group>
+      )}
       {account?.changePercent !== undefined && (
         <AccountComparisonFrame period={period}>
           <Skeleton height={18} width={80} />
@@ -86,6 +104,26 @@ export function AccountDetailsSkeleton({
                   <Skeleton h={14} w={82} />
                 </Button>
               </Group>
+              <ValueAdjustmentsFrame
+                action={
+                  <Button disabled size="compact-md" variant="subtle">
+                    <Skeleton h={14} w={42} />
+                  </Button>
+                }
+              >
+                {hasAccountValueAdjustments(account ?? {}) && (
+                  <Stack gap="xs" mt="xs">
+                    {['Expected value', 'Expected tax'].map((label) => (
+                      <Group justify="space-between" key={label}>
+                        <Text data-typography="metadata" c="dimmed">
+                          {label}
+                        </Text>
+                        <Skeleton h={14} w={40} />
+                      </Group>
+                    ))}
+                  </Stack>
+                )}
+              </ValueAdjustmentsFrame>
             </Stack>
           ) : selected === 'history' ? (
             <>

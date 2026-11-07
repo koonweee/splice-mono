@@ -174,4 +174,21 @@ describe('AccountsSurfaceService', () => {
       groupingLabel: 'Cash',
     });
   });
+
+  it('uses adjusted native/reporting account values and retains base evidence', async () => {
+    mockAccountService.findAll.mockResolvedValue([
+      createMockAccount({
+        expectedValuePercent: '50',
+        expectedTaxPercent: '30',
+        currentBalance: {
+          money: { amount: '10000000', currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        },
+      }),
+    ]);
+    const result = await service.getAccountsSnapshot(mockUserId);
+    expect(result.accounts[0].balance.money.amount).toBe('3500000');
+    expect(result.accounts[0].reportingBalance?.money.amount).toBe('3500000');
+    expect(result.accounts[0].currentBalance.money.amount).toBe('10000000');
+  });
 });

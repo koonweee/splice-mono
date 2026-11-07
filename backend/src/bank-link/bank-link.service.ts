@@ -1873,7 +1873,19 @@ export class BankLinkService extends OwnedCrudService<
           );
         }
 
-        account = await accountRepository.save(account);
+        // Provider writes leave user-owned percentages untouched, even if they
+        // changed after this sync loaded its account rows.
+        const settings = {
+          expectedValuePercent: account.expectedValuePercent,
+          expectedTaxPercent: account.expectedTaxPercent,
+        };
+        const providerWrite = Object.assign(new AccountEntity(), account);
+        Reflect.deleteProperty(providerWrite, 'expectedValuePercent');
+        Reflect.deleteProperty(providerWrite, 'expectedTaxPercent');
+        account = Object.assign(
+          await accountRepository.save(providerWrite),
+          settings,
+        );
       }
 
       savedAccounts.push(account);

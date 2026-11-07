@@ -378,4 +378,25 @@ describe('McpPortfolioVisualizationService', () => {
     );
     expect(currencyConversionService.getResolvedRates).not.toHaveBeenCalled();
   });
+
+  it('aggregates effective holding contributions while preserving quantity and quoted price', async () => {
+    mcpReadService.listInvestmentHoldings.mockResolvedValue({
+      data: [
+        holding({
+          effectiveInstitutionValue: {
+            amount: '35',
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          },
+          expectedValuePercent: '50',
+          expectedTaxPercent: '30',
+        }),
+      ],
+    });
+    const result = await service.visualize(USER_ID);
+    expect(result.totalValueUsd.amount).toBe('35');
+    expect(result.positions[0].valueUsd.amount).toBe('35');
+    expect(result.positions[0].quantity).toBe('2.5');
+    expect(result.positions[0].contributions[0].priceUsd?.amount).toBe('40');
+  });
 });

@@ -13,4 +13,14 @@ export interface UpdateAccountMetadataDto {
   customName?: string | null
   /** @nullable */
   notes?: string | null
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedValuePercent?: string
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedTaxPercent?: string
 }

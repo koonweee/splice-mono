@@ -8,8 +8,8 @@
 import type { AccountType } from './accountType'
 import type { AccountSubType } from './accountSubType'
 import type { AccountValuationMode } from './accountValuationMode'
-import type { AccountBankLink } from './accountBankLink'
 import type { MoneyWithSign } from './moneyWithSign'
+import type { AccountBankLink } from './accountBankLink'
 
 export interface Account {
   id: string
@@ -25,6 +25,7 @@ export interface Account {
   /** @nullable */
   subType: AccountSubType
   valuationMode: AccountValuationMode
+  effectiveBalance?: MoneyWithSign
   /** @nullable */
   externalAccountId?: string | null
   /** @nullable */
@@ -33,6 +34,16 @@ export interface Account {
   /** @nullable */
   archivedAt?: string | null
   syncedAt?: string
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedValuePercent?: string
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedTaxPercent?: string
   availableBalance: MoneyWithSign
   currentBalance: MoneyWithSign
   createdAt: string

@@ -11,6 +11,7 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { AccountType } from 'plaid';
 import { In, IsNull, Not, Repository } from 'typeorm';
+import { calculateEffectiveBalance } from '../common/effective-balance';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import {
@@ -73,11 +74,14 @@ export class AccountService extends OwnedCrudService<
       name: dto.name,
       customName: dto.customName,
       notes: dto.notes,
+      expectedValuePercent: dto.expectedValuePercent,
+      expectedTaxPercent: dto.expectedTaxPercent,
       type: dto.type,
       subType: dto.subType,
       availableBalance: dto.availableBalance,
       currentBalance: dto.currentBalance,
     };
+    this.assertSupportedValue(manualDto.currentBalance, manualDto);
     const account = await super.create(manualDto, userId);
 
     if (!account.bankLinkId) {
@@ -115,6 +119,7 @@ export class AccountService extends OwnedCrudService<
       );
     }
 
+    this.assertSupportedValue(newBalance, accountEntity);
     accountEntity.currentBalance = BalanceColumns.fromMoneyWithSign(newBalance);
 
     // Manual investment accounts only track a single balance value.
@@ -131,8 +136,13 @@ export class AccountService extends OwnedCrudService<
     accountEntity.availableBalance =
       BalanceColumns.fromMoneyWithSign(availableBalance);
 
-    const savedEntity = await this.repository.save(accountEntity);
-    const account = savedEntity.toObject();
+    // Balance writes cannot overwrite concurrently edited user valuation settings.
+    const balanceWrite = await this.repository.save({
+      id: accountEntity.id,
+      currentBalance: accountEntity.currentBalance,
+      availableBalance: accountEntity.availableBalance,
+    });
+    const account = Object.assign(accountEntity, balanceWrite).toObject();
 
     this.eventEmitter.emit(
       ManualAccountEvents.BALANCE_UPDATED,
@@ -163,10 +173,31 @@ export class AccountService extends OwnedCrudService<
     }
 
     this.applyUpdate(entity, dto);
+    this.assertSupportedValue(entity.currentBalance.toMoneyWithSign(), entity);
 
-    const savedEntity = await this.repository.save(entity);
+    // An assumptions edit must not write the provider balances from an earlier read.
+    const changesValuation =
+      dto.expectedValuePercent !== undefined ||
+      dto.expectedTaxPercent !== undefined;
+    const saved = await this.repository.save(
+      changesValuation ? { id: entity.id, ...dto } : entity,
+    );
+    const savedEntity = Object.assign(entity, saved);
     this.logger.log({ id }, `${this.entityName} updated successfully`);
     return savedEntity.toObject();
+  }
+
+  private assertSupportedValue(
+    balance: SerializedMoneyWithSign,
+    settings: Pick<Account, 'expectedValuePercent' | 'expectedTaxPercent'>,
+  ): void {
+    try {
+      calculateEffectiveBalance(balance, settings);
+    } catch {
+      throw new BadRequestException(
+        'Adjusted account value exceeds the supported amount',
+      );
+    }
   }
 
   protected applyUpdate(
@@ -183,6 +214,10 @@ export class AccountService extends OwnedCrudService<
     }
     if (dto.customName !== undefined) entity.customName = dto.customName;
     if (dto.notes !== undefined) entity.notes = dto.notes;
+    if (dto.expectedValuePercent !== undefined)
+      entity.expectedValuePercent = dto.expectedValuePercent;
+    if (dto.expectedTaxPercent !== undefined)
+      entity.expectedTaxPercent = dto.expectedTaxPercent;
   }
 
   async findOne(id: string, userId: string): Promise<Account | null> {

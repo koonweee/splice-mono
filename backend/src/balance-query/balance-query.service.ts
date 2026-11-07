@@ -309,6 +309,8 @@ export class BalanceQueryService {
                 type: true,
                 subType: true,
                 valuationMode: true,
+                expectedValuePercent: true,
+                expectedTaxPercent: true,
                 externalAccountId: true,
                 bankLinkId: true,
                 availableBalance: { amount: true, currency: true, sign: true },
@@ -541,7 +543,10 @@ export class BalanceQueryService {
     dateRates: Map<string, RateWithSource> | undefined,
   ): AccountBalanceResult {
     // Calculate effective balance based on account type
-    const effectiveBalance = this.calculateEffectiveBalance(currentBalance);
+    const effectiveBalance = calculateSharedEffectiveBalance(
+      currentBalance,
+      account,
+    );
 
     // Determine syncedAt (undefined if forward-filled or no snapshot)
     const isForwardFilled = snapshot && snapshot.snapshotDate !== targetDate;
@@ -574,17 +579,6 @@ export class BalanceQueryService {
             : 'recorded',
       },
     };
-  }
-
-  /**
-   * Calculate effective balance based on account type.
-   * - Investment/brokerage accounts: currentBalance
-   * - All other types: currentBalance
-   */
-  private calculateEffectiveBalance(
-    currentBalance: SerializedMoneyWithSign,
-  ): SerializedMoneyWithSign {
-    return calculateSharedEffectiveBalance(currentBalance);
   }
 
   /**

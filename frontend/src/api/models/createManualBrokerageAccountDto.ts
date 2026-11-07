@@ -18,4 +18,14 @@ export interface CreateManualBrokerageAccountDto {
   accountCurrency: string
   /** @minItems 1 */
   positions: ManualBrokeragePositionInput[]
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedValuePercent?: string
+  /**
+   * @maxLength 100
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  expectedTaxPercent?: string
 }

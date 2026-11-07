@@ -17,6 +17,9 @@ export function balanceEndpoint(result: AccountBalanceResult, date: string) {
   return {
     date,
     nativeBalance: result.effectiveBalance.balance,
+    baseBalance: result.currentBalance.balance,
+    expectedValuePercent: result.account.expectedValuePercent ?? '100',
+    expectedTaxPercent: result.account.expectedTaxPercent ?? '0',
     reportingBalance:
       result.effectiveBalance.reportingBalance ??
       result.effectiveBalance.convertedBalance ??
@@ -117,6 +120,7 @@ export function buildBalanceAttribution(
     },
     limitations: [
       'Recorded balances include native balance changes and reporting FX effects; these are not market P&L or spending attribution.',
+      'Effective balances apply the current account expected-value and expected-tax percentages to every historical date; snapshots retain base balances.',
       'Missing snapshots contribute zero under chart semantics, not a known zero valuation.',
       'Account classification and metadata reflect the current owned account set; snapshot update time is recording time, not a separate market price timestamp.',
     ],

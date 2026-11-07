@@ -51,6 +51,8 @@ export const DashboardAccountSummarySchema = registerSchema(
     type: AccountTypeSchema,
     subType: z.string().nullable(),
     valuationMode: AccountValuationModeSchema,
+    expectedValuePercent: z.string().optional(),
+    expectedTaxPercent: z.string().optional(),
     institutionName: z.string().nullable(),
     archivedAt: z.string().datetime().nullable(),
     syncedAt: z.string().datetime().nullable(),

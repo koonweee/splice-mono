@@ -46,6 +46,7 @@ function AccountDialogs({ state, masked }: ExampleProps) {
   const onClose = () => setOpened(false)
   const account = {
     ...fixtureSummaries[0],
+    institutionName: undefined,
     ...(state === 'account'
       ? {
           changePercent: 0,
@@ -54,6 +55,9 @@ function AccountDialogs({ state, masked }: ExampleProps) {
             sign: 'positive' as const,
           },
         }
+      : {}),
+    ...(state === 'adjusted'
+      ? { expectedValuePercent: '50', expectedTaxPercent: '30' }
       : {}),
     ...(state === 'holdings'
       ? {
@@ -97,12 +101,14 @@ function AccountDialogs({ state, masked }: ExampleProps) {
             skeleton={
               <AccountDetailsSkeleton
                 account={account}
+                section={state === 'adjusted' ? 'details' : 'history'}
                 period={TimePeriod.month}
               />
             }
           >
             <DeferredAccount
               account={account}
+              initialSection={state === 'adjusted' ? 'details' : 'history'}
               opened={opened}
               onClose={onClose}
               balancesHidden={masked}
@@ -188,9 +194,11 @@ export const dialogExamples = [
     id: 'account-dialogs',
     title: 'Account details, add, backfill and holdings dialogs',
     component: AccountDialogs,
-    states: ['account', 'add', 'backfill', 'holdings'],
+    states: ['account', 'adjusted', 'add', 'backfill', 'holdings'],
     components: [
       'AccountModal',
+      'ValueAdjustmentsSection',
+      'ValueAdjustmentsFrame',
       'AddAccountModal',
       'BackfillModal',
       'ManualBrokerageHoldingsModal',

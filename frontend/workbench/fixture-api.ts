@@ -1,4 +1,5 @@
 import { AxiosError, AxiosHeaders, CanceledError } from 'axios'
+import { adjustedAccountBalance } from '../src/lib/account-value-adjustments'
 import { OfflineMutationError } from '../src/lib/offline-mutation'
 import { resolveAppearance } from '../src/lib/design-system/appearance'
 import { waitForRead } from './loading-gates'
@@ -44,6 +45,7 @@ export type FixtureOptions = {
   longContent?: boolean
   empty?: boolean
   manualHoldings?: boolean
+  adjustedAccount?: boolean
   appearance?: unknown
   latency?: number
   failure?: 'none' | 'reads' | 'writes'
@@ -55,6 +57,10 @@ export type FixtureOptions = {
 export function createFixtureApi(options: FixtureOptions = {}) {
   let manualResponseLost = false
   const accounts = structuredClone(options.empty ? [] : fixtureAccounts)
+  if (options.adjustedAccount && accounts[0]) {
+    accounts[0].expectedValuePercent = '50'
+    accounts[0].expectedTaxPercent = '30'
+  }
   if (options.longContent && accounts.length) {
     for (const [index, status] of (
       ['OK', 'PENDING_REAUTH'] as const
@@ -202,7 +208,12 @@ export function createFixtureApi(options: FixtureOptions = {}) {
               account,
               availableBalance: { balance: account.availableBalance },
               currentBalance: { balance: account.currentBalance },
-              effectiveBalance: { balance: account.currentBalance },
+              effectiveBalance: {
+                balance: adjustedAccountBalance(
+                  account.currentBalance,
+                  account,
+                ),
+              },
             },
           ]),
         ),
@@ -460,6 +471,10 @@ export function createFixtureApi(options: FixtureOptions = {}) {
     else if (account && method === 'PATCH') {
       const patch = config.data as UpdateAccountMetadataDto
       Object.assign(account, patch, { updatedAt: FIXTURE_NOW })
+      account.effectiveBalance = adjustedAccountBalance(
+        account.currentBalance,
+        account,
+      )
       result = account
     } else if (account && match[2] === 'balance') {
       const { balance } = config.data as UpdateBalanceBody
@@ -496,6 +511,7 @@ export const axios = createFixtureApi({
   sankey: params.has('sankey') ? params.get('sankey') !== 'false' : undefined,
   empty: params.get('state') === 'empty',
   longContent: params.get('state') === 'long-content',
+  adjustedAccount: params.get('state') === 'adjusted',
   manualHoldings:
     params.get('example') === 'account-dialogs' &&
     params.get('state') === 'holdings',
