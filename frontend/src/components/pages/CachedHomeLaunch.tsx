@@ -129,6 +129,7 @@ export function SavedHomePreview({
         initial={{
           appearance: snapshot.presentation.appearance,
           today: snapshot.endDate,
+          hideDiscountedAccounts: snapshot.presentation.hideDiscountedAccounts,
           maskBalances:
             cookies?.maskBalances ?? snapshot.presentation.maskBalances,
         }}

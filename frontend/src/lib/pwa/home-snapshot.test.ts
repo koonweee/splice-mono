@@ -312,3 +312,26 @@ describe('durable cleanup acknowledgment', () => {
     expect(await cleared).toBe(true)
   })
 })
+
+it('binds saved summary and series to the saved visibility scope', () => {
+  const value = snapshot()
+  value.authEpoch = 'scope-fixture'
+  value.presentation.hideDiscountedAccounts = true
+  expect(isHomeSnapshot(value)).toBe(false)
+  value.summary.data.hideDiscountedAccounts = true
+  expect(isHomeSnapshot(value)).toBe(true)
+  value.series = {
+    updatedAt: value.summary.updatedAt,
+    data: {
+      period: value.summary.data.period,
+      startDate: value.summary.data.startDate,
+      endDate: value.endDate,
+      reportingCurrency: 'USD',
+      generatedAt: value.summary.data.generatedAt,
+      points: [],
+    },
+  }
+  expect(isHomeSnapshot(value)).toBe(false)
+  value.series.data.hideDiscountedAccounts = true
+  expect(isHomeSnapshot(value)).toBe(true)
+})

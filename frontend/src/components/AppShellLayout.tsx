@@ -11,6 +11,7 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { Link } from '@tanstack/react-router'
 import {
+  ChartNoAxesCombined,
   CreditCard,
   Eye,
   EyeOff,
@@ -51,7 +52,12 @@ export function AppShellLayout({
 }) {
   const [navigationOpened, { toggle }] = useDisclosure()
   const opened = navigationOpened && !readOnly
-  const { maskBalances, setMaskBalances } = usePresentationPreferences()
+  const {
+    maskBalances,
+    setMaskBalances,
+    hideDiscountedAccounts,
+    setHideDiscountedAccounts,
+  } = usePresentationPreferences()
   const navItems = [
     { to: '/home', label: 'Home', icon: Home },
     { to: '/transactions', label: 'Transactions', icon: TrendingUp },
@@ -62,6 +68,7 @@ export function AppShellLayout({
 
   return (
     <AppShell
+      className={pathname === '/home' ? styles.homeShell : undefined}
       header={{
         height: 'calc(max(60px, 3.75rem) + var(--splice-safe-area-top, 0px))',
       }}
@@ -80,7 +87,7 @@ export function AppShellLayout({
           wrap="nowrap"
           gap={8}
         >
-          <Group wrap="nowrap" gap={4}>
+          <Group wrap="nowrap" gap={4} className={styles.headerBrand}>
             <Burger
               aria-label={opened ? 'Close navigation' : 'Open navigation'}
               aria-expanded={opened}
@@ -110,6 +117,34 @@ export function AppShellLayout({
                   onClick={() => setMaskBalances((current) => !current)}
                 >
                   {maskBalances ? <EyeOff size={18} /> : <Eye size={18} />}
+                </ActionIcon>
+              </Tooltip>
+            )}
+            {pathname === '/home' && (
+              <Tooltip
+                label={
+                  hideDiscountedAccounts
+                    ? 'Show accounts below 100% expected value'
+                    : 'Hide accounts below 100% expected value'
+                }
+              >
+                <ActionIcon
+                  variant="subtle"
+                  c="dimmed"
+                  disabled={readOnly}
+                  aria-label={
+                    hideDiscountedAccounts
+                      ? 'Show accounts below 100% expected value'
+                      : 'Hide accounts below 100% expected value'
+                  }
+                  aria-pressed={hideDiscountedAccounts}
+                  onClick={() =>
+                    setHideDiscountedAccounts((current) => !current)
+                  }
+                >
+                  <ChartNoAxesCombined size={18} aria-hidden="true">
+                    {hideDiscountedAccounts && <path d="m3 3 18 18" />}
+                  </ChartNoAxesCombined>
                 </ActionIcon>
               </Tooltip>
             )}

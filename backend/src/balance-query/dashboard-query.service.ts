@@ -24,7 +24,11 @@ export class DashboardQueryService {
 
   private getStartDate(userId: string, query: DashboardQuery): Promise<string> {
     return query.period === 'all'
-      ? this.balances.getHistoryStartDate(userId, query.endDate)
+      ? this.balances.getHistoryStartDate(
+          userId,
+          query.endDate,
+          query.hideDiscountedAccounts ?? false,
+        )
       : Promise.resolve(
           dayjs(query.endDate)
             .subtract(DASHBOARD_PERIOD_DAYS[query.period], 'day')
@@ -42,6 +46,7 @@ export class DashboardQueryService {
       startDate,
       query.endDate,
       true,
+      query.hideDiscountedAccounts ?? false,
     );
     let first: BalanceQueryPerDateResult | undefined;
     let last: BalanceQueryPerDateResult | undefined;
@@ -114,6 +119,7 @@ export class DashboardQueryService {
       startDate,
       query.endDate,
       false,
+      query.hideDiscountedAccounts ?? false,
     );
     const points: DashboardSeriesResponse['points'] = [];
     // Keep all-history responses bounded while retaining both endpoints.

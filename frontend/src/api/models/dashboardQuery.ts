@@ -6,8 +6,10 @@
  * OpenAPI spec version: 1.0
  */
 import type { DashboardPeriod } from './dashboardPeriod'
+import type { DashboardQueryHideDiscountedAccounts } from './dashboardQueryHideDiscountedAccounts'
 
 export interface DashboardQuery {
   period: DashboardPeriod
   endDate: string
+  hideDiscountedAccounts?: DashboardQueryHideDiscountedAccounts
 }

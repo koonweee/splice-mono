@@ -139,13 +139,21 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           context.queryClient.setQueryData(key, data, { updatedAt })
       }
       seed(
-        dashboardSummaryOptions(snapshot.period, snapshot.endDate).queryKey,
+        dashboardSummaryOptions(
+          snapshot.period,
+          snapshot.endDate,
+          snapshot.presentation.hideDiscountedAccounts,
+        ).queryKey,
         snapshot.summary.data,
         snapshot.summary.updatedAt,
       )
       if (snapshot.series)
         seed(
-          dashboardSeriesOptions(snapshot.period, snapshot.endDate).queryKey,
+          dashboardSeriesOptions(
+            snapshot.period,
+            snapshot.endDate,
+            snapshot.presentation.hideDiscountedAccounts,
+          ).queryKey,
           snapshot.series.data,
           snapshot.series.updatedAt,
         )
@@ -162,7 +170,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       // a real read on launch even when the restored data was recently written.
       const liveSummary = await context.queryClient
         .fetchQuery({
-          ...dashboardSummaryOptions(period, presentation.today),
+          ...dashboardSummaryOptions(
+            period,
+            presentation.today,
+            presentation.hideDiscountedAccounts,
+          ),
           staleTime: 0,
         })
         .then(
@@ -175,11 +187,19 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           snapshot &&
           snapshot.identity === sessionUser.id &&
           !context.queryClient.getQueryData(
-            dashboardSummaryOptions(period, presentation.today).queryKey,
+            dashboardSummaryOptions(
+              period,
+              presentation.today,
+              presentation.hideDiscountedAccounts,
+            ).queryKey,
           ),
         )
       void context.queryClient.prefetchQuery({
-        ...dashboardSeriesOptions(period, presentation.today),
+        ...dashboardSeriesOptions(
+          period,
+          presentation.today,
+          presentation.hideDiscountedAccounts,
+        ),
         staleTime: 0,
       })
       // Local masking remains usable while launch reads are in flight.

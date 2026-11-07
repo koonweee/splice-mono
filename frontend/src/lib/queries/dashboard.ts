@@ -3,15 +3,31 @@ import {
   getBalanceQueryControllerGetDashboardSummaryQueryOptions,
 } from '../../api/clients/spliceAPI'
 import { FINANCIAL_STALE_TIME } from '../query-policy'
-import type { TimePeriod } from '../types'
+import type { DashboardPeriod } from '../../api/models'
 
-export const dashboardSummaryOptions = (period: TimePeriod, endDate: string) =>
+export const dashboardSummaryOptions = (
+  period: DashboardPeriod,
+  endDate: string,
+  hideDiscountedAccounts = false,
+) =>
   getBalanceQueryControllerGetDashboardSummaryQueryOptions(
-    { period, endDate },
+    {
+      period,
+      endDate,
+      ...(hideDiscountedAccounts ? { hideDiscountedAccounts: true } : {}),
+    },
     { query: { staleTime: FINANCIAL_STALE_TIME } },
   )
-export const dashboardSeriesOptions = (period: TimePeriod, endDate: string) =>
+export const dashboardSeriesOptions = (
+  period: DashboardPeriod,
+  endDate: string,
+  hideDiscountedAccounts = false,
+) =>
   getBalanceQueryControllerGetDashboardSeriesQueryOptions(
-    { period, endDate },
+    {
+      period,
+      endDate,
+      ...(hideDiscountedAccounts ? { hideDiscountedAccounts: true } : {}),
+    },
     { query: { staleTime: FINANCIAL_STALE_TIME } },
   )

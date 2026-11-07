@@ -20,6 +20,7 @@ export type HomeSnapshot = {
     timezone: string
     appearance: AppearancePreference
     maskBalances: boolean
+    hideDiscountedAccounts?: boolean
     hideZeroBalanceAccounts: boolean
   }
   summary: { data: DashboardSummaryResponse; updatedAt: number }
@@ -147,13 +148,15 @@ export function isHomeSnapshot(
       !record(p) ||
       !only(
         p,
-        'currency timezone appearance maskBalances hideZeroBalanceAccounts',
+        'currency timezone appearance maskBalances hideZeroBalanceAccounts hideDiscountedAccounts',
       ) ||
       !currency(p.currency) ||
       !string(p.timezone) ||
       !parseAppearance(p.appearance) ||
       !record(p.appearance) ||
       !only(p.appearance, 'mode accent monospaceAmounts') ||
+      (p.hideDiscountedAccounts !== undefined &&
+        typeof p.hideDiscountedAccounts !== 'boolean') ||
       typeof p.maskBalances !== 'boolean' ||
       typeof p.hideZeroBalanceAccounts !== 'boolean'
     )
@@ -164,6 +167,10 @@ export function isHomeSnapshot(
       only(entry, 'data updatedAt') &&
       timestamp(entry.updatedAt, value.savedAt as number) &&
       record(entry.data) &&
+      (entry.data.hideDiscountedAccounts === undefined ||
+        typeof entry.data.hideDiscountedAccounts === 'boolean') &&
+      (entry.data.hideDiscountedAccounts ?? false) ===
+        (p.hideDiscountedAccounts ?? false) &&
       entry.data.period === value.period &&
       entry.data.endDate === value.endDate &&
       date(entry.data.startDate) &&
@@ -181,7 +188,7 @@ export function isHomeSnapshot(
     if (
       !only(
         summary,
-        'period startDate endDate reportingCurrency generatedAt netWorth changeAmount changePercent assets liabilities',
+        'period startDate endDate reportingCurrency generatedAt netWorth changeAmount changePercent assets liabilities hideDiscountedAccounts',
       ) ||
       !money(summary.netWorth) ||
       !money(summary.changeAmount) ||
@@ -204,7 +211,7 @@ export function isHomeSnapshot(
         series.startDate !== summary.startDate ||
         !only(
           series,
-          'period startDate endDate reportingCurrency generatedAt points',
+          'period startDate endDate reportingCurrency generatedAt points hideDiscountedAccounts',
         ) ||
         !Array.isArray(series.points) ||
         series.points.length > 122 ||

@@ -11,6 +11,7 @@ import {
   Between,
   In,
   LessThanOrEqual,
+  MoreThanOrEqual,
   Repository,
   type EntityManager,
 } from 'typeorm';
@@ -248,11 +249,20 @@ export class BalanceQueryService {
    * is retained. Boundary reads select at most two snapshots per account;
    * series reads retain complete daily FX validation, even on omitted dates.
    */
-  async getHistoryStartDate(userId: string, endDate: string): Promise<string> {
+  async getHistoryStartDate(
+    userId: string,
+    endDate: string,
+    hideDiscountedAccounts = false,
+  ): Promise<string> {
     const first = await this.snapshotRepository.findOne({
       where: {
         userId,
-        account: { userId },
+        account: {
+          userId,
+          ...(hideDiscountedAccounts
+            ? { expectedValuePercent: MoreThanOrEqual('100') }
+            : {}),
+        },
         snapshotDate: LessThanOrEqual(endDate),
       },
       order: { snapshotDate: 'ASC' },
@@ -266,9 +276,11 @@ export class BalanceQueryService {
     startDate: string,
     endDate: string,
     boundaryOnly: boolean,
+    hideDiscountedAccounts = false,
   ) {
     return this.loadBalanceProjection(userId, startDate, endDate, {
       boundaryOnly,
+      hideDiscountedAccounts,
       includeLatestSync: boundaryOnly,
     });
   }
@@ -278,6 +290,7 @@ export class BalanceQueryService {
     startDate: string,
     endDate: string,
     options: {
+      hideDiscountedAccounts?: boolean;
       accountIds?: string[];
       boundaryOnly?: boolean;
       includeLatestSync?: boolean;
@@ -295,6 +308,9 @@ export class BalanceQueryService {
             manager.withRepository(this.accountRepository).find({
               where: {
                 userId,
+                ...(options.hideDiscountedAccounts
+                  ? { expectedValuePercent: MoreThanOrEqual('100') }
+                  : {}),
                 ...(options.accountIds
                   ? { id: In([...new Set(options.accountIds)]) }
                   : {}),

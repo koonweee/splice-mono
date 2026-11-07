@@ -45,6 +45,7 @@ export type FixtureOptions = {
   longContent?: boolean
   empty?: boolean
   manualHoldings?: boolean
+  homeDiscountedAccount?: boolean
   adjustedAccount?: boolean
   appearance?: unknown
   latency?: number
@@ -57,6 +58,12 @@ export type FixtureOptions = {
 export function createFixtureApi(options: FixtureOptions = {}) {
   let manualResponseLost = false
   const accounts = structuredClone(options.empty ? [] : fixtureAccounts)
+  if (options.homeDiscountedAccount && accounts[0]) {
+    accounts[0].name = 'RSUs'
+    accounts[0].expectedValuePercent = '50'
+    accounts[0].expectedTaxPercent = '30'
+    accounts[0].currentBalance.money.amount = '10000000'
+  }
   if (options.adjustedAccount && accounts[0]) {
     accounts[0].expectedValuePercent = '50'
     accounts[0].expectedTaxPercent = '30'
@@ -263,11 +270,15 @@ export function createFixtureApi(options: FixtureOptions = {}) {
       fixtureDashboard(
         (config.params?.period ?? 'month') as DashboardPeriod,
         options.empty ?? false,
+        config.params?.hideDiscountedAccounts === true,
+        accounts,
       ).summary,
     '/balance-query/dashboard-series': (config) =>
       fixtureDashboard(
         (config.params?.period ?? 'month') as DashboardPeriod,
         options.empty ?? false,
+        config.params?.hideDiscountedAccounts === true,
+        accounts,
       ).series,
   }
   let nextId = 1
@@ -512,6 +523,7 @@ export const axios = createFixtureApi({
   empty: params.get('state') === 'empty',
   longContent: params.get('state') === 'long-content',
   adjustedAccount: params.get('state') === 'adjusted',
+  homeDiscountedAccount: params.get('state') === 'discounted',
   manualHoldings:
     params.get('example') === 'account-dialogs' &&
     params.get('state') === 'holdings',

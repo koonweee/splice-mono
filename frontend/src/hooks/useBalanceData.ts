@@ -37,13 +37,14 @@ import { TimePeriod } from '@/lib/types'
  * Hook for fetching all account balances for the dashboard
  */
 export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
-  const { today } = usePresentationPreferences()
+  const { today, hideDiscountedAccounts } = usePresentationPreferences()
   const queryClient = useQueryClient()
   const summary = useQuery({
-    ...dashboardSummaryOptions(period, today),
+    ...dashboardSummaryOptions(period, today, hideDiscountedAccounts),
     // Keep balances and rows mounted; callers skeleton the comparison slots.
     // Never revive a removed private cache or carry values across currencies/days.
     placeholderData: (previous, previousQuery) =>
+      (previous?.hideDiscountedAccounts ?? false) === hideDiscountedAccounts &&
       previous?.endDate === today &&
       previous.reportingCurrency === reportingCurrency &&
       previousQuery &&
@@ -62,7 +63,8 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
     retained.current = queryClient
       .getQueryCache()
       .find<DashboardSummaryResponse>({
-        queryKey: dashboardSummaryOptions(period, today).queryKey,
+        queryKey: dashboardSummaryOptions(period, today, hideDiscountedAccounts)
+          .queryKey,
         exact: true,
       })
   }, [summary.data, summary.isPlaceholderData, queryClient, period, today])
@@ -84,17 +86,20 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
   )
   // A failed filter request keeps balances from their live source Query, so
   // metadata/mutation patches apply immediately. Removed/reset caches never revive.
-  const summaryData =
+  const receivedSummary =
     summary.data ??
     (summary.isError &&
     cachedPrevious &&
+    (cachedPrevious.hideDiscountedAccounts ?? false) ===
+      hideDiscountedAccounts &&
     cachedPrevious.endDate === today &&
     cachedPrevious.reportingCurrency === reportingCurrency
       ? cachedPrevious
       : undefined)
   const series = useQuery({
-    ...dashboardSeriesOptions(period, today),
+    ...dashboardSeriesOptions(period, today, hideDiscountedAccounts),
     placeholderData: (previous, previousQuery) =>
+      (previous?.hideDiscountedAccounts ?? false) === hideDiscountedAccounts &&
       previous?.endDate === today &&
       previous.reportingCurrency === reportingCurrency &&
       previousQuery &&
@@ -105,30 +110,87 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
         ? previous
         : undefined,
   })
+  // A filter changes the entire valuation scope. Publish its summary and
+  // complete series together; late responses stay in their own query caches.
+  const publishedScope = useRef<
+    | {
+        hidden: boolean
+        summary: DashboardSummaryResponse
+        series: DashboardSeriesResponse
+      }
+    | undefined
+  >(undefined)
+  const priorScope = publishedScope.current
+  if (
+    priorScope &&
+    (queryClient.getQueryData(
+      dashboardSummaryOptions(
+        priorScope.summary.period,
+        priorScope.summary.endDate,
+        priorScope.hidden,
+      ).queryKey,
+    ) !== priorScope.summary ||
+      queryClient.getQueryData(
+        dashboardSeriesOptions(
+          priorScope.series.period,
+          priorScope.series.endDate,
+          priorScope.hidden,
+        ).queryKey,
+      ) !== priorScope.series)
+  )
+    publishedScope.current = undefined
+  const readyScope =
+    receivedSummary &&
+    series.data &&
+    !summary.isPlaceholderData &&
+    !series.isPlaceholderData &&
+    (receivedSummary.hideDiscountedAccounts ?? false) ===
+      hideDiscountedAccounts &&
+    (series.data.hideDiscountedAccounts ?? false) === hideDiscountedAccounts &&
+    receivedSummary.period === series.data.period &&
+    receivedSummary.startDate === series.data.startDate &&
+    receivedSummary.endDate === series.data.endDate &&
+    receivedSummary.reportingCurrency === series.data.reportingCurrency
+  if (readyScope)
+    publishedScope.current = {
+      hidden: hideDiscountedAccounts,
+      summary: receivedSummary,
+      series: series.data,
+    }
+  const switchingScope = Boolean(
+    publishedScope.current &&
+    publishedScope.current.hidden !== hideDiscountedAccounts,
+  )
+  const summaryData = switchingScope
+    ? publishedScope.current?.summary
+    : receivedSummary
+  const seriesData = switchingScope
+    ? publishedScope.current?.series
+    : series.data
   // Retain only the visual series while switching. Comparison values still
   // require a matching summary; hover is disabled until both queries settle.
   const chartDisplayData = useMemo<Array<ChartDataPoint> | undefined>(() => {
     if (
-      !series.data ||
-      series.data.endDate !== today ||
-      series.data.reportingCurrency !== reportingCurrency
+      !seriesData ||
+      seriesData.endDate !== today ||
+      seriesData.reportingCurrency !== reportingCurrency
     )
       return undefined
-    const shortRange = ['day', 'week', 'month'].includes(series.data.period)
-    return series.data.points.map((point) => ({
+    const shortRange = ['day', 'week', 'month'].includes(seriesData.period)
+    return seriesData.points.map((point) => ({
       date: point.date,
       label: dayjs(point.date).format(shortRange ? 'MMM D' : 'MMM D, YYYY'),
       value: moneyToChartNumber(point.netWorth),
       money: point.netWorth,
     }))
-  }, [series.data, reportingCurrency, today])
+  }, [seriesData, reportingCurrency, today])
   const seriesMatchesSummary =
-    series.data !== undefined &&
+    seriesData !== undefined &&
     summaryData !== undefined &&
-    series.data.reportingCurrency === summaryData.reportingCurrency &&
-    series.data.period === summaryData.period &&
-    series.data.startDate === summaryData.startDate &&
-    series.data.endDate === summaryData.endDate
+    seriesData.reportingCurrency === summaryData.reportingCurrency &&
+    seriesData.period === summaryData.period &&
+    seriesData.startDate === summaryData.startDate &&
+    seriesData.endDate === summaryData.endDate
   const data = useMemo<DashboardData | undefined>(() => {
     if (
       !summaryData ||
@@ -150,7 +212,7 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
       assets: summaryData.assets.map(account),
       liabilities: summaryData.liabilities.map(account),
       chartData: seriesMatchesSummary
-        ? series.data.points.map((point) => ({
+        ? seriesData.points.map((point) => ({
             date: point.date,
             label: dayjs(point.date).format(
               [TimePeriod.day, TimePeriod.week, TimePeriod.month].includes(
@@ -164,13 +226,7 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
           }))
         : [],
     }
-  }, [
-    summaryData,
-    series.data,
-    seriesMatchesSummary,
-    reportingCurrency,
-    period,
-  ])
+  }, [summaryData, seriesData, seriesMatchesSummary, reportingCurrency, period])
   return {
     data,
     isLoading: summary.isPending,
@@ -186,7 +242,8 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
         : undefined),
     isFetching: summary.isFetching,
     isChangingPeriod:
-      summaryData !== undefined && summaryData.period !== period,
+      summaryData !== undefined &&
+      (summaryData.period !== period || switchingScope),
     refetch: summary.refetch,
     seriesError: series.error,
     seriesLoading:

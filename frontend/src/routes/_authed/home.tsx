@@ -15,11 +15,19 @@ export const Route = createFileRoute('/_authed/home')({
   loader: async ({ context, deps }) => {
     prepareChartCode('home')
     void context.queryClient.prefetchQuery(
-      dashboardSeriesOptions(deps.period, context.presentation.today),
+      dashboardSeriesOptions(
+        deps.period,
+        context.presentation.today,
+        context.presentation.hideDiscountedAccounts,
+      ),
     )
     await loadQuery(
       context.queryClient,
-      dashboardSummaryOptions(deps.period, context.presentation.today),
+      dashboardSummaryOptions(
+        deps.period,
+        context.presentation.today,
+        context.presentation.hideDiscountedAccounts,
+      ),
     )
   },
   component: HomeRoute,
