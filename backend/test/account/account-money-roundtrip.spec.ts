@@ -118,13 +118,18 @@ describe('manual account money persistence round trips', () => {
           availableBalance: serializeBalance(entity.availableBalance),
         });
 
-        persistedEntity = Object.assign(new AccountEntity(), entity, {
-          id: accountId,
-          createdAt: entity.createdAt ?? persistedAt,
-          updatedAt: persistedAt,
-          currentBalance: hydrateBigintBalance(entity.currentBalance),
-          availableBalance: hydrateBigintBalance(entity.availableBalance),
-        });
+        persistedEntity = Object.assign(
+          new AccountEntity(),
+          persistedEntity,
+          entity,
+          {
+            id: accountId,
+            createdAt: entity.createdAt ?? persistedAt,
+            updatedAt: persistedAt,
+            currentBalance: hydrateBigintBalance(entity.currentBalance),
+            availableBalance: hydrateBigintBalance(entity.availableBalance),
+          },
+        );
         return persistedEntity;
       }),
       findOne: jest.fn(async () => persistedEntity),

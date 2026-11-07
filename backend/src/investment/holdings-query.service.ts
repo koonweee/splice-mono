@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { assertDateRange } from '../common/query-bounds';
+import { calculateEffectiveBalance } from '../common/effective-balance';
 import { AccountEntity } from '../account/account.entity';
 import type { InvestmentHoldingsResponse } from '../types/Investment';
 import { HoldingsSnapshotHeaderEntity } from './holdings-snapshot-header.entity';
@@ -134,6 +135,8 @@ export class HoldingsQueryService {
         'account.type',
         'account.subType',
         'account.valuationMode',
+        'account.expectedValuePercent',
+        'account.expectedTaxPercent',
         'account.externalAccountId',
         'account.bankLinkId',
         'account.archivedAt',
@@ -263,6 +266,9 @@ export class HoldingsQueryService {
               ? account.currentBalance.currency
               : null),
           accountValue,
+          effectiveAccountValue: accountValue
+            ? calculateEffectiveBalance(accountValue, account)
+            : null,
           holdings: header
             ? (holdingsByHeader.get(header.id) ?? []).map((holding) =>
                 holding.toObject(),

@@ -41,6 +41,7 @@ import {
   formatRelativeTime,
   getChangeColorMantine,
 } from '../lib/format'
+import { hasAccountValueAdjustments } from '../lib/account-value-adjustments'
 import { AccountComparisonFrame } from './AccountComparisonFrame'
 import { AccountSections } from './AccountSections'
 import { ManualBrokerageHoldingsModalSkeleton } from './investments/ManualBrokerageHoldingsModal.skeleton'
@@ -50,6 +51,7 @@ import { InvestmentHoldingsTableSkeleton } from './investments/InvestmentHolding
 import { InvestmentActivityTableSkeleton } from './investments/InvestmentActivityTable.skeleton'
 import { DataState } from './DataState'
 import styles from './AccountModal.module.css'
+import { ValueAdjustmentsSection } from './accounts/ValueAdjustmentsSection'
 import { InlineBalanceEditor } from './accounts/InlineBalanceEditor'
 import { LazyChart as Chart } from './LazyChart'
 import { EditorModal } from './forms/EditorModal'
@@ -67,6 +69,7 @@ interface AccountModalProps {
   onClose: () => void
   period: TimePeriod
   comparisonLoading?: boolean
+  initialSection?: 'history' | 'details'
   balancesHidden?: boolean
 }
 
@@ -77,6 +80,7 @@ export function AccountModal({
   period,
   balancesHidden = false,
   comparisonLoading = false,
+  initialSection = 'history',
 }: AccountModalProps) {
   const queryClient = useQueryClient()
   const updateAccount = useAccountMetadataMutation(account?.id)
@@ -143,7 +147,7 @@ export function AccountModal({
   const activeSection =
     selectedSection && selectedSection.accountId === account?.id
       ? selectedSection.value
-      : 'history'
+      : initialSection
   const summaryIsHoldingsValued = account?.valuationMode === 'holdings'
   const {
     holdings,
@@ -185,6 +189,9 @@ export function AccountModal({
   const isHoldingsValued =
     summaryIsHoldingsValued || fullAccount?.valuationMode === 'holdings'
   const notesChanged = notes !== savedNotes
+  const hasAdjustments = hasAccountValueAdjustments(
+    fullAccount ?? account ?? {},
+  )
 
   const notesEditorOpenedRef = useRef(notesEditorOpened)
   notesEditorOpenedRef.current = notesEditorOpened
@@ -367,9 +374,9 @@ export function AccountModal({
                   wrap="nowrap"
                 >
                   <Text data-typography="body" c="dimmed">
-                    Current balance
+                    {hasAdjustments ? 'Adjusted value' : 'Current balance'}
                   </Text>
-                  {isManual && !isHoldingsValued ? (
+                  {isManual && !isHoldingsValued && !hasAdjustments ? (
                     <Stack
                       align="flex-end"
                       className={styles.balanceValue}
@@ -465,6 +472,54 @@ export function AccountModal({
                     </div>
                   )}
                 </Group>
+                {hasAdjustments && (
+                  <Group
+                    justify="space-between"
+                    wrap="nowrap"
+                    className={styles.balanceRow}
+                  >
+                    <Text data-typography="metadata" c="dimmed">
+                      Account balance
+                    </Text>
+                    {balanceEditorOpened && isManual && !isHoldingsValued ? (
+                      <InlineBalanceEditor
+                        account={fullAccount}
+                        balance={
+                          editableNativeBalance ?? fullAccount.currentBalance
+                        }
+                        onCancel={closeBalanceEditor}
+                        onSaved={closeBalanceEditor}
+                      />
+                    ) : (
+                      <Group
+                        gap={4}
+                        wrap="nowrap"
+                        className={styles.nativeBalanceRow}
+                      >
+                        <Text data-typography="numericMetadata" c="dimmed">
+                          {balancesHidden
+                            ? HIDDEN_BALANCE_PLACEHOLDER
+                            : formatMoneyWithSign({
+                                value:
+                                  editableNativeBalance ??
+                                  fullAccount.currentBalance,
+                                appendCurrency: true,
+                              })}
+                        </Text>
+                        {isManual && !isHoldingsValued && (
+                          <ActionIcon
+                            aria-label="Edit balance"
+                            onClick={openBalanceEditor}
+                            className={styles.compactAction}
+                            variant="subtle"
+                          >
+                            <Pencil size={18} />
+                          </ActionIcon>
+                        )}
+                      </Group>
+                    )}
+                  </Group>
+                )}
                 {account && account.changePercent !== undefined && (
                   <AccountComparisonFrame period={period}>
                     {comparisonLoading ? (
@@ -590,6 +645,12 @@ export function AccountModal({
                         </Text>
                       ) : null}
                     </Box>
+                    <ValueAdjustmentsSection
+                      key={fullAccount.id}
+                      account={fullAccount}
+                      balance={editableNativeBalance}
+                      balancesHidden={balancesHidden}
+                    />
                   </Stack>
                 )}
               </Tabs.Panel>

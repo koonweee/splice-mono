@@ -54,6 +54,8 @@ export interface BalanceHistorySurfaceAccountSummary {
   subTypeLabel: string | null;
   grouping: AccountGrouping;
   groupingLabel: string;
+  expectedValuePercent?: string;
+  expectedTaxPercent?: string;
   effectiveBalance: SerializedMoneyWithSign;
   convertedEffectiveBalance?: SerializedMoneyWithSign;
   reportingEffectiveBalance?: SerializedMoneyWithSign;
@@ -281,6 +283,8 @@ export class BalanceHistorySurfaceService {
             groupingLabel: getAccountGroupingLabel(
               getAccountGrouping(String(accountResult.account.type)),
             ),
+            expectedValuePercent: accountResult.account.expectedValuePercent,
+            expectedTaxPercent: accountResult.account.expectedTaxPercent,
             effectiveBalance: accountResult.effectiveBalance.balance,
             convertedEffectiveBalance:
               accountResult.effectiveBalance.convertedBalance,

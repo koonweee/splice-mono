@@ -1,0 +1,25 @@
+.section {
+  border-top: 1px solid var(--splice-separator);
+  padding-top: var(--mantine-spacing-sm);
+}
+.preview {
+  border: 1px solid var(--splice-border);
+  border-radius: var(--mantine-radius-sm);
+  padding: var(--mantine-spacing-sm);
+  background: var(--splice-surface-muted);
+}
+.saveActions {
+  margin-left: auto;
+}
+@media (--sheet-layout) {
+  .actions {
+    align-items: stretch;
+  }
+  .saveActions {
+    width: 100%;
+  }
+  .saveActions > button {
+    flex: 1;
+    min-height: var(--splice-size-touch-target);
+  }
+}

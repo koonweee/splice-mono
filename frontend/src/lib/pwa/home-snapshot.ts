@@ -1,4 +1,5 @@
 import { parseAppearance } from '../design-system/appearance-preference'
+import { ExactDecimal } from '../money'
 import { TimePeriod } from '../types'
 import { getPendingLogout } from './logout-state'
 import type { AppearancePreference } from '../design-system/appearance'
@@ -85,7 +86,7 @@ function account(value: unknown) {
     record(value) &&
     only(
       value,
-      'id name customName type subType valuationMode institutionName archivedAt syncedAt effectiveBalance convertedEffectiveBalance changeAmount changePercent',
+      'id name customName type subType valuationMode expectedValuePercent expectedTaxPercent institutionName archivedAt syncedAt effectiveBalance convertedEffectiveBalance changeAmount changePercent',
     ) &&
     string(value.id) &&
     string(value.name) &&
@@ -104,6 +105,15 @@ function account(value: unknown) {
       'crypto_wallet',
     ].includes(String(value.type)) &&
     ['balance', 'holdings'].includes(String(value.valuationMode)) &&
+    (value.expectedValuePercent === undefined ||
+      (typeof value.expectedValuePercent === 'string' &&
+        /^(0|[1-9]\d*)(\.\d+)?$/.test(value.expectedValuePercent) &&
+        new ExactDecimal(value.expectedValuePercent).gt(0))) &&
+    (value.expectedTaxPercent === undefined ||
+      (typeof value.expectedTaxPercent === 'string' &&
+        /^(0|[1-9]\d*)(\.\d+)?$/.test(value.expectedTaxPercent) &&
+        new ExactDecimal(value.expectedTaxPercent).gte(0) &&
+        new ExactDecimal(value.expectedTaxPercent).lte(100))) &&
     money(value.effectiveBalance) &&
     (value.convertedEffectiveBalance === undefined ||
       money(value.convertedEffectiveBalance)) &&

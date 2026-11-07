@@ -1,3 +1,4 @@
+import { calculateEffectiveBalance } from '../common/effective-balance';
 import { buildBalanceWithConversion } from '../balance-query/balance-projection';
 import type { RateWithSource } from '../types/ExchangeRate';
 import {
@@ -195,6 +196,10 @@ export interface McpBalanceSnapshot {
   institutionName: string | null;
   snapshotDate: string;
   snapshotType: string;
+  effectiveBalance: McpMoney;
+  reportingEffectiveBalance: McpMoney | null;
+  expectedValuePercent: string;
+  expectedTaxPercent: string;
   currentBalance: McpMoney;
   availableBalance: McpMoney;
   reportingCurrentBalance: McpMoney | null;
@@ -282,6 +287,9 @@ export interface McpInvestmentHolding {
   securityClosePrice: string | null;
   securityClosePriceAsOf: string | null;
   securityUpdatedAt: string | null;
+  effectiveInstitutionValue?: McpMoney | null;
+  expectedValuePercent?: string;
+  expectedTaxPercent?: string;
   institutionValue: McpMoney | null;
   currency: string | null;
   vestedQuantity: string | null;
@@ -1145,6 +1153,22 @@ export class McpReadService {
     const currency =
       holding.isoCurrencyCode ?? holding.unofficialCurrencyCode ?? null;
     const fallbackAccount = accountById.get(holding.accountId);
+    const institutionValue = mcpMoneyFromDecimalString(
+      holding.institutionValue,
+      currency,
+    );
+    const effectiveInstitutionValue = institutionValue
+      ? toMcpMoney(
+          calculateEffectiveBalance(
+            MoneyWithSign.fromMajorUnit(
+              institutionValue.currency,
+              institutionValue.amount,
+              institutionValue.sign,
+            ).toSerialized(),
+            fallbackAccount,
+          ),
+        )
+      : null;
 
     return {
       id: holding.id,
@@ -1174,10 +1198,10 @@ export class McpReadService {
       securityClosePrice: holding.security?.closePrice ?? null,
       securityClosePriceAsOf: holding.security?.closePriceAsOf ?? null,
       securityUpdatedAt: holding.security?.updateDatetime ?? null,
-      institutionValue: mcpMoneyFromDecimalString(
-        holding.institutionValue,
-        currency,
-      ),
+      institutionValue,
+      effectiveInstitutionValue,
+      expectedValuePercent: fallbackAccount?.expectedValuePercent ?? '100',
+      expectedTaxPercent: fallbackAccount?.expectedTaxPercent ?? '0',
       currency,
       vestedQuantity: holding.vestedQuantity,
       vestedValue: mcpMoneyFromDecimalString(holding.vestedValue, currency),
@@ -1433,6 +1457,11 @@ export class McpReadService {
         snapshot.snapshotDate,
       );
     };
+    const effectiveBalance = calculateEffectiveBalance(
+      snapshot.currentBalance.toMoneyWithSign(),
+      account,
+    );
+    const effective = convert(effectiveBalance);
     const current = convert(snapshot.currentBalance.toMoneyWithSign());
     const available = convert(snapshot.availableBalance.toMoneyWithSign());
     return {
@@ -1450,6 +1479,12 @@ export class McpReadService {
       institutionName: account.bankLink?.institutionName ?? null,
       snapshotDate: snapshot.snapshotDate,
       snapshotType: snapshot.snapshotType,
+      effectiveBalance: toMcpMoney(effectiveBalance),
+      reportingEffectiveBalance: effective?.reportingBalance
+        ? toMcpMoney(effective.reportingBalance)
+        : null,
+      expectedValuePercent: account.expectedValuePercent ?? '100',
+      expectedTaxPercent: account.expectedTaxPercent ?? '0',
       currentBalance: toMcpMoney(snapshot.currentBalance.toMoneyWithSign()),
       availableBalance: toMcpMoney(snapshot.availableBalance.toMoneyWithSign()),
       reportingCurrentBalance: current?.reportingBalance

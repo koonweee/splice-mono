@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import { Group, Paper, Text, Tooltip } from '@mantine/core'
 import { AlertTriangle } from 'lucide-react'
+import { hasAccountValueAdjustments } from '../lib/account-value-adjustments'
 import {
   formatAccountType,
   formatMoneyWithSign,
@@ -74,6 +75,7 @@ export function AccountCard({
             {account.institutionName
               ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`
               : formatAccountType(account.subType || account.type)}
+            {hasAccountValueAdjustments(account) ? ' · Adjusted' : ''}
           </Text>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>

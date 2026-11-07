@@ -1170,4 +1170,45 @@ describe('BalanceQueryService', () => {
       );
     });
   });
+
+  it.each([null, 'provider-link'])(
+    'applies current assumptions to historical and carried balances for link %s',
+    async (bankLinkId) => {
+      const entity = createMockAccountEntity(
+        'acc-1',
+        AccountType.Investment,
+        'USD',
+        bankLinkId,
+      );
+      const account = {
+        ...entity.toObject(),
+        expectedValuePercent: '50',
+        expectedTaxPercent: '30',
+      };
+      entity.toObject.mockReturnValue(account);
+      const snapshot = createMockSnapshotEntity(
+        'acc-1',
+        '2024-01-15',
+        '0',
+        '10000000',
+      );
+      mockAccountRepository.find.mockResolvedValue([entity]);
+      mockSnapshotRepository.find.mockResolvedValue([snapshot]);
+      const results = await service.getBalancesForDateRange(
+        ['acc-1'],
+        '2024-01-15',
+        '2024-01-16',
+        mockUserId,
+      );
+      expect(
+        results.map(
+          (day) => day.balances['acc-1'].effectiveBalance.balance.money.amount,
+        ),
+      ).toEqual(['3500000', '3500000']);
+      expect(
+        results[0].balances['acc-1'].currentBalance.balance.money.amount,
+      ).toBe('10000000');
+      expect(snapshot.currentBalance.amount).toBe('10000000');
+    },
+  );
 });

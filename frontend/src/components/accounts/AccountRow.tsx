@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Pencil,
   RotateCcw,
+  SlidersHorizontal,
   X,
 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
@@ -30,6 +31,8 @@ import {
   notifyMutationSuccess,
 } from '../../lib/mutation-feedback'
 import { ConfirmActionDialog } from '../ConfirmActionDialog'
+import { EditorModal } from '../forms/EditorModal'
+import { ValueAdjustmentsSection } from './ValueAdjustmentsSection'
 import { StatusBadge } from './StatusBadge'
 import styles from './AccountRow.module.css'
 import { AccountRowFrame } from './AccountRowFrame'
@@ -55,6 +58,7 @@ export function AccountRow({ account }: { account: Account }) {
   const [editedName, setEditedName] = useState('')
   const [nameError, setNameError] = useState<string | null>(null)
   const [archiveModalOpened, setArchiveModalOpened] = useState(false)
+  const [valueEditorOpened, setValueEditorOpened] = useState(false)
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const nameSubmissionPending = useRef(false)
   const archiveSubmissionPending = useRef(false)
@@ -363,6 +367,17 @@ export function AccountRow({ account }: { account: Account }) {
                   </ActionIcon>
                 </Tooltip>
               )}
+              <Tooltip label="Adjust value" withArrow>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  aria-label="Adjust value"
+                  onClick={() => setValueEditorOpened(true)}
+                >
+                  <SlidersHorizontal size={14} />
+                </ActionIcon>
+              </Tooltip>
               <Tooltip label="Archive account" withArrow>
                 <ActionIcon
                   variant="subtle"
@@ -437,6 +452,12 @@ export function AccountRow({ account }: { account: Account }) {
                     </Menu.Item>
                   )}
                   <Menu.Item
+                    leftSection={<SlidersHorizontal size={20} />}
+                    onClick={() => setValueEditorOpened(true)}
+                  >
+                    Adjust value
+                  </Menu.Item>
+                  <Menu.Item
                     color="red"
                     leftSection={<Archive size={20} />}
                     onClick={() => {
@@ -455,6 +476,19 @@ export function AccountRow({ account }: { account: Account }) {
           </div>
         )}
       </AccountRowFrame>
+      {valueEditorOpened && (
+        <EditorModal
+          opened
+          onClose={() => setValueEditorOpened(false)}
+          title={displayName}
+        >
+          <ValueAdjustmentsSection
+            key={account.id}
+            account={account}
+            initiallyEditing
+          />
+        </EditorModal>
+      )}
       <ConfirmActionDialog
         opened={archiveModalOpened}
         onClose={() => {
