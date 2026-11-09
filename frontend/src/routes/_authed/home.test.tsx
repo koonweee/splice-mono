@@ -22,6 +22,10 @@ import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type * as BalanceDataHook from '../../hooks/useBalanceData'
 import { TimePeriod } from '@/lib/types'
 
+vi.mock('../../hooks/useConnectionHealthCheck', () => ({
+  useConnectionHealthCheck: () => undefined,
+}))
+
 vi.mock('../../lib/pwa/use-save-home-snapshot', () => ({
   useSaveHomeSnapshot: () => undefined,
 }))
@@ -227,7 +231,9 @@ beforeEach(() => {
 afterEach(async () => {
   cleanup()
   // Flush deferred feature/Suspense completion before jsdom is torn down.
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
   vi.clearAllMocks()
   window.localStorage.clear()
 })
@@ -251,9 +257,9 @@ describe('HomePage balance visibility', () => {
 
     expect(screen.getByText('+10.00%')).toBeTruthy()
     expect(screen.getByText('from last month')).toBeTruthy()
-    expect(screen.queryByText('+5.00%')).toBeNull()
-    expect(screen.queryByText('-2.00%')).toBeNull()
-    expect(screen.queryByText('-1.00%')).toBeNull()
+    expect(screen.getByText('+5.00%')).toBeTruthy()
+    expect(screen.getByText('-2.00%')).toBeTruthy()
+    expect(screen.getByText('-1.00%')).toBeTruthy()
     expect(screen.getByText('54.5%')).toBeTruthy()
     expect(screen.getByText('45.5%')).toBeTruthy()
   })

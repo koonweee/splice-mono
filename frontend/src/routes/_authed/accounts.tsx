@@ -4,6 +4,7 @@ import { showNotification } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
+import { useConnectionHealthCheck } from '../../hooks/useConnectionHealthCheck'
 import { BACKFILL_TITLE } from '../../components/accounts/BackfillInstructions'
 import { AddAccountSkeleton } from '../../components/accounts/AddAccountModal.skeleton'
 import { BackfillSkeleton } from '../../components/accounts/BackfillModal.skeleton'
@@ -48,6 +49,7 @@ function AccountsPage() {
     error,
     refetch,
   } = useAccountControllerFindAll()
+  useConnectionHealthCheck(Boolean(accounts))
   const [modalOpened, { open: openModal, close: closeModal }] =
     useDisclosure(false)
   const [backfillOpened, { open: openBackfill, close: closeBackfill }] =

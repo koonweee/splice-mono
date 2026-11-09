@@ -61,6 +61,7 @@ export class NotificationListener {
           {
             userId: event.userId,
             bankLinkId: event.bankLinkId,
+            accountNames: event.accountNames,
             providerName: event.providerName,
             institutionName: event.institutionName,
             status: event.status,
@@ -74,6 +75,7 @@ export class NotificationListener {
           {
             userId: event.userId,
             bankLinkId: event.bankLinkId,
+            accountNames: event.accountNames,
             notificationId: notification.id,
           },
           'Created notification for bank link requiring attention',

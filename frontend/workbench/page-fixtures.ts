@@ -256,7 +256,10 @@ export function fixtureDashboard(
       valuationMode: account.valuationMode,
       expectedValuePercent: account.expectedValuePercent ?? '100',
       expectedTaxPercent: account.expectedTaxPercent ?? '0',
-      institutionName: 'Example institution',
+      institutionName:
+        account.bankLink?.institutionName ?? 'Example institution',
+      bankLinkStatus: account.bankLink?.status ?? null,
+      connectionHealth: account.bankLink?.health ?? null,
       archivedAt: account.archivedAt ?? null,
       syncedAt: null,
       effectiveBalance: adjustedAccountBalance(account.currentBalance, account),

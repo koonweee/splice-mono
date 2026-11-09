@@ -344,6 +344,7 @@ export class BalanceQueryService {
                   status: true,
                   statusDate: true,
                   statusBody: true,
+                  health: true,
                   createdAt: true,
                   updatedAt: true,
                 },

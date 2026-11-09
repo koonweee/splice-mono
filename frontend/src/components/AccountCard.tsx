@@ -1,23 +1,15 @@
-import dayjs from 'dayjs'
 import { Group, Paper, Text, Tooltip } from '@mantine/core'
 import { AlertTriangle } from 'lucide-react'
+import { accountConnectionWarning } from '../lib/connection-health'
 import {
   formatAccountType,
   formatMoneyWithSign,
-  formatRelativeTime,
   getChangeColorMantine,
   resolveBalance,
 } from '../lib/format'
 import { ChangePercentPopover } from './ChangePercentPopover'
 import styles from './AccountCard.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
-
-const STALE_THRESHOLD_DAYS = 7
-
-function isSyncStale(syncedAt?: string): boolean {
-  if (!syncedAt) return false
-  return dayjs().diff(dayjs(syncedAt), 'day') >= STALE_THRESHOLD_DAYS
-}
 
 export function AccountCard({
   account,
@@ -32,7 +24,7 @@ export function AccountCard({
     account.effectiveBalance,
     account.convertedEffectiveBalance,
   )
-  const stale = isSyncStale(account.syncedAt)
+  const warning = accountConnectionWarning(account)
 
   return (
     <Paper
@@ -58,12 +50,10 @@ export function AccountCard({
             <Text data-typography="rowTitle" truncate>
               {account.customName ?? account.name}
             </Text>
-            {stale && (
-              <Tooltip
-                label={`Last synced ${formatRelativeTime(new Date(account.syncedAt ?? ''))}`}
-                withArrow
-              >
+            {warning && (
+              <Tooltip label={warning} withArrow>
                 <AlertTriangle
+                  aria-label="Account connection warning"
                   size={14}
                   color="var(--mantine-color-yellow-6)"
                 />

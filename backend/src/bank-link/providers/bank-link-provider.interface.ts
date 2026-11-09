@@ -1,3 +1,4 @@
+import type { ProviderConnectionHealth } from '../../types/BankLinkHealth';
 import type {
   GetAccountsResponse,
   LinkCompletionResponse,
@@ -124,6 +125,10 @@ export interface IBankLinkProvider {
    * Get sanitized provider diagnostics for the current connection state.
    * Optional - used to enrich webhook errors without exposing credentials.
    */
+  getConnectionHealth?(
+    authentication: Record<string, unknown>,
+  ): Promise<ProviderConnectionHealth>;
+
   getConnectionDiagnostics?(
     authentication: Record<string, any>,
   ): Promise<Record<string, unknown>>;

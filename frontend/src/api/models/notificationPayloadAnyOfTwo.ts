@@ -10,6 +10,7 @@ import type { NotificationPayloadAnyOfTwoStatusBody } from './notificationPayloa
 
 export type NotificationPayloadAnyOfTwo = {
   bankLinkId: string
+  accountNames?: string[]
   providerName: string
   /** @nullable */
   institutionName: string | null

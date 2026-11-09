@@ -72,6 +72,35 @@ describe('Home snapshot validation', () => {
     expect(value.presentation.maskBalances).toBe(true)
     expect(value.summary.updatedAt).toBeLessThan(value.savedAt)
   })
+  it('preserves sanitized connection health and rejects extra nested fields', () => {
+    const value = snapshot()
+    value.summary.data.assets.push({
+      id: 'sg',
+      name: 'SG IBKR',
+      customName: null,
+      type: 'investment',
+      subType: null,
+      valuationMode: 'balance',
+      institutionName: 'IBKR',
+      archivedAt: null,
+      syncedAt: null,
+      bankLinkStatus: 'ERROR',
+      connectionHealth: {
+        state: 'needs_attention',
+        reason: 'accounts_missing',
+        message: 'Reconnect',
+        checkedAt: new Date().toISOString(),
+        lastImportedAt: null,
+        providerUpdates: [],
+      },
+      effectiveBalance: value.summary.data.netWorth,
+    })
+    expect(isHomeSnapshot(value)).toBe(true)
+    Object.assign(value.summary.data.assets[0].connectionHealth!, {
+      accessToken: 'must-not-persist',
+    })
+    expect(isHomeSnapshot(value)).toBe(false)
+  })
   it('accepts valid series with independent freshness', () => {
     const value = snapshot()
     value.series = {

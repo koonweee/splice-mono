@@ -1,3 +1,4 @@
+import { BankLinkHealthService } from '../../src/bank-link/bank-link-health.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { Request } from 'express';
@@ -20,6 +21,7 @@ describe('BankLinkController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BankLinkController],
       providers: [
+        { provide: BankLinkHealthService, useValue: {} },
         {
           provide: BankLinkService,
           useValue: mockBankLinkService,

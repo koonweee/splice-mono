@@ -179,6 +179,7 @@ postgresSuite('Plaid archive disconnect on PostgreSQL', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
     );
     await expect(
       service['saveBankLinkFromLinkCompletionResponse']('plaid', user.id, {

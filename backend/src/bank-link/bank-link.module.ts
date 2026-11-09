@@ -1,3 +1,5 @@
+import { BankLinkHealthService } from './bank-link-health.service';
+import { BankLinkHealthScheduledService } from './bank-link-health.scheduled';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from 'src/account/account.entity';
@@ -36,6 +38,8 @@ import { StalePendingTransactionScheduledService } from './stale-pending-transac
   controllers: [BankLinkController],
   providers: [
     BankLinkService,
+    BankLinkHealthService,
+    BankLinkHealthScheduledService,
     BankLinkLifecycleService,
     BankLinkLifecycleScheduledService,
     BankLinkDisconnectService,

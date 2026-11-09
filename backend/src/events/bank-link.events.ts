@@ -13,5 +13,6 @@ export class BankLinkNeedsAttentionEvent {
     public readonly status: Exclude<BankLinkStatus, 'OK'>,
     public readonly statusBody: Record<string, unknown> | null,
     public readonly occurredAt: string,
+    public readonly accountNames?: string[],
   ) {}
 }

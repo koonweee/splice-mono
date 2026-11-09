@@ -8,6 +8,7 @@ import type { Query, QueryFilters } from '@tanstack/react-query'
 import type * as Mantine from '@mantine/core'
 import type { Account } from '../../api/models'
 import type React from 'react'
+import type * as PositionsEditorModule from '../investments/ManualBrokeragePositionsEditor'
 
 const mockFns = vi.hoisted(() => ({
   createMutateMock: vi.fn(),
@@ -17,29 +18,33 @@ const mockFns = vi.hoisted(() => ({
   invalidateQueriesMock: vi.fn(),
 }))
 
-vi.mock('../investments/ManualBrokeragePositionsEditor', () => ({
-  isPositiveDecimal: (value: string) => Number(value) > 0,
-  ManualBrokeragePositionsEditor: ({
-    onChange,
-  }: {
-    onChange: (positions: Array<{ symbol: string; quantity: string }>) => void
-  }) => (
-    <button
-      onClick={() =>
-        onChange([
-          { symbol: 'GOOGL', quantity: '2' },
-          { symbol: 'INTC', quantity: '97' },
-          { symbol: 'NVDA', quantity: '7' },
-          { symbol: 'TSM', quantity: '8' },
-          { symbol: 'C6L.SI', quantity: '200' },
-        ])
-      }
-      type="button"
-    >
-      Load reference portfolio
-    </button>
-  ),
-}))
+vi.mock(
+  '../investments/ManualBrokeragePositionsEditor',
+  async (importOriginal) => ({
+    ...(await importOriginal<typeof PositionsEditorModule>()),
+    isPositiveDecimal: (value: string) => Number(value) > 0,
+    ManualBrokeragePositionsEditor: ({
+      onChange,
+    }: {
+      onChange: (positions: Array<{ symbol: string; quantity: string }>) => void
+    }) => (
+      <button
+        onClick={() =>
+          onChange([
+            { symbol: 'GOOGL', quantity: '2' },
+            { symbol: 'INTC', quantity: '97' },
+            { symbol: 'NVDA', quantity: '7' },
+            { symbol: 'TSM', quantity: '8' },
+            { symbol: 'C6L.SI', quantity: '200' },
+          ])
+        }
+        type="button"
+      >
+        Load reference portfolio
+      </button>
+    ),
+  }),
+)
 
 vi.mock('@mantine/core', async () => {
   const actual: typeof Mantine = await vi.importActual('@mantine/core')
@@ -297,7 +302,10 @@ describe('manual account money payloads', () => {
         />
       </MantineProvider>,
     )
-    expect(screen.getByLabelText('Current balance')).toHaveProperty('value', '1.000000000000000001')
+    expect(screen.getByLabelText('Current balance')).toHaveProperty(
+      'value',
+      '1.000000000000000001',
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Save balance' }))
     expect(mockFns.updateBalanceMutateMock).toHaveBeenCalledWith(
       {
@@ -341,11 +349,11 @@ describe('manual account money payloads', () => {
           name: 'Prime Account UI valuation test',
           accountCurrency: 'USD',
           positions: [
-            { symbol: 'GOOGL', quantity: '2' },
-            { symbol: 'INTC', quantity: '97' },
-            { symbol: 'NVDA', quantity: '7' },
-            { symbol: 'TSM', quantity: '8' },
-            { symbol: 'C6L.SI', quantity: '200' },
+            { symbol: 'GOOGL', quantity: '2', costBasis: null },
+            { symbol: 'INTC', quantity: '97', costBasis: null },
+            { symbol: 'NVDA', quantity: '7', costBasis: null },
+            { symbol: 'TSM', quantity: '8', costBasis: null },
+            { symbol: 'C6L.SI', quantity: '200', costBasis: null },
           ],
         },
       },

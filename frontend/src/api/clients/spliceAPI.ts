@@ -49,6 +49,7 @@ import type {
   CategoryControllerFindManagementParams,
   CategoryControllerSearchParams,
   CategoryManagementItem,
+  ConnectionHealthCheckResult,
   CreateAnalysisRuleDto,
   CreateCategorizationRuleDto,
   CreateCustomCategoryDto,
@@ -3251,6 +3252,165 @@ export const useBalanceSnapshotControllerImportCsv = <
 > => {
   const mutationOptions =
     getBalanceSnapshotControllerImportCsvMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Check stale owned bank connections using cached, rate-limited provider diagnostics
+ */
+export const bankLinkControllerCheckHealth = (signal?: AbortSignal) => {
+  return axios<ConnectionHealthCheckResult>({
+    url: `/bank-link/check-health`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getBankLinkControllerCheckHealthMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bankLinkControllerCheckHealth>>,
+    TError,
+    void,
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bankLinkControllerCheckHealth>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['bankLinkControllerCheckHealth']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bankLinkControllerCheckHealth>>,
+    void
+  > = () => {
+    return bankLinkControllerCheckHealth()
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type BankLinkControllerCheckHealthMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bankLinkControllerCheckHealth>>
+>
+
+export type BankLinkControllerCheckHealthMutationError = unknown
+
+export const useBankLinkControllerCheckHealth = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bankLinkControllerCheckHealth>>,
+      TError,
+      void,
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bankLinkControllerCheckHealth>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions =
+    getBankLinkControllerCheckHealthMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Check an owned connection; repeat requests are rate limited
+ */
+export const bankLinkControllerCheckConnection = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<ConnectionHealthCheckResult>({
+    url: `/bank-link/${id}/check-health`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getBankLinkControllerCheckConnectionMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bankLinkControllerCheckConnection>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bankLinkControllerCheckConnection>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['bankLinkControllerCheckConnection']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bankLinkControllerCheckConnection>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return bankLinkControllerCheckConnection(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type BankLinkControllerCheckConnectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bankLinkControllerCheckConnection>>
+>
+
+export type BankLinkControllerCheckConnectionMutationError = unknown
+
+export const useBankLinkControllerCheckConnection = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bankLinkControllerCheckConnection>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bankLinkControllerCheckConnection>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getBankLinkControllerCheckConnectionMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

@@ -49,6 +49,7 @@ type NewSyncedTransactionsInput = {
 };
 
 type BankLinkNeedsAttentionInput = {
+  accountNames?: string[];
   userId: string;
   bankLinkId: string;
   providerName: string;
@@ -601,6 +602,7 @@ export class NotificationService {
         dedupeKey: this.buildBankLinkNeedsAttentionDedupeKey(input),
         payload: {
           bankLinkId: input.bankLinkId,
+          accountNames: input.accountNames,
           providerName: input.providerName,
           institutionName: input.institutionName,
           status: input.status,
@@ -863,10 +865,13 @@ export class NotificationService {
       case 'bank_link.needs_attention': {
         const bankLinkPayload = notification.payload as NotificationPayload & {
           institutionName?: string | null;
+          accountNames?: string[];
           status?: string;
         };
         const institutionName =
-          bankLinkPayload.institutionName?.trim() || 'A linked account';
+          bankLinkPayload.accountNames?.slice(0, 2).join(', ') ||
+          bankLinkPayload.institutionName?.trim() ||
+          'A linked account';
         return {
           title: `${institutionName} needs attention`,
           body:

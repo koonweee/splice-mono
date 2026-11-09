@@ -7,6 +7,8 @@
  */
 import type { DashboardAccountSummaryType } from './dashboardAccountSummaryType'
 import type { DashboardAccountSummaryValuationMode } from './dashboardAccountSummaryValuationMode'
+import type { DashboardAccountSummaryBankLinkStatus } from './dashboardAccountSummaryBankLinkStatus'
+import type { DashboardAccountSummaryConnectionHealth } from './dashboardAccountSummaryConnectionHealth'
 import type { MoneyWithSign } from './moneyWithSign'
 
 export interface DashboardAccountSummary {
@@ -22,6 +24,9 @@ export interface DashboardAccountSummary {
   expectedTaxPercent?: string
   /** @nullable */
   institutionName: string | null
+  /** @nullable */
+  bankLinkStatus?: DashboardAccountSummaryBankLinkStatus
+  connectionHealth?: DashboardAccountSummaryConnectionHealth
   /** @nullable */
   archivedAt: string | null
   /** @nullable */

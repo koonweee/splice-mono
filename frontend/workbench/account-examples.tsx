@@ -130,6 +130,44 @@ function StatusExamples() {
         <StatusBadge status="OK" />
         <StatusBadge
           status="ERROR"
+          health={{
+            state: 'needs_attention',
+            reason: 'accounts_missing',
+            message:
+              'The provider cannot access (SG) IBKR …3898. Reconnect and review shared accounts.',
+            checkedAt: new Date().toISOString(),
+            lastImportedAt: null,
+            providerUpdates: [],
+          }}
+          onFix={() => setMessage('Fixture missing-account repair selected')}
+        />
+        <StatusBadge
+          status="OK"
+          health={{
+            state: 'delayed',
+            reason: 'provider_delayed',
+            message:
+              'Account access is available. Provider updates are delayed.',
+            checkedAt: new Date().toISOString(),
+            lastImportedAt: null,
+            providerUpdates: [],
+          }}
+          onCheck={() => setMessage('Fixture connection check selected')}
+        />
+        <StatusBadge
+          status="OK"
+          health={{
+            state: 'unknown',
+            reason: 'check_failed',
+            message: 'Connection check unavailable. Try again later.',
+            checkedAt: new Date().toISOString(),
+            lastImportedAt: null,
+            providerUpdates: [],
+          }}
+          onCheck={() => setMessage('Fixture retry selected')}
+        />
+        <StatusBadge
+          status="ERROR"
           statusBody={{
             display_message: 'Connection unavailable',
             suggested_action: 'Try again later',

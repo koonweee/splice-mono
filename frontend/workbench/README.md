@@ -829,3 +829,7 @@ Verified account-overview/ready in Light 390px, Dark 1440px and OLED 390px; a re
 Use page-home/discounted for an RSU account with 100k base and 35k effective value. The stock-chart ActionIcon beside the eye uses the same subtle/dimmed treatment, swaps to a slashed chart while hiding, and changes its tooltip/action label. Toggle it to remove only accounts below 100% expected value from rows, totals, comparison and the complete series. Add latency=2000 or failure=reads to review paired scope transitions. Saved-launch views show the saved scope and disable this data-changing control until live data is available; masking remains usable. Home rows keep their default appearance.
 
 At 384px and below, the Home header uses two compact rows to preserve all 44px touch targets and the reserved refresh slot; larger phone and desktop header layouts stay unchanged. Check the full bounds of every control, including logout, in addition to document overflow.
+
+## Bank connection health
+
+Use `status-colors` for account-unavailable/Fix, updates-delayed/Check connection and unavailable-check states. `page-accounts&state=long-content` includes connected, consent, missing-account and delayed links, with Reconnect available in desktop actions and the touch menu. Health API calls use fixture-only handlers and never contact Plaid.

@@ -21,6 +21,7 @@ describe('BankLinkService archived account sync', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
     );
     const archivedAccount = {
       id: 'archived-account-id',

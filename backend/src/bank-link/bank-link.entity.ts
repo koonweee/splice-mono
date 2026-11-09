@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import type { BankLinkHealth } from '../types/BankLinkHealth';
 import { OwnedEntity } from '../common/owned.entity';
 import type {
   BankLinkStatus,
@@ -38,6 +39,15 @@ export class BankLinkEntity extends OwnedEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   statusBody: Record<string, any> | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  health: BankLinkHealth | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  healthCheckedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  healthCheckStartedAt: Date | null;
 
   @Column({ type: 'timestamptz', nullable: true })
   archivedAt: Date | null;
@@ -86,6 +96,7 @@ export class BankLinkEntity extends OwnedEntity {
       institutionId: this.institutionId,
       institutionName: this.institutionName,
       status: this.status,
+      health: this.health ?? null,
       statusDate: this.statusDate,
       statusBody: this.statusBody,
       createdAt: this.createdAt,
