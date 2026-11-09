@@ -1,11 +1,10 @@
-import dayjs from 'dayjs'
 import { Group, Skeleton, Text, Tooltip } from '@mantine/core'
 import { AlertTriangle } from 'lucide-react'
+import { accountConnectionWarning } from '../lib/connection-health'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatAccountType,
   formatMoneyWithSign,
-  formatRelativeTime,
   getChangeColorMantine,
   resolveBalance,
 } from '../lib/format'
@@ -13,13 +12,6 @@ import { ChangePercentPopover } from './ChangePercentPopover'
 import { CompactAccountRowFrame } from './CompactAccountRowFrame'
 import styles from './CompactAccountRow.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
-
-const STALE_THRESHOLD_DAYS = 7
-
-function isSyncStale(syncedAt?: string): boolean {
-  if (!syncedAt) return false
-  return dayjs().diff(dayjs(syncedAt), 'day') >= STALE_THRESHOLD_DAYS
-}
 
 export function CompactAccountRow({
   account,
@@ -40,7 +32,7 @@ export function CompactAccountRow({
     account.effectiveBalance,
     account.convertedEffectiveBalance,
   )
-  const stale = isSyncStale(account.syncedAt)
+  const warning = accountConnectionWarning(account)
 
   return (
     <CompactAccountRowFrame
@@ -52,12 +44,10 @@ export function CompactAccountRow({
             <Text data-typography="rowTitleSmall" truncate>
               {account.customName ?? account.name}
             </Text>
-            {stale && (
-              <Tooltip
-                label={`Last synced ${formatRelativeTime(new Date(account.syncedAt ?? ''))}`}
-                withArrow
-              >
+            {warning && (
+              <Tooltip label={warning} withArrow>
                 <AlertTriangle
+                  aria-label="Account connection warning"
                   size={14}
                   color="var(--mantine-color-yellow-6)"
                   style={{ flexShrink: 0 }}

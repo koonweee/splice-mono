@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
+import { useConnectionHealthCheck } from '../../hooks/useConnectionHealthCheck'
 import { usePresentationPreferences } from '../../lib/presentation-preferences'
 import { useCurrentUser } from '../../lib/session'
 import { DeferredOverlay } from '../DeferredOverlay'
@@ -47,6 +48,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
     period,
     user ? (user.settings.currency ?? 'USD') : undefined,
   )
+  useConnectionHealthCheck(Boolean(dashboard))
   const { maskBalances: balancesHidden } = usePresentationPreferences()
   const hideZeroBalanceAccounts =
     user?.settings.hideZeroBalanceAccounts ?? false

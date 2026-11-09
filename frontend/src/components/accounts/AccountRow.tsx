@@ -22,7 +22,10 @@ import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
 import { useAccountMetadataMutation } from '../../hooks/useAccountMetadataMutation'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { SanitizedBankLinkStatus } from '../../api/models/sanitizedBankLinkStatus'
-import { useBankLinkControllerInitiateLinking } from '../../api/clients/spliceAPI'
+import {
+  useBankLinkControllerCheckConnection,
+  useBankLinkControllerInitiateLinking,
+} from '../../api/clients/spliceAPI'
 import { axios } from '../../api/axios'
 import { getApiErrorMessage } from '../../lib/api-errors'
 import { formatAccountType, formatRelativeTime } from '../../lib/format'
@@ -46,6 +49,7 @@ export function AccountRow({ account }: { account: Account }) {
   const menuTrigger = useRef<HTMLButtonElement>(null)
   const [returnMenuFocus, setReturnMenuFocus] = useState(true)
   const initiateLinking = useBankLinkControllerInitiateLinking()
+  const checkConnection = useBankLinkControllerCheckConnection()
   const updateAccount = useAccountMetadataMutation(account.id)
   const archiveAccount = useMutation({
     mutationKey: ['accountControllerArchive'],
@@ -188,7 +192,8 @@ export function AccountRow({ account }: { account: Account }) {
     [],
   )
 
-  const handleFixConnection = needsFix
+  const canReconnect = account.bankLink?.providerName === 'plaid'
+  const handleFixConnection = canReconnect
     ? () => {
         if (initiateLinking.isPending) return
         const redirectUri = getPlaidRedirectUri()
@@ -319,7 +324,33 @@ export function AccountRow({ account }: { account: Account }) {
             <StatusBadge
               status={account.bankLink?.status}
               statusBody={account.bankLink?.statusBody}
-              onFix={handleFixConnection}
+              onFix={needsFix ? handleFixConnection : undefined}
+              health={account.bankLink?.health}
+              pending={initiateLinking.isPending || checkConnection.isPending}
+              onCheck={
+                canReconnect
+                  ? () =>
+                      checkConnection.mutate(
+                        { id: account.bankLink!.id },
+                        {
+                          onSuccess: () => {
+                            void invalidateMutationFamilies(queryClient, [
+                              'accounts',
+                              'balances',
+                              'notifications',
+                              'notificationSummary',
+                            ])
+                          },
+                          onError: (error) =>
+                            notifyMutationError({
+                              title: 'Connection check failed',
+                              error,
+                              fallback: 'Try checking the connection again.',
+                            }),
+                        },
+                      )
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -336,6 +367,20 @@ export function AccountRow({ account }: { account: Account }) {
               >
                 <Pencil size={14} />
               </ActionIcon>
+              {handleFixConnection && (
+                <Tooltip label="Reconnect" withArrow>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    aria-label="Reconnect account"
+                    size="sm"
+                    loading={initiateLinking.isPending}
+                    onClick={handleFixConnection}
+                  >
+                    <Link2 size={14} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
               {isManual && handleConvertToLinked && (
                 <Tooltip label="Link with Plaid" withArrow>
                   <ActionIcon
@@ -433,6 +478,15 @@ export function AccountRow({ account }: { account: Account }) {
                   >
                     Edit account name
                   </Menu.Item>
+                  {handleFixConnection && (
+                    <Menu.Item
+                      leftSection={<Link2 size={20} />}
+                      onClick={handleFixConnection}
+                      disabled={initiateLinking.isPending}
+                    >
+                      Reconnect account
+                    </Menu.Item>
+                  )}
                   {isManual && handleConvertToLinked && (
                     <Menu.Item
                       leftSection={<Link2 size={20} />}

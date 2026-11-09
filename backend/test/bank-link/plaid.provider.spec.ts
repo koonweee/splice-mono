@@ -100,11 +100,70 @@ describe('PlaidProvider', () => {
       expect(provider['client'].linkTokenCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           access_token: 'access-token-123',
+          update: { account_selection_enabled: true },
         }),
       );
       expect(provider['client'].linkTokenCreate).toHaveBeenCalledWith(
         expect.not.objectContaining({ user_token: expect.anything() }),
       );
+    });
+  });
+
+  describe('getConnectionHealth', () => {
+    it('detects NO_ACCOUNTS even when item/get reports no item error', async () => {
+      provider['client'] = {
+        itemGet: jest.fn().mockResolvedValue({
+          data: {
+            item: { error: null },
+            status: {
+              investments: { last_successful_update: '2026-10-29T00:00:00Z' },
+            },
+          },
+        }),
+        accountsGet: jest.fn().mockRejectedValue({
+          response: { data: { error_code: 'NO_ACCOUNTS' } },
+          config: { data: 'secret-token' },
+        }),
+      } as any;
+      const result = await provider.getConnectionHealth({
+        accessToken: 'secret-token',
+      });
+      expect(result).toMatchObject({
+        externalAccountIds: [],
+        issue: { code: 'NO_ACCOUNTS', reason: 'accounts_missing' },
+      });
+      expect(JSON.stringify(result)).not.toContain('secret-token');
+    });
+    it('returns accessible accounts independently of whether holdings exist', async () => {
+      provider['client'] = {
+        itemGet: jest
+          .fn()
+          .mockResolvedValue({ data: { item: { error: null }, status: {} } }),
+        accountsGet: jest.fn().mockResolvedValue({
+          data: { accounts: [{ account_id: 'external' }] },
+        }),
+      } as any;
+      expect(
+        await provider.getConnectionHealth({ accessToken: 'secret-token' }),
+      ).toEqual({
+        externalAccountIds: ['external'],
+        issue: null,
+        providerUpdates: [],
+      });
+    });
+    it('does not expose raw transient SDK errors', async () => {
+      provider['client'] = {
+        itemGet: jest
+          .fn()
+          .mockResolvedValue({ data: { item: { error: null } } }),
+        accountsGet: jest.fn().mockRejectedValue({
+          response: { data: { error_code: 'INSTITUTION_DOWN' } },
+          config: { data: 'secret-token' },
+        }),
+      } as any;
+      await expect(
+        provider.getConnectionHealth({ accessToken: 'secret-token' }),
+      ).rejects.toThrow('Provider connection check could not be completed');
     });
   });
 

@@ -36,6 +36,7 @@ vi.mock('../api/clients/spliceAPI', async () => {
 
 vi.mock('../lib/responsive', () => ({
   useCompactLayout: () => mockFns.isMobile,
+  useSheetLayout: () => mockFns.isMobile,
 }))
 
 vi.mock('./TransactionsTable', () => ({

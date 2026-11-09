@@ -1,6 +1,7 @@
 import { AccountSubtype, AccountType } from 'plaid';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
+import { BankLinkHealthSchema } from './BankLinkHealth';
 import { CryptoAccountType } from './AccountType';
 import { MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
@@ -116,6 +117,7 @@ export const BankLinkSchema = z
     institutionName: z.string().nullable().optional(),
     /** Current status of the bank link */
     status: BankLinkStatusEnum,
+    health: BankLinkHealthSchema.nullable().optional(),
     /** When the status was last updated */
     statusDate: z.coerce.date(),
     /** Additional status information (e.g., error details) */

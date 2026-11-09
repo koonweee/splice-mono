@@ -22,6 +22,7 @@ const mockFns = vi.hoisted(() => ({
   useAccountControllerUpdateMock: vi.fn(),
   useBankLinkControllerInitiateLinkingMock: vi.fn(),
   notificationsShowMock: vi.fn(),
+  checkMutateMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-query', async () => {
@@ -54,6 +55,10 @@ vi.mock('../../api/clients/spliceAPI', async () => {
 
   return {
     ...actual,
+    useBankLinkControllerCheckConnection: () => ({
+      mutate: mockFns.checkMutateMock,
+      isPending: false,
+    }),
     getAccountControllerFindAllQueryKey: () => ['/account'],
     getBalanceQueryControllerGetAllBalancesQueryKey: () => [
       '/balance-query/all-balances',
@@ -355,5 +360,76 @@ describe('AccountRow touch menu', () => {
       screen.getByRole('button', { name: 'Cancel account name edit' }),
     )
     expect(screen.queryByRole('textbox', { name: 'Account name' })).toBeNull()
+  })
+})
+
+const linked = (status: 'OK' | 'ERROR' = 'OK'): Account['bankLink'] => ({
+  id: 'link',
+  userId: 'user-id',
+  providerName: 'plaid',
+  accountIds: ['external'],
+  institutionName: 'Interactive Brokers - US',
+  status,
+  statusDate: account.createdAt,
+  createdAt: account.createdAt,
+  updatedAt: account.updatedAt,
+})
+
+describe('AccountRow connection repair', () => {
+  it('keeps reconnect available when a link is marked connected', () => {
+    renderAccount({ bankLinkId: 'link', bankLink: linked() })
+    fireEvent.click(screen.getByRole('button', { name: 'Reconnect account' }))
+    expect(
+      mockFns.useBankLinkControllerInitiateLinkingMock().mutate,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'plaid',
+        data: expect.objectContaining({ bankLinkId: 'link' }),
+      }),
+      expect.anything(),
+    )
+  })
+  it('shows Fix for confirmed missing account access', () => {
+    renderAccount({
+      bankLinkId: 'link',
+      bankLink: {
+        ...linked('ERROR')!,
+        health: {
+          state: 'needs_attention',
+          reason: 'accounts_missing',
+          message: 'Account unavailable',
+          checkedAt: account.createdAt,
+          lastImportedAt: null,
+          providerUpdates: [],
+        },
+      },
+    })
+    expect(screen.getByText('Account unavailable')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Fix' }))
+    expect(
+      mockFns.useBankLinkControllerInitiateLinkingMock().mutate,
+    ).toHaveBeenCalled()
+  })
+  it('checks delayed accounts without presenting a broken-login Fix action', () => {
+    renderAccount({
+      bankLinkId: 'link',
+      bankLink: {
+        ...linked()!,
+        health: {
+          state: 'delayed',
+          reason: 'provider_delayed',
+          message: 'Updates are delayed',
+          checkedAt: account.createdAt,
+          lastImportedAt: null,
+          providerUpdates: [],
+        },
+      },
+    })
+    expect(screen.queryByRole('button', { name: 'Fix' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Check connection' }))
+    expect(mockFns.checkMutateMock).toHaveBeenCalledWith(
+      { id: 'link' },
+      expect.anything(),
+    )
   })
 })

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { SanitizedBankLinkStatus } from './sanitizedBankLinkStatus'
+import type { SanitizedBankLinkHealth } from './sanitizedBankLinkHealth'
 import type { SanitizedBankLinkStatusBody } from './sanitizedBankLinkStatusBody'
 
 export interface SanitizedBankLink {
@@ -17,6 +18,7 @@ export interface SanitizedBankLink {
   /** @nullable */
   institutionName?: string | null
   status: SanitizedBankLinkStatus
+  health?: SanitizedBankLinkHealth
   /** @nullable */
   statusDate: string | null
   /** @nullable */

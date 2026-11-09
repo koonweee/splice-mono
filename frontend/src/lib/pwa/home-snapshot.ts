@@ -82,12 +82,46 @@ function money(value: unknown) {
     /^(0|[1-9]\d{0,77})$/.test(value.money.amount)
   )
 }
+function connectionHealth(value: unknown): boolean {
+  return (
+    record(value) &&
+    only(
+      value,
+      'state reason message checkedAt lastImportedAt providerUpdates',
+    ) &&
+    ['healthy', 'delayed', 'needs_attention', 'unknown'].includes(
+      String(value.state),
+    ) &&
+    (value.reason === null ||
+      [
+        'accounts_missing',
+        'login_required',
+        'consent_required',
+        'provider_delayed',
+        'import_delayed',
+        'check_failed',
+      ].includes(String(value.reason))) &&
+    string(value.message) &&
+    string(value.checkedAt) &&
+    nullableString(value.lastImportedAt) &&
+    Array.isArray(value.providerUpdates) &&
+    value.providerUpdates.every(
+      (update) =>
+        record(update) &&
+        only(update, 'product lastSuccessfulUpdateAt lastFailedUpdateAt') &&
+        ['investments', 'transactions'].includes(String(update.product)) &&
+        nullableString(update.lastSuccessfulUpdateAt) &&
+        nullableString(update.lastFailedUpdateAt),
+    )
+  )
+}
+
 function account(value: unknown) {
   return (
     record(value) &&
     only(
       value,
-      'id name customName type subType valuationMode expectedValuePercent expectedTaxPercent institutionName archivedAt syncedAt effectiveBalance convertedEffectiveBalance changeAmount changePercent',
+      'id name customName type subType valuationMode expectedValuePercent expectedTaxPercent institutionName bankLinkStatus connectionHealth archivedAt syncedAt effectiveBalance convertedEffectiveBalance changeAmount changePercent',
     ) &&
     string(value.id) &&
     string(value.name) &&
@@ -96,6 +130,14 @@ function account(value: unknown) {
     nullableString(value.institutionName) &&
     nullableString(value.archivedAt) &&
     nullableString(value.syncedAt) &&
+    (value.bankLinkStatus === undefined ||
+      value.bankLinkStatus === null ||
+      ['OK', 'ERROR', 'PENDING_REAUTH'].includes(
+        String(value.bankLinkStatus),
+      )) &&
+    (value.connectionHealth === undefined ||
+      value.connectionHealth === null ||
+      connectionHealth(value.connectionHealth)) &&
     [
       'investment',
       'credit',

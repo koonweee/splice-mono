@@ -79,6 +79,8 @@ export class DashboardQueryService {
         expectedValuePercent: account.expectedValuePercent,
         expectedTaxPercent: account.expectedTaxPercent,
         institutionName: account.bankLink?.institutionName ?? null,
+        bankLinkStatus: account.bankLink?.status ?? null,
+        connectionHealth: account.bankLink?.health ?? null,
         archivedAt: account.archivedAt?.toISOString() ?? null,
         syncedAt: result.latestSyncedAt?.toISOString() ?? null,
         effectiveBalance: effective.balance,

@@ -1,3 +1,5 @@
+import type { ProviderConnectionHealth } from '../../../types/BankLinkHealth';
+import { getConnectionIssue } from './plaid-connection-health';
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'crypto';
 import { decodeJwt, decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
@@ -341,7 +343,7 @@ export class PlaidProvider implements IBankLinkProvider {
 
     let updatedProviderUserDetails: PlaidUserDetails | undefined;
     let linkModeParams:
-      | Pick<LinkTokenCreateRequest, 'access_token'>
+      | Pick<LinkTokenCreateRequest, 'access_token' | 'update'>
       | (Omit<
           Pick<
             LinkTokenCreateRequest,
@@ -355,7 +357,10 @@ export class PlaidProvider implements IBankLinkProvider {
         > & { link_customization_name?: string });
 
     if (accessToken) {
-      linkModeParams = { access_token: accessToken };
+      linkModeParams = {
+        access_token: accessToken,
+        update: { account_selection_enabled: true },
+      };
     } else {
       const existingDetails =
         this.parseProviderUserDetails(providerUserDetails);
@@ -1102,6 +1107,61 @@ export class PlaidProvider implements IBankLinkProvider {
         'Error fetching item from Plaid',
       );
       throw error;
+    }
+  }
+
+  async getConnectionHealth(
+    authentication: Record<string, unknown>,
+  ): Promise<ProviderConnectionHealth> {
+    if (!isPlaidAuthentication(authentication))
+      throw new Error('Missing access token');
+    const { data } = await this.client.itemGet(
+      { access_token: authentication.accessToken },
+      { timeout: 10_000 },
+    );
+    const providerUpdates: ProviderConnectionHealth['providerUpdates'] = [];
+    for (const product of ['investments', 'transactions'] as const) {
+      const status = data.status?.[product];
+      if (status)
+        providerUpdates.push({
+          product,
+          lastSuccessfulUpdateAt: status.last_successful_update ?? null,
+          lastFailedUpdateAt: status.last_failed_update ?? null,
+        });
+    }
+    const issue = getConnectionIssue(data.item.error);
+    if (issue) return { externalAccountIds: [], issue, providerUpdates };
+    if (data.item.error)
+      throw new Error('Provider reports a temporary connection error');
+    const expiration = data.item.consent_expiration_time;
+    let consentIssue: ProviderConnectionHealth['issue'] = null;
+    if (
+      expiration &&
+      Date.parse(expiration) <= Date.now() + 7 * 24 * 60 * 60 * 1000
+    ) {
+      consentIssue = {
+        code: 'CONSENT_EXPIRING',
+        reason: 'consent_required',
+        message: 'Renew consent to keep these accounts connected.',
+      };
+    }
+    try {
+      const accounts = await this.client.accountsGet(
+        { access_token: authentication.accessToken },
+        { timeout: 10_000 },
+      );
+      return {
+        externalAccountIds: accounts.data.accounts.map(
+          (account) => account.account_id,
+        ),
+        issue: consentIssue,
+        providerUpdates,
+      };
+    } catch (error) {
+      const accountIssue = getConnectionIssue(error);
+      if (!accountIssue)
+        throw new Error('Provider connection check could not be completed');
+      return { externalAccountIds: [], issue: accountIssue, providerUpdates };
     }
   }
 

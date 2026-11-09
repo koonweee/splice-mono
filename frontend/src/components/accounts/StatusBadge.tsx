@@ -1,4 +1,5 @@
 import { Badge, Button, Group, Popover, Text } from '@mantine/core'
+import type { BankLinkHealth } from '@/api/models/bankLinkHealth'
 import type { SanitizedBankLinkStatusBody } from '@/api/models/sanitizedBankLinkStatusBody'
 import { SanitizedBankLinkStatus } from '@/api/models/sanitizedBankLinkStatus'
 
@@ -44,9 +45,19 @@ interface StatusBadgeProps {
   status?: SanitizedBankLinkStatus
   statusBody?: SanitizedBankLinkStatusBody
   onFix?: () => void
+  health?: BankLinkHealth | null
+  onCheck?: () => void
+  pending?: boolean
 }
 
-export function StatusBadge({ status, statusBody, onFix }: StatusBadgeProps) {
+export function StatusBadge({
+  status,
+  statusBody,
+  onFix,
+  health,
+  onCheck,
+  pending,
+}: StatusBadgeProps) {
   if (!status) {
     return (
       <Badge
@@ -60,14 +71,27 @@ export function StatusBadge({ status, statusBody, onFix }: StatusBadgeProps) {
     )
   }
 
-  const config = statusConfig[status] ?? { color: 'gray', label: status }
-  const role =
-    status === SanitizedBankLinkStatus.OK
-      ? 'success'
-      : status === SanitizedBankLinkStatus.ERROR
-        ? 'danger'
-        : 'warning'
-  const tooltipLabel = getTooltipLabel(status, statusBody)
+  const delayed = status === 'OK' && health?.state === 'delayed'
+  const unknown = status === 'OK' && health?.state === 'unknown'
+  const config = delayed
+    ? { color: 'yellow', label: 'Updates delayed' }
+    : unknown
+      ? { color: 'gray', label: 'Check unavailable' }
+      : health?.reason === 'accounts_missing' && status !== 'OK'
+        ? { color: 'red', label: 'Account unavailable' }
+        : (statusConfig[status] ?? { color: 'gray', label: status })
+  const role = delayed
+    ? 'warning'
+    : unknown
+      ? 'neutral'
+      : status === SanitizedBankLinkStatus.OK
+        ? 'success'
+        : status === SanitizedBankLinkStatus.ERROR
+          ? 'danger'
+          : 'warning'
+  const tooltipLabel =
+    getTooltipLabel(status, statusBody) ??
+    (health?.state !== 'healthy' ? health?.message : null)
 
   const badge = (
     <Badge
@@ -105,12 +129,32 @@ export function StatusBadge({ status, statusBody, onFix }: StatusBadgeProps) {
     return (
       <Group gap="xs">
         {renderedBadge}
-        <Button size="compact-xs" variant="light" onClick={onFix}>
+        <Button
+          size="compact-xs"
+          variant="light"
+          onClick={onFix}
+          loading={pending}
+        >
           Fix
         </Button>
       </Group>
     )
   }
 
+  if (onCheck && (delayed || unknown)) {
+    return (
+      <Group gap="xs">
+        {renderedBadge}
+        <Button
+          size="compact-xs"
+          variant="light"
+          onClick={onCheck}
+          loading={pending}
+        >
+          Check connection
+        </Button>
+      </Group>
+    )
+  }
   return renderedBadge
 }
