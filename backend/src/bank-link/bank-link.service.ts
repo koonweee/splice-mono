@@ -1,3 +1,7 @@
+import {
+  resolveReconnectAccountReplacement,
+  type ReconnectAccountTarget,
+} from './reconnect-account-identity';
 import { BankLinkHealthService } from './bank-link-health.service';
 import {
   BadRequestException,
@@ -60,6 +64,7 @@ type LinkConversionContext = {
 type LinkUpdateContext = {
   mode: 'update-bank-link';
   bankLinkId: string;
+  target?: ReconnectAccountTarget;
 };
 
 type LinkFlowContext = LinkConversionContext | LinkUpdateContext;
@@ -192,12 +197,21 @@ export class BankLinkService extends OwnedCrudService<
     network?: string,
     bankLinkId?: string,
     convertAccountId?: string,
+    reconnectAccountId?: string,
   ): Promise<InitiateLinkResponse> {
     this.logger.log(
       { providerName, userId, bankLinkId, convertAccountId },
       'Initiating link with provider',
     );
 
+    if (
+      reconnectAccountId &&
+      (!bankLinkId || providerName !== 'plaid' || convertAccountId)
+    ) {
+      throw new BadRequestException(
+        'Account repair requires its existing Plaid connection',
+      );
+    }
     if (bankLinkId && convertAccountId) {
       throw new BadRequestException(
         'bankLinkId and convertAccountId cannot be used together',
@@ -232,7 +246,30 @@ export class BankLinkService extends OwnedCrudService<
 
     let linkFlowContext: LinkFlowContext | undefined;
     if (bankLinkId) {
-      linkFlowContext = { mode: 'update-bank-link', bankLinkId };
+      const target = reconnectAccountId
+        ? await this.accountRepository.findOne({
+            where: {
+              id: reconnectAccountId,
+              userId,
+              bankLinkId,
+              archivedAt: IsNull(),
+            },
+          })
+        : null;
+      if (reconnectAccountId && !target)
+        throw new NotFoundException('Account is not active on this connection');
+      linkFlowContext = {
+        mode: 'update-bank-link',
+        bankLinkId,
+        ...(target
+          ? {
+              target: {
+                accountId: target.id,
+                externalAccountId: target.externalAccountId,
+              },
+            }
+          : {}),
+      };
     }
     if (convertAccountId) {
       const accountToConvert = await this.accountRepository.findOne({
@@ -751,7 +788,11 @@ export class BankLinkService extends OwnedCrudService<
 
     try {
       if (linkFlowContext?.mode === 'update-bank-link') {
-        await this.completeBankLinkUpdate(linkFlowContext.bankLinkId, userId);
+        await this.completeBankLinkUpdate(
+          linkFlowContext.bankLinkId,
+          userId,
+          linkFlowContext,
+        );
         await this.webhookEventService.markCompleted(webhookId, parsedPayload);
         this.logger.log(
           { webhookId, bankLinkId: linkFlowContext.bankLinkId },
@@ -1033,7 +1074,11 @@ export class BankLinkService extends OwnedCrudService<
    * @param userId - ID of the user who owns this bank link
    * @returns Updated accounts
    */
-  async syncAccounts(bankLinkId: string, userId: string): Promise<Account[]> {
+  async syncAccounts(
+    bankLinkId: string,
+    userId: string,
+    reconnect?: LinkUpdateContext,
+  ): Promise<Account[]> {
     // Get bank link entity (scoped by userId)
     const bankLink = await this.repository.findOne({
       where: { id: bankLinkId, userId, archivedAt: IsNull() },
@@ -1056,26 +1101,24 @@ export class BankLinkService extends OwnedCrudService<
     const provider = this.providerRegistry.getProvider(bankLink.providerName);
 
     // Fetch accounts and institution info from provider
-    const { accounts: apiAccounts, institution } =
-      await this.fetchWithConnectionHealth(bankLink, async () => {
-        const response = await provider.getAccounts(bankLink.authentication);
-        await this.health.validateAccounts(
-          bankLink,
-          response.accounts.map((account) => account.accountId),
-        );
-        return response;
-      });
-    this.logger.log(
-      { count: apiAccounts.length, providerName: bankLink.providerName },
-      'Fetched accounts from provider',
-    );
+    return this.fetchWithConnectionHealth(bankLink, async () => {
+      const { accounts: apiAccounts, institution } = await provider.getAccounts(
+        bankLink.authentication,
+      );
+      this.logger.log(
+        { count: apiAccounts.length, providerName: bankLink.providerName },
+        'Fetched accounts from provider',
+      );
 
-    return this.applyAccountSyncWithLifecycleLock(
-      bankLinkId,
-      userId,
-      apiAccounts,
-      institution,
-    );
+      return this.applyAccountSyncWithLifecycleLock(
+        bankLinkId,
+        userId,
+        apiAccounts,
+        institution,
+        bankLink,
+        reconnect,
+      );
+    });
   }
 
   private async applyAccountSyncWithLifecycleLock(
@@ -1083,6 +1126,8 @@ export class BankLinkService extends OwnedCrudService<
     userId: string,
     apiAccounts: APIAccount[],
     institution?: { id?: string | null; name?: string | null },
+    fetchedLink?: BankLinkEntity,
+    reconnect?: LinkUpdateContext,
   ): Promise<Account[]> {
     const queryRunner = this.repository.manager.connection.createQueryRunner();
     await queryRunner.connect();
@@ -1100,6 +1145,63 @@ export class BankLinkService extends OwnedCrudService<
       if (!bankLink) {
         throw new Error(`Bank link not found: ${bankLinkId}`);
       }
+
+      if (
+        bankLink.disconnectRequestedAt ||
+        bankLink.disconnectedAt ||
+        (fetchedLink &&
+          (bankLink.authentication.accessToken !==
+            fetchedLink.authentication.accessToken ||
+            bankLink.statusDate?.getTime() !==
+              fetchedLink.statusDate?.getTime()))
+      ) {
+        throw new BadRequestException(
+          'The connection changed while checking accounts. Try again.',
+        );
+      }
+      if (reconnect && bankLink.providerName === 'plaid') {
+        if (reconnect.bankLinkId !== bankLink.id)
+          throw new BadRequestException('Reconnect connection mismatch');
+        const existing = await accountRepository.find({
+          where: { userId, bankLinkId },
+        });
+        const replacement = resolveReconnectAccountReplacement(
+          existing,
+          apiAccounts.map((account) => account.accountId),
+          reconnect.target,
+        );
+        if (replacement) {
+          await queryRunner.manager.transaction(async (manager) => {
+            const accountRepo = manager.getRepository(AccountEntity);
+            const result = await accountRepo.update(
+              {
+                id: replacement.accountId,
+                userId,
+                bankLinkId,
+                externalAccountId: replacement.previousId,
+                archivedAt: IsNull(),
+              },
+              { externalAccountId: replacement.replacementId },
+            );
+            if (result.affected !== 1)
+              throw new BadRequestException('Account changed during reconnect');
+            await this.reconcileAccountIdsCache(
+              bankLink,
+              userId,
+              manager.getRepository(BankLinkEntity),
+              accountRepo,
+            );
+          });
+          this.logger.log(
+            { bankLinkId, accountId: replacement.accountId },
+            'Reconciled account identity after verified reconnect',
+          );
+        }
+      }
+      await this.health.validateAccounts(
+        bankLink,
+        apiAccounts.map((account) => account.accountId),
+      );
 
       // Update bank link institution info if changed
       if (institution) {
@@ -2234,6 +2336,7 @@ export class BankLinkService extends OwnedCrudService<
   private parseLinkFlowContext(
     context?: Record<string, any> | null,
   ): LinkFlowContext | undefined {
+    const target: unknown = context?.target;
     if (
       context?.mode === 'update-bank-link' &&
       typeof context.bankLinkId === 'string'
@@ -2241,6 +2344,20 @@ export class BankLinkService extends OwnedCrudService<
       return {
         mode: 'update-bank-link',
         bankLinkId: context.bankLinkId,
+        ...(typeof target === 'object' &&
+        target !== null &&
+        'accountId' in target &&
+        typeof target.accountId === 'string' &&
+        'externalAccountId' in target &&
+        (typeof target.externalAccountId === 'string' ||
+          target.externalAccountId === null)
+          ? {
+              target: {
+                accountId: target.accountId,
+                externalAccountId: target.externalAccountId,
+              },
+            }
+          : {}),
       };
     }
     if (
@@ -2264,6 +2381,7 @@ export class BankLinkService extends OwnedCrudService<
   private async completeBankLinkUpdate(
     bankLinkId: string,
     userId: string,
+    reconnect?: LinkUpdateContext,
   ): Promise<void> {
     const bankLink = await this.repository.findOne({
       where: { id: bankLinkId, userId, archivedAt: IsNull() },
@@ -2272,7 +2390,8 @@ export class BankLinkService extends OwnedCrudService<
       throw new NotFoundException(`Bank link not found: ${bankLinkId}`);
     }
 
-    await this.syncAccounts(bankLinkId, userId);
+    if (reconnect) await this.syncAccounts(bankLinkId, userId, reconnect);
+    else await this.syncAccounts(bankLinkId, userId);
 
     const result = await this.health.check(bankLinkId, userId, {
       afterReconnect: true,
