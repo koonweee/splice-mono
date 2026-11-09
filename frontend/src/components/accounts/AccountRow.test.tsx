@@ -384,7 +384,10 @@ describe('AccountRow connection repair', () => {
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'plaid',
-        data: expect.objectContaining({ bankLinkId: 'link' }),
+        data: expect.objectContaining({
+          bankLinkId: 'link',
+          reconnectAccountId: 'account-id',
+        }),
       }),
       expect.anything(),
     )

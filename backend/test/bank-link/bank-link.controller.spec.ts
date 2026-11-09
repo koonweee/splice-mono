@@ -58,6 +58,7 @@ describe('BankLinkController', () => {
         undefined, // network
         undefined, // bankLinkId
         undefined, // convertAccountId
+        undefined, // reconnectAccountId
       );
 
       expect(result).toEqual({
@@ -80,8 +81,24 @@ describe('BankLinkController', () => {
         undefined, // network
         undefined, // bankLinkId
         undefined, // convertAccountId
+        undefined, // reconnectAccountId
       );
     });
+  });
+
+  it('forwards the specific account selected for repair', async () => {
+    const body = { bankLinkId: 'link', reconnectAccountId: 'selected-account' };
+    await controller.initiateLinking('plaid', body, mockCurrentUser);
+    expect(service.initiateLinking).toHaveBeenCalledWith(
+      'plaid',
+      mockUserId,
+      undefined,
+      undefined,
+      undefined,
+      'link',
+      undefined,
+      'selected-account',
+    );
   });
 
   describe('handleWebhook', () => {
