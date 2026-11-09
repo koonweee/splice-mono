@@ -22,6 +22,8 @@ export const InitiateLinkRequestSchema = registerSchema(
     redirectUri: z.string().optional(), // Optional redirect after linking (Plaid)
     /** Existing bank link ID for update/reauth flows */
     bankLinkId: z.string().uuid().optional(),
+    /** Specific existing account the user chose to repair on that connection. */
+    reconnectAccountId: z.string().uuid().optional(),
     /** Existing manual account ID to convert into a linked account */
     convertAccountId: z.string().uuid().optional(),
     /** Wallet address for crypto linking */

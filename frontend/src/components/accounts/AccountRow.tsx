@@ -200,7 +200,11 @@ export function AccountRow({ account }: { account: Account }) {
         initiateLinking.mutate(
           {
             provider: account.bankLink!.providerName,
-            data: { bankLinkId: account.bankLink!.id, redirectUri },
+            data: {
+              bankLinkId: account.bankLink!.id,
+              reconnectAccountId: account.id,
+              redirectUri,
+            },
           },
           {
             onSuccess: (response) => {

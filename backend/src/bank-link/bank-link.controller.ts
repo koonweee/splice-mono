@@ -93,6 +93,7 @@ export class BankLinkController {
       body.network,
       body.bankLinkId,
       body.convertAccountId,
+      body.reconnectAccountId,
     );
   }
 

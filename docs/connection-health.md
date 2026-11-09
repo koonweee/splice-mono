@@ -11,3 +11,9 @@ Provider delay and unfinished imports are separate from missing access. Investme
 Health checks read cached provider item/account information; they do not request a provider refresh, replace holdings, modify balances, delete missing accounts, or rotate credentials. Stale-load selection checks each active account's last provider-sync snapshot, excluding forward fills and manual balance writes. The legacy seven-day warning remains a fallback when no recent verified health result exists.
 
 The migration adds nullable JSON health and check/lease timestamps to bank links. Older images can run with these extra columns retained during rollback. Public API responses expose only sanitized health; authentication and lease fields stay private. Health endpoints are authenticated and owner scoped.
+
+## Account IDs after reconnect
+
+Plaid can issue a new account_id when permissions are restored. Fix carries the stable Splice account UUID, and the server stores its current provider ID in the private reconnect-session context. After verified session success, a replacement is accepted only for that selected missing account, with all sibling IDs still present and exactly one previously unknown returned ID. Legacy single-account sessions can infer their sole target. Names, masks and balances never determine the mapping; multiple missing accounts or replacement candidates remain unresolved. The provider binding and connection ID cache change atomically under the lifecycle lock, preserving Splice history and user settings. Background sync and health probes retain strict ID validation.
+
+See [Plaid's ID-rotation guidance](https://plaid.com/docs/errors/invalid-input/#invalid_account_id) and [account field limitations](https://plaid.com/docs/api/accounts/). This explicit-session policy is Splice's reconciliation rule; Plaid does not provide a universal immutable brokerage-account identifier.

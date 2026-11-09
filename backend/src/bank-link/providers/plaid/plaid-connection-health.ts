@@ -1,8 +1,10 @@
 import type { ConnectionIssue } from '../../../types/BankLinkHealth';
 
 export class MissingProviderAccountsError extends Error {
-  constructor() {
-    super('The provider no longer exposes one or more linked accounts.');
+  constructor(
+    message = 'The provider no longer exposes one or more linked accounts.',
+  ) {
+    super(message);
   }
 }
 
