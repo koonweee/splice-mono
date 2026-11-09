@@ -1,3 +1,5 @@
+import { BankLinkHealthSchema } from './BankLinkHealth';
+import { BankLinkStatusEnum } from './BankLink';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { AccountTypeSchema, AccountValuationModeSchema } from './Account';
@@ -66,6 +68,8 @@ export const DashboardAccountSummarySchema = registerSchema(
     expectedValuePercent: z.string().optional(),
     expectedTaxPercent: z.string().optional(),
     institutionName: z.string().nullable(),
+    bankLinkStatus: BankLinkStatusEnum.nullable().optional(),
+    connectionHealth: BankLinkHealthSchema.nullable().optional(),
     archivedAt: z.string().datetime().nullable(),
     syncedAt: z.string().datetime().nullable(),
     effectiveBalance: MoneyWithSignSchema,

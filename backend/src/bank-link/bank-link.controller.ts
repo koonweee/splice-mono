@@ -1,3 +1,5 @@
+import { BankLinkHealthService } from './bank-link-health.service';
+import { ConnectionHealthCheckResultSchema } from '../types/BankLinkHealth';
 import { Body, Controller, HttpCode, Param, Post, Req } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -22,7 +24,45 @@ import { BankLinkService } from './bank-link.service';
 @ApiTags('bank-link')
 @Controller('bank-link')
 export class BankLinkController {
-  constructor(private bankLinkService: BankLinkService) {}
+  constructor(
+    private bankLinkService: BankLinkService,
+    private readonly health: BankLinkHealthService,
+  ) {}
+
+  @Post('check-health')
+  @HttpCode(200)
+  @ApiOperation({
+    description:
+      'Check stale owned bank connections using cached, rate-limited provider diagnostics',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Health checks completed',
+    schema: ConnectionHealthCheckResultSchema,
+  })
+  async checkHealth(
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ checked: number; changed: boolean }> {
+    return this.health.checkConnections(user.userId, true);
+  }
+
+  @Post(':id/check-health')
+  @HttpCode(200)
+  @ApiOperation({
+    description: 'Check an owned connection; repeat requests are rate limited',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Health check completed',
+    schema: ConnectionHealthCheckResultSchema,
+  })
+  async checkConnection(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ checked: number; changed: boolean }> {
+    const result = await this.health.check(id, user.userId, { force: true });
+    return { checked: Number(result.checked), changed: result.changed };
+  }
 
   @Post('initiate/:provider')
   @ApiOperation({

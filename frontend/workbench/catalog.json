@@ -667,6 +667,7 @@
   {
     "component": "StatusBadge",
     "source": "components/accounts/StatusBadge.tsx",
+    "composition": "Ready includes connected, missing-account/Fix, delayed/Check connection and unavailable-check states.",
     "example": "status-colors",
     "states": ["ready"]
   },

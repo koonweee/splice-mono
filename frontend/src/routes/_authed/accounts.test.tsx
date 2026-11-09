@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
   sync: vi.fn(),
 }))
 
+vi.mock('../../hooks/useConnectionHealthCheck', () => ({
+  useConnectionHealthCheck: () => undefined,
+}))
+
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (config: { component: ComponentType }) => ({
     ...config,

@@ -70,7 +70,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
   }
   if (options.longContent && accounts.length) {
     for (const [index, status] of (
-      ['OK', 'PENDING_REAUTH'] as const
+      ['OK', 'PENDING_REAUTH', 'ERROR', 'OK'] as const
     ).entries()) {
       const id = `density-linked-${index}`
       accounts.push({
@@ -88,6 +88,20 @@ export function createFixtureApi(options: FixtureOptions = {}) {
           institutionName: 'Example connected institution',
           accountIds: [id],
           status,
+          health:
+            index >= 2
+              ? {
+                  state: index === 2 ? 'needs_attention' : 'delayed',
+                  reason: index === 2 ? 'accounts_missing' : 'provider_delayed',
+                  message:
+                    index === 2
+                      ? 'The provider cannot access this account. Reconnect and review shared accounts.'
+                      : 'Account access is available. Provider updates are delayed.',
+                  checkedAt: FIXTURE_NOW,
+                  lastImportedAt: null,
+                  providerUpdates: [],
+                }
+              : null,
           statusDate: FIXTURE_NOW,
           statusBody: index
             ? { reason: 'The connection needs renewed consent.' }
@@ -283,6 +297,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
   }
   let nextId = 1
   const writes: Record<string, (config: AxiosRequestConfig) => unknown> = {
+    'POST /bank-link/check-health': () => ({ checked: 0, changed: false }),
     ...notificationStore.writes,
     'POST /transaction/category/bulk': (config) =>
       transactionBulkStore.update(
@@ -336,6 +351,8 @@ export function createFixtureApi(options: FixtureOptions = {}) {
     const method = (config.method ?? 'GET').toUpperCase()
     const url = config.url ?? ''
     const path = url.split('?')[0]
+    const healthOperation =
+      method === 'POST' && /^\/bank-link\/[^/]+\/check-health$/.test(path)
     const match = /^\/account\/([^/]+)(?:\/(balance|archive))?$/.exec(path)
     const account = match && accounts.find((item) => item.id === match[1])
     const categoryMatch = /^\/category\/custom\/([^/]+)$/.exec(path)
@@ -353,6 +370,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
           transactionMatch?.[2] === 'manual' &&
           ['PATCH', 'DELETE'].includes(method)))
     const recognized =
+      healthOperation ||
       (Boolean(category) && method === 'PATCH') ||
       transactionOperation ||
       (method === 'GET' &&
@@ -424,7 +442,8 @@ export function createFixtureApi(options: FixtureOptions = {}) {
       )
     }
     let result: unknown
-    if (category && method === 'PATCH')
+    if (healthOperation) result = { checked: 1, changed: false }
+    else if (category && method === 'PATCH')
       result = categoryStore.update(
         category,
         config.data as UpdateCustomCategoryDto,

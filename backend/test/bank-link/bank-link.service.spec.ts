@@ -1,3 +1,4 @@
+import { BankLinkHealthService } from '../../src/bank-link/bank-link-health.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -36,6 +37,16 @@ if (!plaidGetPendingTransactionReconciliationSnapshot) {
 const mockPlaidGetPendingTransactionReconciliationSnapshot = jest.mocked(
   plaidGetPendingTransactionReconciliationSnapshot,
 );
+
+const mockHealth = {
+  validateAccounts: jest.fn().mockResolvedValue(undefined),
+  recordSyncFailure: jest.fn().mockResolvedValue(undefined),
+  check: jest.fn().mockResolvedValue({
+    checked: true,
+    changed: true,
+    health: { state: 'healthy' },
+  }),
+};
 
 const mockEventEmitter = {
   emit: jest.fn(),
@@ -243,6 +254,7 @@ describe('BankLinkService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BankLinkService,
+        { provide: BankLinkHealthService, useValue: mockHealth },
         {
           provide: getRepositoryToken(BankLinkEntity),
           useValue: mockBankLinkRepository,
@@ -831,12 +843,10 @@ describe('BankLinkService', () => {
       expect(mockPlaidProvider.getAccounts).toHaveBeenCalledWith(
         mockBankLinkEntity.authentication,
       );
-      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
-        { id: mockBankLinkEntity.id, userId: mockUserId },
-        expect.objectContaining({
-          status: 'OK',
-          statusBody: null,
-        }),
+      expect(mockHealth.check).toHaveBeenCalledWith(
+        mockBankLinkEntity.id,
+        mockUserId,
+        { afterReconnect: true },
       );
       expect(mockBankLinkRepository.update).not.toHaveBeenCalledWith(
         expect.anything(),
@@ -1614,12 +1624,10 @@ describe('BankLinkService', () => {
       );
 
       // Should have updated status to OK and cleared statusBody
-      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
-        { id: bankLinkWithError.id, userId: mockUserId },
-        expect.objectContaining({
-          status: 'OK',
-          statusBody: null,
-        }),
+      expect(mockHealth.check).toHaveBeenCalledWith(
+        bankLinkWithError.id,
+        mockUserId,
+        { afterReconnect: true },
       );
       // Should have triggered account sync
       expect(mockPlaidProvider.getAccounts).toHaveBeenCalled();
@@ -3250,6 +3258,69 @@ describe('BankLinkService', () => {
         [mockBankLink.id],
       );
       expect(mockReconciliationQueryRunner.release).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe('connection health integration', () => {
+    it.each([
+      'accounts',
+      'holdings',
+      'investment-transactions',
+      'transactions',
+    ])(
+      'records actionable %s fetch errors and preserves the original failure',
+      async (kind) => {
+        const failure = { response: { data: { error_code: 'NO_ACCOUNTS' } } };
+        mockAccountRepository.findOne.mockResolvedValue({ type: 'investment' });
+        let request: Promise<unknown>;
+        if (kind === 'accounts') {
+          jest
+            .mocked(mockPlaidProvider.getAccounts)
+            .mockRejectedValueOnce(failure);
+          request = service.syncAccounts(mockBankLinkEntity.id, mockUserId);
+        } else if (kind === 'holdings') {
+          jest
+            .mocked(mockPlaidProvider.syncInvestmentHoldings!)
+            .mockRejectedValueOnce(failure);
+          request = service.syncInvestmentHoldings(
+            mockBankLinkEntity.id,
+            mockUserId,
+          );
+        } else if (kind === 'investment-transactions') {
+          jest
+            .mocked(mockPlaidProvider.syncInvestmentTransactions!)
+            .mockRejectedValueOnce(failure);
+          request = service.syncInvestmentTransactions(
+            mockBankLinkEntity.id,
+            mockUserId,
+          );
+        } else {
+          mockPlaidSyncTransactions.mockRejectedValueOnce(failure);
+          request = service.syncTransactions(mockBankLinkEntity.id, mockUserId);
+        }
+        await expect(request).rejects.toBe(failure);
+        expect(mockHealth.recordSyncFailure).toHaveBeenCalledWith(
+          expect.objectContaining({ id: mockBankLinkEntity.id }),
+          failure,
+        );
+      },
+    );
+    it('does not complete a reconnect when health verification still reports missing accounts', async () => {
+      jest.spyOn(service, 'syncAccounts').mockResolvedValueOnce([]);
+      mockHealth.check.mockResolvedValueOnce({
+        checked: true,
+        changed: true,
+        health: {
+          state: 'needs_attention',
+          message: 'Account still unavailable',
+        },
+      });
+      await expect(
+        service['completeBankLinkUpdate'](mockBankLinkEntity.id, mockUserId),
+      ).rejects.toThrow('Account still unavailable');
+      expect(mockBankLinkRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'OK' }),
+      );
     });
   });
 });

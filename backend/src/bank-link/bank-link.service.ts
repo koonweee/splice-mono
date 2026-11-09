@@ -1,3 +1,4 @@
+import { BankLinkHealthService } from './bank-link-health.service';
 import {
   BadRequestException,
   ConflictException,
@@ -133,8 +134,28 @@ export class BankLinkService extends OwnedCrudService<
     private userService: UserService,
     private transactionService: TransactionService,
     private investmentService: InvestmentService,
+    private readonly health: BankLinkHealthService,
   ) {
     super(bankLinkRepository);
+  }
+
+  private async fetchWithConnectionHealth<T>(
+    link: BankLinkEntity,
+    fetch: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await fetch();
+    } catch (error) {
+      try {
+        await this.health.recordSyncFailure(link, error);
+      } catch {
+        this.logger.warn(
+          { bankLinkId: link.id },
+          'Unable to record connection failure',
+        );
+      }
+      throw error;
+    }
   }
 
   protected applyUpdate(entity: BankLinkEntity, dto: UpdateBankLinkDto): void {
@@ -604,6 +625,10 @@ export class BankLinkService extends OwnedCrudService<
       bankLink.userId,
       parsedPayload,
       async () => {
+        if (statusInfo.status === 'OK' && statusInfo.shouldSync) {
+          await this.completeBankLinkUpdate(bankLink.id, bankLink.userId);
+          return;
+        }
         const previousStatus = bankLink.status;
         let statusBody = statusInfo.statusBody;
         const provider = this.providerRegistry.getProvider(
@@ -638,6 +663,9 @@ export class BankLinkService extends OwnedCrudService<
             status: statusInfo.status,
             statusDate,
             statusBody,
+            health: null,
+            healthCheckedAt: null,
+            healthCheckStartedAt: null,
           },
         );
         this.logger.log(
@@ -659,6 +687,18 @@ export class BankLinkService extends OwnedCrudService<
               statusInfo.status,
               statusBody,
               statusDate.toISOString(),
+              (
+                await this.accountRepository.find({
+                  where: {
+                    bankLinkId: bankLink.id,
+                    userId: bankLink.userId,
+                    archivedAt: IsNull(),
+                  },
+                })
+              ).map(
+                (account) =>
+                  account.customName ?? account.name ?? 'Linked account',
+              ),
             ),
           );
         }
@@ -1016,9 +1056,15 @@ export class BankLinkService extends OwnedCrudService<
     const provider = this.providerRegistry.getProvider(bankLink.providerName);
 
     // Fetch accounts and institution info from provider
-    const { accounts: apiAccounts, institution } = await provider.getAccounts(
-      bankLink.authentication,
-    );
+    const { accounts: apiAccounts, institution } =
+      await this.fetchWithConnectionHealth(bankLink, async () => {
+        const response = await provider.getAccounts(bankLink.authentication);
+        await this.health.validateAccounts(
+          bankLink,
+          response.accounts.map((account) => account.accountId),
+        );
+        return response;
+      });
     this.logger.log(
       { count: apiAccounts.length, providerName: bankLink.providerName },
       'Fetched accounts from provider',
@@ -1459,9 +1505,8 @@ export class BankLinkService extends OwnedCrudService<
       'Starting transaction sync for bank link',
     );
 
-    const syncResults = await provider.syncTransactions(
-      bankLink.authentication,
-      currentCursor,
+    const syncResults = await this.fetchWithConnectionHealth(bankLink, () =>
+      provider.syncTransactions!(bankLink.authentication, currentCursor),
     );
     let accountMappings = await this.buildTransactionAccountMappings(
       bankLinkId,
@@ -1597,8 +1642,19 @@ export class BankLinkService extends OwnedCrudService<
       bankLinkId,
       'holdings',
     );
-    const holdingsResponse = await provider.syncInvestmentHoldings(
-      bankLink.authentication,
+    const holdingsResponse = await this.fetchWithConnectionHealth(
+      bankLink,
+      async () => {
+        const response = await provider.syncInvestmentHoldings!(
+          bankLink.authentication,
+        );
+        await this.health.validateAccounts(
+          bankLink,
+          response.externalAccountIds,
+          true,
+        );
+        return response;
+      },
     );
     const accountIdMap = await this.buildExternalAccountIdMap(
       userId,
@@ -1683,10 +1739,21 @@ export class BankLinkService extends OwnedCrudService<
       bankLinkId,
       'transactions',
     );
-    const response = await provider.syncInvestmentTransactions(
-      bankLink.authentication,
-      startDate,
-      endDate,
+    const response = await this.fetchWithConnectionHealth(
+      bankLink,
+      async () => {
+        const result = await provider.syncInvestmentTransactions!(
+          bankLink.authentication,
+          startDate,
+          endDate,
+        );
+        await this.health.validateAccounts(
+          bankLink,
+          result.externalAccountIds,
+          true,
+        );
+        return result;
+      },
     );
     const accountIdMap = await this.buildExternalAccountIdMap(
       userId,
@@ -2207,10 +2274,15 @@ export class BankLinkService extends OwnedCrudService<
 
     await this.syncAccounts(bankLinkId, userId);
 
-    await this.repository.update(
-      { id: bankLink.id, userId },
-      { status: 'OK', statusDate: new Date(), statusBody: null },
-    );
+    const result = await this.health.check(bankLinkId, userId, {
+      afterReconnect: true,
+    });
+    if (
+      result.health?.state === 'needs_attention' ||
+      result.health?.state === 'unknown'
+    ) {
+      throw new BadRequestException(result.health.message);
+    }
   }
 
   private async saveBankLinkFromLinkCompletionResponse(

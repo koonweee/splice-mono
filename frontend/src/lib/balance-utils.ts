@@ -16,7 +16,9 @@ import type {
   AccountValuationMode,
   BalanceQueryPerDateResult,
   BalanceWithConvertedBalance,
+  BankLinkHealth,
   MoneyWithSign,
+  SanitizedBankLinkStatus,
 } from '../api/models'
 
 type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
@@ -232,6 +234,8 @@ export interface AccountSummaryData {
   changePercent?: number
   changeAmount?: MoneyWithSign
   institutionName?: string
+  bankLinkStatus?: SanitizedBankLinkStatus | null
+  connectionHealth?: BankLinkHealth | null
   syncedAt?: string
   archivedAt?: string | null
   valuationMode: AccountValuationMode
@@ -379,6 +383,8 @@ export function transformToDashboardData(
           changeAmount: accountChangeAmount,
           institutionName:
             accountResult.account.bankLink?.institutionName ?? undefined,
+          bankLinkStatus: accountResult.account.bankLink?.status ?? null,
+          connectionHealth: accountResult.account.bankLink?.health ?? null,
           syncedAt: getLatestAccountSyncedAt(
             sortedResults,
             accountId,

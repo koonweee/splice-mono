@@ -42,6 +42,7 @@ export type NewSyncedTransactionsNotificationPayload = z.infer<
 
 export const BankLinkNeedsAttentionNotificationPayloadSchema = z.object({
   bankLinkId: z.string().uuid(),
+  accountNames: z.array(z.string()).optional(),
   providerName: z.string(),
   institutionName: z.string().nullable(),
   status: z.enum(['ERROR', 'PENDING_REAUTH']),
