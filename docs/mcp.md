@@ -3,7 +3,7 @@
 ## Read this in 60 seconds
 
 Splice exposes one public, stateless Streamable HTTP MCP resource at
-`https://splice-mcp.kw0.dev/mcp`. It is separate from the Nest API origin and
+`https://splice-mcp.sf.ext.kw0.dev/mcp`. It is separate from the Nest API origin and
 uses Auth0 OAuth access tokens; a Splice personal access token is valid only for
 ordinary REST API automation and must not be used with MCP.
 
@@ -13,11 +13,11 @@ are not authorization and do not guarantee a confirmation prompt. OAuth scope
 checks, authenticated-user ownership, domain validation, and categorization
 preview tokens are the authoritative controls.
 
-The listener is disabled by default. Production enables it only on the SF app
-replica and routes container port `3001` through external Traefik. Deployment
-topology and Komodo values live in the separate `koonweee/stack` repository,
-under `control-plane/komodo/resources/apps/splice/` and
-`control-plane/komodo/stacks/splice-app/`.
+The listener is disabled by default. The SF external deployment enables it on
+the single backend and routes container port `3001` through external Traefik.
+Its topology and Komodo values live in `koonweee/stack-v2/apps/splice/`.
+The legacy endpoint and infrastructure sections below remain rollback references
+until cutover acceptance; do not use them to configure the new installation.
 
 ## Historical balances and valuation evidence
 
@@ -36,6 +36,16 @@ The tool exposes closes and separate adjusted closes, price-basis limitations, a
 Synthetic example: assets of USD 1000 and USD 500, less SGD 100 debt at 0.75 USD/SGD, give USD 1425 opening net worth. Closing assets of USD 900 and USD 450, less SGD 200 debt at 0.80, give USD 1190. Contributions are −100, −50 and −85 USD, exactly reconciling a −235 USD change. That arithmetic does not prove the investment decline was market loss or the cash decline was spending. An FX-only debt explanation would predict −5 USD with unchanged SGD 100 debt; native debt actually rose by SGD 100. The fixture and checks live in `backend/test/balance-query/balance-attribution.spec.ts`; no private records are used.
 
 All new tools require `splice:read` and are read-only, with validated structured output and equivalent JSON text fallback. Existing inputs/native fields remain usable; additions do not require an MCP App or financial writes. A requested unavailable/unowned attribution account or historical security fails rather than silently returning a partial reconciliation. Empty result arrays are successful coverage responses; transport/auth/provider/database errors are not empty portfolios.
+
+## SF external migration
+
+The Stack v2 migration uses `https://splice-mcp.sf.ext.kw0.dev/mcp`, with
+widget origin `https://splice-mcp.sf.ext.kw0.dev`. Its Auth0 resource/audience
+must match the new URL exactly; register that resource and its permissions
+before cutover, then reconnect callers and refresh ChatGPT discovery. The
+legacy registration and rollout records below describe the old deployment
+and remain rollback references until migration acceptance. Deployment is owned
+by `koonweee/stack-v2`, under `apps/splice/`.
 
 ## Authentication and identity
 

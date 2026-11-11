@@ -5,7 +5,7 @@ import { renderCashFlowApp } from './apps/cash-flow';
 import { renderPortfolioViewerApp } from './apps/portfolio-viewer';
 import type { SpliceMcpDependencies } from './mcp.definition';
 
-export const MCP_APP_DOMAIN = 'https://splice-mcp.kw0.dev';
+export const MCP_APP_DOMAIN = 'https://splice-mcp.sf.ext.kw0.dev';
 
 export interface SpliceMcpAppDefinition {
   id: 'cash_flow' | 'portfolio';

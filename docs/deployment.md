@@ -13,12 +13,41 @@ Start from the backend and frontend `.env.example` files and store production va
 - optional VAPID keys for browser push notifications
 
 Personal access tokens remain available for ordinary REST API automation. MCP
-is a separate Auth0 OAuth resource at `https://splice-mcp.kw0.dev/mcp`; it does
-not accept PATs and is not mounted on `API_DOMAIN`. Keep MCP disabled on normal
-API replicas. The SF-only listener, Auth0 contract, ingress ordering, smoke
-tests, and rollback are documented in the [canonical MCP runbook](mcp.md).
+is a separate Auth0 OAuth resource at `https://splice-mcp.sf.ext.kw0.dev/mcp`; it
+does not accept PATs and is not mounted on `API_DOMAIN`. Stack v2 runs one
+backend with the MCP listener enabled. The Auth0 contract and smoke tests are
+documented in the [canonical MCP runbook](mcp.md); migration ordering and
+rollback live in `koonweee/stack-v2/apps/splice/README.md`.
 
 Set the Google callback URL to `${API_DOMAIN}/user/oauth/google/callback`, register that exact redirect URI with Google, and register `FRONTEND_DOMAIN` as an authorized JavaScript origin. Keep `LOCAL_AUTH_BYPASS=false` in every deployed environment.
+
+## SF external migration build
+
+For the Stack v2 migration, build the reviewed migration commit from the deployed
+source baseline on the operator Mac. Target `linux/amd64` explicitly for SF;
+permanent build automation and builder VM setup are deferred. Publishing images
+does not deploy the application. After publishing, pin both immutable digests
+in `koonweee/stack-v2/apps/splice/compose.yaml`.
+
+```sh
+# From a clean checkout of the reviewed migration commit; Docker must be logged in to GHCR.
+revision=$(git rev-parse HEAD)
+tag="sf-migration-$(git rev-parse --short=12 HEAD)"
+docker buildx build --platform linux/amd64 --push \
+  --label "org.opencontainers.image.revision=$revision" \
+  --label org.opencontainers.image.source=https://github.com/koonweee/splice-mono \
+  --tag "ghcr.io/koonweee/splice-backend:$tag" backend
+docker buildx build --platform linux/amd64 --push \
+  --label "org.opencontainers.image.revision=$revision" \
+  --label org.opencontainers.image.source=https://github.com/koonweee/splice-mono \
+  --build-arg VITE_API_BASE_URL=https://splice-api.sf.ext.kw0.dev \
+  --tag "ghcr.io/koonweee/splice-frontend:$tag" frontend
+```
+
+Use a unique tag for each reviewed source revision and build configuration. Do
+not overwrite the legacy `latest` tags during migration. The legacy workflow
+below promotes source; after its Komodo build triggers are retired, it does not
+publish or deploy images by itself.
 
 ## Release workflow
 
