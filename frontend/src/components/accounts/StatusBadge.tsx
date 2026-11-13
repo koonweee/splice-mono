@@ -71,27 +71,22 @@ export function StatusBadge({
     )
   }
 
-  const delayed = status === 'OK' && health?.state === 'delayed'
   const unknown = status === 'OK' && health?.state === 'unknown'
-  const config = delayed
-    ? { color: 'yellow', label: 'Updates delayed' }
-    : unknown
-      ? { color: 'gray', label: 'Check unavailable' }
-      : health?.reason === 'accounts_missing' && status !== 'OK'
-        ? { color: 'red', label: 'Account unavailable' }
-        : (statusConfig[status] ?? { color: 'gray', label: status })
-  const role = delayed
-    ? 'warning'
-    : unknown
-      ? 'neutral'
-      : status === SanitizedBankLinkStatus.OK
-        ? 'success'
-        : status === SanitizedBankLinkStatus.ERROR
-          ? 'danger'
-          : 'warning'
+  const config = unknown
+    ? { color: 'gray', label: 'Check unavailable' }
+    : health?.reason === 'accounts_missing' && status !== 'OK'
+      ? { color: 'red', label: 'Account unavailable' }
+      : (statusConfig[status] ?? { color: 'gray', label: status })
+  const role = unknown
+    ? 'neutral'
+    : status === SanitizedBankLinkStatus.OK
+      ? 'success'
+      : status === SanitizedBankLinkStatus.ERROR
+        ? 'danger'
+        : 'warning'
   const tooltipLabel =
     getTooltipLabel(status, statusBody) ??
-    (health?.state !== 'healthy' ? health?.message : null)
+    (health?.state === 'needs_attention' || unknown ? health.message : null)
 
   const badge = (
     <Badge
@@ -141,7 +136,7 @@ export function StatusBadge({
     )
   }
 
-  if (onCheck && (delayed || unknown)) {
+  if (onCheck && unknown) {
     return (
       <Group gap="xs">
         {renderedBadge}

@@ -54,23 +54,3 @@ export function getConnectionIssue(error: unknown): ConnectionIssue | null {
       return null;
   }
 }
-
-/** Market-day grace excludes weekends; no reliance on transaction activity. */
-export function isProviderUpdateOverdue(
-  value: string | null,
-  now: Date,
-  investments: boolean,
-): boolean {
-  if (!value) return false;
-  const time = Date.parse(value);
-  if (!Number.isFinite(time)) return false;
-  if (!investments) return now.getTime() - time >= 72 * 60 * 60 * 1000;
-  const cursor = new Date(time);
-  let weekdays = 0;
-  while (cursor.getTime() + 24 * 60 * 60 * 1000 <= now.getTime()) {
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-    if (cursor.getUTCDay() !== 0 && cursor.getUTCDay() !== 6) weekdays++;
-    if (weekdays >= 3) return true;
-  }
-  return false;
-}

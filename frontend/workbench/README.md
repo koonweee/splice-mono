@@ -832,4 +832,18 @@ At 384px and below, the Home header uses two compact rows to preserve all 44px t
 
 ## Bank connection health
 
-Use `status-colors` for account-unavailable/Fix, updates-delayed/Check connection and unavailable-check states. `page-accounts&state=long-content` includes connected, consent, missing-account and delayed links, with Reconnect available in desktop actions and the touch menu. Health API calls use fixture-only handlers and never contact Plaid.
+Use `status-colors` for account-unavailable/Fix, connected accounts with old provider timestamps, and unavailable-check states. `page-accounts&state=long-content` includes connected, consent, missing-account and unavailable-check links, with Reconnect available in desktop actions and the touch menu. Health API calls use fixture-only handlers and never contact Plaid.
+
+
+The connection status now follows explicit provider errors and verified account
+access. Old provider success/failure timestamps and old local imports do not
+produce a warning. Regression coverage includes both banking and investment
+connections, explicit consent errors, failed checks, cleanup of cached diagnoses,
+and rejection of retired diagnoses in cached Home data.
+
+Browser-reviewed `status-colors/ready` in Light at 1280×900, Dark at 1440×900,
+and OLED at 390×844 with sage accent (`#8bab7b`). Connected badges remain green;
+missing-account/Fix and unavailable-check details/retry remain usable. The phone
+retry reports the fixture action, and the connected account retains Reconnect in
+its phone action menu. No browser runtime errors were recorded. Accounts loading/ready keeps its existing
+component-owned frames; the number of loaded rows is data-dependent.

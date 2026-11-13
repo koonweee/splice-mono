@@ -1133,18 +1133,6 @@ export class PlaidProvider implements IBankLinkProvider {
     if (issue) return { externalAccountIds: [], issue, providerUpdates };
     if (data.item.error)
       throw new Error('Provider reports a temporary connection error');
-    const expiration = data.item.consent_expiration_time;
-    let consentIssue: ProviderConnectionHealth['issue'] = null;
-    if (
-      expiration &&
-      Date.parse(expiration) <= Date.now() + 7 * 24 * 60 * 60 * 1000
-    ) {
-      consentIssue = {
-        code: 'CONSENT_EXPIRING',
-        reason: 'consent_required',
-        message: 'Renew consent to keep these accounts connected.',
-      };
-    }
     try {
       const accounts = await this.client.accountsGet(
         { access_token: authentication.accessToken },
@@ -1154,7 +1142,7 @@ export class PlaidProvider implements IBankLinkProvider {
         externalAccountIds: accounts.data.accounts.map(
           (account) => account.account_id,
         ),
-        issue: consentIssue,
+        issue: null,
         providerUpdates,
       };
     } catch (error) {

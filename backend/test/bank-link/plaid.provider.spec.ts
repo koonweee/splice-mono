@@ -151,6 +151,38 @@ describe('PlaidProvider', () => {
         providerUpdates: [],
       });
     });
+    it('keeps consent expiration as metadata until Plaid reports a consent error', async () => {
+      provider['client'] = {
+        itemGet: jest.fn().mockResolvedValue({
+          data: {
+            item: {
+              error: null,
+              consent_expiration_time: new Date(
+                Date.now() + 24 * 60 * 60 * 1000,
+              ).toISOString(),
+            },
+            status: {},
+          },
+        }),
+        accountsGet: jest.fn().mockResolvedValue({
+          data: { accounts: [{ account_id: 'external' }] },
+        }),
+      } as any;
+      expect(
+        await provider.getConnectionHealth({ accessToken: 'secret-token' }),
+      ).toMatchObject({ issue: null, externalAccountIds: ['external'] });
+      provider['client'].itemGet = jest.fn().mockResolvedValue({
+        data: {
+          item: { error: { error_code: 'CONSENT_EXPIRING' } },
+          status: {},
+        },
+      });
+      expect(
+        await provider.getConnectionHealth({ accessToken: 'secret-token' }),
+      ).toMatchObject({
+        issue: { code: 'CONSENT_EXPIRING', reason: 'consent_required' },
+      });
+    });
     it('does not expose raw transient SDK errors', async () => {
       provider['client'] = {
         itemGet: jest

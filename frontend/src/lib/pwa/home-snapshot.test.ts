@@ -96,6 +96,14 @@ describe('Home snapshot validation', () => {
       effectiveBalance: value.summary.data.netWorth,
     })
     expect(isHomeSnapshot(value)).toBe(true)
+    const health = value.summary.data.assets[0].connectionHealth!
+    Object.assign(health, { state: 'delayed', reason: 'provider_delayed' })
+    expect(isHomeSnapshot(value)).toBe(false)
+    Object.assign(health, {
+      state: 'needs_attention',
+      reason: 'accounts_missing',
+    })
+    expect(isHomeSnapshot(value)).toBe(true)
     Object.assign(value.summary.data.assets[0].connectionHealth!, {
       accessToken: 'must-not-persist',
     })

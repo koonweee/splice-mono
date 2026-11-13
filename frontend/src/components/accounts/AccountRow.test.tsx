@@ -413,15 +413,42 @@ describe('AccountRow connection repair', () => {
       mockFns.useBankLinkControllerInitiateLinkingMock().mutate,
     ).toHaveBeenCalled()
   })
-  it('checks delayed accounts without presenting a broken-login Fix action', () => {
+  it('shows accessible accounts as connected despite old provider timestamps', () => {
     renderAccount({
       bankLinkId: 'link',
       bankLink: {
         ...linked()!,
         health: {
-          state: 'delayed',
-          reason: 'provider_delayed',
-          message: 'Updates are delayed',
+          state: 'healthy',
+          reason: null,
+          message: 'The linked accounts are accessible.',
+          checkedAt: account.createdAt,
+          lastImportedAt: null,
+          providerUpdates: [
+            {
+              product: 'investments',
+              lastSuccessfulUpdateAt: '2026-01-01T00:00:00Z',
+              lastFailedUpdateAt: '2026-01-05T00:00:00Z',
+            },
+          ],
+        },
+      },
+    })
+    expect(screen.getByText('Connected')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Fix' })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Check connection' }),
+    ).toBeNull()
+  })
+  it('retries unavailable checks without presenting a broken-login Fix action', () => {
+    renderAccount({
+      bankLinkId: 'link',
+      bankLink: {
+        ...linked()!,
+        health: {
+          state: 'unknown',
+          reason: 'check_failed',
+          message: 'Connection check unavailable. Try again later.',
           checkedAt: account.createdAt,
           lastImportedAt: null,
           providerUpdates: [],

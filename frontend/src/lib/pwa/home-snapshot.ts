@@ -89,16 +89,12 @@ function connectionHealth(value: unknown): boolean {
       value,
       'state reason message checkedAt lastImportedAt providerUpdates',
     ) &&
-    ['healthy', 'delayed', 'needs_attention', 'unknown'].includes(
-      String(value.state),
-    ) &&
+    ['healthy', 'needs_attention', 'unknown'].includes(String(value.state)) &&
     (value.reason === null ||
       [
         'accounts_missing',
         'login_required',
         'consent_required',
-        'provider_delayed',
-        'import_delayed',
         'check_failed',
       ].includes(String(value.reason))) &&
     string(value.message) &&

@@ -4,14 +4,12 @@ import { registerSchema } from '../common/zod-api-response';
 export const BankLinkHealthSchema = registerSchema(
   'BankLinkHealth',
   z.object({
-    state: z.enum(['healthy', 'delayed', 'needs_attention', 'unknown']),
+    state: z.enum(['healthy', 'needs_attention', 'unknown']),
     reason: z
       .enum([
         'accounts_missing',
         'login_required',
         'consent_required',
-        'provider_delayed',
-        'import_delayed',
         'check_failed',
       ])
       .nullable(),
