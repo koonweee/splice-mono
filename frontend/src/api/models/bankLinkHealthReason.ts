@@ -18,7 +18,5 @@ export const BankLinkHealthReason = {
   accounts_missing: 'accounts_missing',
   login_required: 'login_required',
   consent_required: 'consent_required',
-  provider_delayed: 'provider_delayed',
-  import_delayed: 'import_delayed',
   check_failed: 'check_failed',
 } as const

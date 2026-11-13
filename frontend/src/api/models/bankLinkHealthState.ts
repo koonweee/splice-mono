@@ -12,7 +12,6 @@ export type BankLinkHealthState =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const BankLinkHealthState = {
   healthy: 'healthy',
-  delayed: 'delayed',
   needs_attention: 'needs_attention',
   unknown: 'unknown',
 } as const

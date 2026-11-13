@@ -91,12 +91,12 @@ export function createFixtureApi(options: FixtureOptions = {}) {
           health:
             index >= 2
               ? {
-                  state: index === 2 ? 'needs_attention' : 'delayed',
-                  reason: index === 2 ? 'accounts_missing' : 'provider_delayed',
+                  state: index === 2 ? 'needs_attention' : 'unknown',
+                  reason: index === 2 ? 'accounts_missing' : 'check_failed',
                   message:
                     index === 2
                       ? 'The provider cannot access this account. Reconnect and review shared accounts.'
-                      : 'Account access is available. Provider updates are delayed.',
+                      : 'Connection check unavailable. Try again later.',
                   checkedAt: FIXTURE_NOW,
                   lastImportedAt: null,
                   providerUpdates: [],

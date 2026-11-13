@@ -17,21 +17,18 @@ import { BankLinkEntity } from './bank-link.entity';
 import { BANK_LINK_LIFECYCLE_TRANSACTION_LOCK_SQL } from './bank-link-lifecycle-lock';
 import {
   getConnectionIssue,
-  isProviderUpdateOverdue,
   MissingProviderAccountsError,
 } from './providers/plaid/plaid-connection-health';
 import { ProviderRegistry } from './providers/provider.registry';
 
 const CHECK_CACHE_MS = 60 * 60 * 1000;
 const CHECK_LEASE_MS = 5 * 60 * 1000;
-const STALE_ACCOUNT_DAYS = 7;
 
 type CheckResult = {
   checked: boolean;
   changed: boolean;
   health: BankLinkHealth | null;
 };
-type ImportState = { lastImportedAt: string | null; stalled: boolean };
 
 @Injectable()
 export class BankLinkHealthService {
@@ -160,12 +157,19 @@ export class BankLinkHealthService {
         if (!issue) throw error;
       }
     }
-    const imports = await this.importState(link);
-    const health = issue
+    const lastImportedAt = await this.lastImportedAt(link);
+    const health: BankLinkHealth = issue
       ? this.issueHealth(issue, startedAt)
-      : await this.availableHealth(link, snapshot, imports, startedAt);
+      : {
+          state: 'healthy',
+          reason: null,
+          message: 'The linked accounts are accessible.',
+          checkedAt: startedAt.toISOString(),
+          lastImportedAt,
+          providerUpdates: snapshot.providerUpdates,
+        };
     health.providerUpdates = snapshot.providerUpdates;
-    health.lastImportedAt = imports.lastImportedAt;
+    health.lastImportedAt = lastImportedAt;
     const changed = await this.apply(
       link,
       health,
@@ -177,66 +181,19 @@ export class BankLinkHealthService {
     return { checked: true, changed, health };
   }
 
-  private async importState(link: BankLinkEntity): Promise<ImportState> {
-    const rows: Array<{ lastImportedAt: string | null; stalled: boolean }> =
+  /** Import time is diagnostic evidence, not a provider freshness guarantee. */
+  private async lastImportedAt(link: BankLinkEntity): Promise<string | null> {
+    const rows: Array<{ lastImportedAt: string | null }> =
       await this.links.query(
         `
-      SELECT (SELECT MAX(s."updatedAt") FROM balance_snapshot_entity s
+      SELECT MAX(s."updatedAt") AS "lastImportedAt" FROM balance_snapshot_entity s
         JOIN account_entity a ON a.id=s."accountId"
-        WHERE a."bankLinkId"=$1 AND a."userId"=$2 AND a."archivedAt" IS NULL AND s."snapshotType"='SYNC') AS "lastImportedAt",
-        EXISTS (SELECT 1 FROM investment_sync_state_entity i WHERE i."bankLinkId"=$1 AND i."userId"=$2
-          AND i."requestedGeneration">i."completedGeneration" AND i."updatedAt" < now()-interval '6 hours') AS stalled`,
+        WHERE a."bankLinkId"=$1 AND a."userId"=$2 AND a."archivedAt" IS NULL AND s."snapshotType"='SYNC'`,
         [link.id, link.userId],
       );
-    const value = rows[0];
-    return {
-      lastImportedAt: value?.lastImportedAt
-        ? new Date(value.lastImportedAt).toISOString()
-        : null,
-      stalled: value?.stalled ?? false,
-    };
-  }
-
-  private async availableHealth(
-    link: BankLinkEntity,
-    snapshot: ProviderConnectionHealth,
-    imports: ImportState,
-    now: Date,
-  ): Promise<BankLinkHealth> {
-    const accounts = await this.activeAccounts(link);
-    const investment = accounts.some((account) =>
-      ['investment', 'brokerage'].includes(account.type),
-    );
-    const banking = accounts.some(
-      (account) => !['investment', 'brokerage'].includes(account.type),
-    );
-    const overdue = snapshot.providerUpdates.some(
-      (update) =>
-        ((update.product === 'investments' && investment) ||
-          (update.product === 'transactions' && banking)) &&
-        isProviderUpdateOverdue(
-          update.lastSuccessfulUpdateAt,
-          now,
-          update.product === 'investments',
-        ),
-    );
-    const reason = imports.stalled
-      ? 'import_delayed'
-      : overdue
-        ? 'provider_delayed'
-        : null;
-    return {
-      state: reason ? 'delayed' : 'healthy',
-      reason,
-      message: imports.stalled
-        ? 'A previous investment import has not completed. Retry syncing this connection.'
-        : overdue
-          ? 'The provider has not completed a recent update. Account access is available.'
-          : 'The linked accounts are accessible.',
-      checkedAt: now.toISOString(),
-      lastImportedAt: imports.lastImportedAt,
-      providerUpdates: snapshot.providerUpdates,
-    };
+    return rows[0]?.lastImportedAt
+      ? new Date(rows[0].lastImportedAt).toISOString()
+      : null;
   }
 
   /** Serialize health with archiving/reconnects; an older probe cannot replace a newer result. */
@@ -303,7 +260,7 @@ export class BankLinkHealthService {
           ? 'PENDING_REAUTH'
           : 'ERROR'
         : (afterReconnect || getConnectionIssue(link.statusBody) !== null) &&
-            (health.state === 'healthy' || health.state === 'delayed')
+            health.state === 'healthy'
           ? 'OK'
           : link.status;
       const issueChanged =
@@ -361,7 +318,7 @@ export class BankLinkHealthService {
     return changed;
   }
 
-  /** User reads request stale candidates; the daily sweep includes every active link. */
+  /** User reads request checks whose cache expired; the daily sweep includes every active link. */
   async checkConnections(
     userId?: string,
     onlyStale = false,
@@ -372,11 +329,9 @@ export class BankLinkHealthService {
       WHERE b."providerName"='plaid' AND b."archivedAt" IS NULL AND b."disconnectRequestedAt" IS NULL
         AND ($1::uuid IS NULL OR b."userId"=$1)
         AND EXISTS (SELECT 1 FROM account_entity a WHERE a."bankLinkId"=b.id AND a."archivedAt" IS NULL)
-        AND (NOT $2 OR b.status <> 'OK' OR b.health->>'state' IN ('delayed','unknown') OR EXISTS (
-          SELECT 1 FROM account_entity a WHERE a."bankLinkId"=b.id AND a."archivedAt" IS NULL AND NOT EXISTS (
-            SELECT 1 FROM balance_snapshot_entity s WHERE s."accountId"=a.id AND s."snapshotType"='SYNC' AND s."updatedAt">now()-$3::int*interval '1 day')))
+        AND (NOT $2 OR b.status <> 'OK' OR b."healthCheckedAt" IS NULL OR b."healthCheckedAt" < $3)
       ORDER BY b."healthCheckedAt" NULLS FIRST,b.id`,
-      [userId ?? null, onlyStale, STALE_ACCOUNT_DAYS],
+      [userId ?? null, onlyStale, new Date(Date.now() - CHECK_CACHE_MS)],
     );
     let checked = 0;
     let changed = false;

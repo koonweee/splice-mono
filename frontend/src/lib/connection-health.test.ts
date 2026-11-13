@@ -46,4 +46,46 @@ describe('account connection warning', () => {
       }),
     ).toBeNull()
   })
+  it('does not invent warnings from old import or health-check timestamps', () => {
+    expect(
+      accountConnectionWarning({ ...base, bankLinkStatus: 'OK' }),
+    ).toBeNull()
+    expect(
+      accountConnectionWarning({
+        ...base,
+        bankLinkStatus: 'OK',
+        connectionHealth: {
+          state: 'healthy',
+          reason: null,
+          message: 'Accessible',
+          checkedAt: '2026-01-01T00:00:00Z',
+          lastImportedAt: '2026-01-01T00:00:00Z',
+          providerUpdates: [
+            {
+              product: 'investments',
+              lastSuccessfulUpdateAt: '2026-01-01T00:00:00Z',
+              lastFailedUpdateAt: '2026-01-05T00:00:00Z',
+            },
+          ],
+        },
+      }),
+    ).toBeNull()
+    expect(accountConnectionWarning(base)).toBeNull()
+  })
+  it('reports an actual failed connection check', () => {
+    expect(
+      accountConnectionWarning({
+        ...base,
+        bankLinkStatus: 'OK',
+        connectionHealth: {
+          state: 'unknown',
+          reason: 'check_failed',
+          message: 'Connection check unavailable. Try again later.',
+          checkedAt: new Date().toISOString(),
+          lastImportedAt: null,
+          providerUpdates: [],
+        },
+      }),
+    ).toBe('Connection check unavailable. Try again later.')
+  })
 })
