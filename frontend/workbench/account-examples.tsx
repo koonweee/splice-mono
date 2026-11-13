@@ -144,15 +144,19 @@ function StatusExamples() {
         <StatusBadge
           status="OK"
           health={{
-            state: 'delayed',
-            reason: 'provider_delayed',
-            message:
-              'Account access is available. Provider updates are delayed.',
+            state: 'healthy',
+            reason: null,
+            message: 'The linked accounts are accessible.',
             checkedAt: new Date().toISOString(),
             lastImportedAt: null,
-            providerUpdates: [],
+            providerUpdates: [
+              {
+                product: 'investments',
+                lastSuccessfulUpdateAt: '2026-01-01T00:00:00Z',
+                lastFailedUpdateAt: '2026-01-05T00:00:00Z',
+              },
+            ],
           }}
-          onCheck={() => setMessage('Fixture connection check selected')}
         />
         <StatusBadge
           status="OK"

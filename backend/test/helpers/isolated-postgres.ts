@@ -63,7 +63,9 @@ export async function isolatedPostgres(
         0,
         database.migrations.length,
         ...all.filter(
-          (migration) => Number(migration.name?.slice(-13)) < beforeTimestamp,
+          (migration) =>
+            Number((migration.name ?? migration.constructor.name).slice(-13)) <
+            beforeTimestamp,
         ),
       );
     await database.runMigrations({ transaction: 'all' });

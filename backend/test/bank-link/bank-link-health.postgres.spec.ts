@@ -9,7 +9,6 @@ import { UserEntity } from '../../src/user/user.entity';
 import type { ProviderConnectionHealth } from '../../src/types/BankLinkHealth';
 import {
   getConnectionIssue,
-  isProviderUpdateOverdue,
   MissingProviderAccountsError,
 } from '../../src/bank-link/providers/plaid/plaid-connection-health';
 import { isolatedPostgres, postgresSuite } from '../helpers/isolated-postgres';
@@ -158,21 +157,70 @@ postgresSuite('Connection health on PostgreSQL', () => {
     expect(attention).not.toHaveBeenCalled();
   });
 
-  it('keeps provider delay separate from a repairable error', async () => {
-    probe.mockResolvedValue({
-      ...healthy(),
-      providerUpdates: [
-        {
-          product: 'investments',
-          lastSuccessfulUpdateAt: '2026-01-01T00:00:00Z',
-          lastFailedUpdateAt: null,
+  it.each(['investment', 'depository'])(
+    'does not infer %s connection failure from provider timestamps',
+    async (type) => {
+      await fixture.database
+        .getRepository(AccountEntity)
+        .update(account.id, { type });
+      probe.mockResolvedValue({
+        ...healthy(),
+        providerUpdates: [
+          {
+            product: type === 'investment' ? 'investments' : 'transactions',
+            lastSuccessfulUpdateAt: '2026-01-01T00:00:00Z',
+            lastFailedUpdateAt: '2026-01-05T00:00:00Z',
+          },
+        ],
+      });
+      await service.check(link.id, link.userId);
+      expect(await stored()).toMatchObject({
+        status: 'OK',
+        health: {
+          state: 'healthy',
+          reason: null,
+          providerUpdates: [
+            {
+              lastSuccessfulUpdateAt: '2026-01-01T00:00:00Z',
+              lastFailedUpdateAt: '2026-01-05T00:00:00Z',
+            },
+          ],
         },
-      ],
+      });
+      expect(attention).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rechecks an expired diagnostic cache even when account data is recent', async () => {
+    await fixture.database.getRepository(BankLinkEntity).update(link.id, {
+      health: {
+        state: 'healthy',
+        reason: null,
+        message: 'Accessible',
+        checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        lastImportedAt: null,
+        providerUpdates: [],
+      },
+      healthCheckedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     });
+    expect(await service.checkConnections(link.userId, true)).toEqual({
+      checked: 1,
+      changed: false,
+    });
+    expect(probe).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not turn an unfinished import into a provider connection failure', async () => {
+    await fixture.database.query(
+      `INSERT INTO investment_sync_state_entity
+      ("userId", "bankLinkId", kind, "requestedGeneration", "completedGeneration", "updatedAt")
+      VALUES ($1,$2,'holdings',2,1,now()-interval '8 hours')`,
+      [link.userId, link.id],
+    );
     await service.check(link.id, link.userId);
-    expect(await stored()).toMatchObject({
-      status: 'OK',
-      health: { state: 'delayed', reason: 'provider_delayed' },
+    expect((await stored()).health).toMatchObject({
+      state: 'healthy',
+      reason: null,
     });
     expect(attention).not.toHaveBeenCalled();
   });
@@ -287,22 +335,6 @@ describe('Provider health classification', () => {
     ])
       expect(getConnectionIssue(error)).toBeNull();
   });
-  it('allows weekends without calling investments stale', () => {
-    expect(
-      isProviderUpdateOverdue(
-        '2026-11-06T18:00:00Z',
-        new Date('2026-11-09T18:00:00Z'),
-        true,
-      ),
-    ).toBe(false);
-    expect(
-      isProviderUpdateOverdue(
-        '2026-11-06T18:00:00Z',
-        new Date('2026-11-11T18:00:00Z'),
-        true,
-      ),
-    ).toBe(true);
-  });
 });
 
 postgresSuite('Connection health migration', () => {
@@ -322,6 +354,15 @@ postgresSuite('Connection health migration', () => {
       await fixture.database.query(
         `INSERT INTO bank_link_entity (id, "userId", "providerName", authentication, "accountIds") VALUES ($1,$2,'plaid','{}','external')`,
         [id, user.id],
+      );
+      fixture.database.migrations.splice(
+        0,
+        fixture.database.migrations.length,
+        ...fixture.database.migrations.filter(
+          (migration) =>
+            (migration.name ?? migration.constructor.name) !==
+            'ClearInferredConnectionHealth1794564000000',
+        ),
       );
       await fixture.database.runMigrations({ transaction: 'all' });
       const rows = await fixture.database.query(
@@ -343,6 +384,60 @@ postgresSuite('Connection health migration', () => {
         [fixture.schema],
       );
       expect(columns).toEqual([]);
+    } finally {
+      await fixture.close();
+    }
+  }, 60_000);
+});
+
+postgresSuite('Retired inferred connection health', () => {
+  it('clears only cached delay diagnoses and preserves access failures and provider credentials', async () => {
+    const fixture = await isolatedPostgres(
+      'clear_inferred_health',
+      1794564000000,
+    );
+    try {
+      const user = await fixture.database.getRepository(UserEntity).save(
+        UserEntity.fromGoogleIdentity({
+          email: `${randomUUID()}@fixture.test`,
+          googleSubject: randomUUID(),
+        }),
+      );
+      const diagnoses = [
+        { state: 'delayed', reason: 'provider_delayed' },
+        { state: 'delayed', reason: 'import_delayed' },
+        { state: 'needs_attention', reason: 'login_required' },
+        { state: 'healthy', reason: null },
+        { state: 'unknown', reason: 'check_failed' },
+      ];
+      const ids: string[] = diagnoses.map(() => randomUUID());
+      for (const [index, health] of diagnoses.entries()) {
+        await fixture.database.query(
+          `INSERT INTO bank_link_entity
+          (id,"userId","providerName",authentication,"accountIds",status,health,"healthCheckedAt")
+          VALUES ($1,$2,'plaid','{"accessToken":"fixture-only"}','external',$3,$4,now())`,
+          [ids[index], user.id, index === 2 ? 'ERROR' : 'OK', health],
+        );
+      }
+      const read = () =>
+        fixture.database.query(
+          `SELECT id,status,authentication,"accountIds",health,"healthCheckedAt" FROM bank_link_entity WHERE id=ANY($1::uuid[]) ORDER BY id`,
+          [ids],
+        );
+      const before: Array<{
+        id: string;
+        health: unknown;
+        healthCheckedAt: unknown;
+      }> = await read();
+      await fixture.database.runMigrations({ transaction: 'all' });
+      const expected = before.map((row) =>
+        ids.slice(0, 2).includes(row.id)
+          ? { ...row, health: null, healthCheckedAt: null }
+          : row,
+      );
+      expect(await read()).toEqual(expected);
+      await fixture.database.undoLastMigration({ transaction: 'all' });
+      expect(await read()).toEqual(expected);
     } finally {
       await fixture.close();
     }
